@@ -5,6 +5,11 @@ import Mathlib
 
 variable {α β : Type*}
 
+def ramsey_key [Infinite α] {G : SimpleGraph α} (c : ℕ) (φ : G.EdgeLabeling (Fin c))
+    (X : Set α) (hx : X.Infinite) (x : α) :
+    ∃ Y ⊆ X, Y.Infinite ∧ ∃ C : Fin c, ∀ u ∈ Y, ∀ h : G.Adj x u, φ.get x u h = C := by
+  sorry
+
 -- Like (9.1.2) in Diestel's Graph Theory book
 theorem ramsey2 [Infinite α] {G : SimpleGraph α} {c : ℕ} (φ : G.EdgeLabeling (Fin c)) :
     ∃ i : Fin c, ∃ f : ℕ → α, f.Injective ∧
