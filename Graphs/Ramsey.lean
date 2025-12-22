@@ -37,20 +37,22 @@ def next_fan (φ : G.EdgeLabeling ι) (F : Fan φ) :
   obtain ⟨Y, hY1, hY2, i, hY3⟩ := ramsey_key φ (F.X \ {y}) hXy y
   refine ⟨⟨y, Y, i, by grind, hY2, hY3⟩, hy, by grind⟩
 
--- Like (9.1.2) in Diestel's Graph Theory book
-theorem ramsey2 (φ : G.EdgeLabeling ι) :
-    ∃ S : Set α, S.Infinite ∧ ∃ i : ι,
+-- Special case of Theorem 9.1.2 in Diestel's Graph Theory book, for `k=2`
+theorem ramsey2 (φ : G.EdgeLabeling ι) : ∃ S : Set α, S.Infinite ∧ ∃ i : ι,
     ∀ u ∈ S, ∀ v ∈ S, ∀ h : G.Adj u v, φ.get u v h = i := by
 
   let x₀ := Classical.choice $ Infinite.nonempty α
-  have : (Set.univ \ {x₀}).Infinite := sorry
+  have : (Set.univ \ {x₀}).Infinite :=
+    Set.Infinite.diff Set.infinite_univ (Set.finite_singleton _)
   obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := ramsey_key φ (Set.univ \ {x₀}) this x₀
   let F₀ : Fan φ := ⟨x₀, X₀, i₀, by grind, hX₀', h₀⟩
 
   choose Φ hΦ using next_fan φ
   let F (n : ℕ) : Fan φ := Φ^[n] F₀
   let C (i : ι) : Set ℕ := { n | (F n).i = i }
-  have key0 : ∃ i : ι, (C i).Infinite := by sorry
+  have key0 : ∃ i : ι, (C i).Infinite := by
+    simp [C, ← Set.infinite_coe_iff]
+    exact Finite.exists_infinite_fiber _
   obtain ⟨i, hi⟩ := key0
 
   let X (n : ℕ) : Set α := (F n).X
@@ -61,9 +63,25 @@ theorem ramsey2 (φ : G.EdgeLabeling ι) :
     simp [X, F, -Function.iterate_succ, Function.iterate_succ']
     grind
 
-  have H2 : Function.Injective x := sorry
+  have H3 ⦃m n : ℕ⦄ (hmn : m < n) : x n ∈ X m := by
+    cases n with
+    | zero => contradiction
+    | succ n =>
+      simp [x, F, -Function.iterate_succ, Function.iterate_succ']
+      exact H1.antitone (Nat.le_of_lt_succ hmn) (hΦ (F n) |>.1)
 
-  have H3 ⦃m n : ℕ⦄ (hmn : m < n) : x n ∈ X m := sorry
+  have H2 : Function.Injective x := by
+    intro m n hmn
+    by_contra H
+    cases lt_or_gt_of_ne H with
+    | inl h =>
+      have h1 := H3 h
+      have h3 := (F m).hx
+      grind
+    | inr h =>
+      have h1 := H3 h
+      have h3 := (F n).hx
+      grind
 
   refine ⟨x '' C i, ?_, i, ?_⟩
   · exact hi.image H2.injOn
