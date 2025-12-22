@@ -1,5 +1,7 @@
 import Mathlib
 
+open Set
+
 variable {α ι : Type*} [Infinite α] [Finite ι] [Nonempty ι] {G : SimpleGraph α}
 
 structure Fan (φ : G.EdgeLabeling ι) where
@@ -19,7 +21,7 @@ def ramsey_key (φ : G.EdgeLabeling ι) (X : Set α) (hx : X.Infinite) (x : α) 
     refine ⟨f i, by grind, hi, i, by grind⟩
   have key : ⋃ i, f i = X := by
     ext y
-    rw [Set.mem_iUnion]
+    rw [mem_iUnion]
     constructor
     · grind
     · intro h
@@ -28,12 +30,12 @@ def ramsey_key (φ : G.EdgeLabeling ι) (X : Set α) (hx : X.Infinite) (x : α) 
       · use Classical.choice inferInstance ; grind
   have : (⋃ i, f i).Infinite := by grind
   contrapose! this
-  exact Set.finite_iUnion this
+  exact finite_iUnion this
 
 def next_fan (φ : G.EdgeLabeling ι) (F : Fan φ) :
     ∃ G : Fan φ, G.x ∈ F.X ∧ G.X ⊂ F.X := by
   obtain ⟨y, hy⟩ := F.hX.nonempty
-  have hXy : (F.X \ {y}).Infinite := Set.Infinite.diff F.hX $ Set.finite_singleton y
+  have hXy : (F.X \ {y}).Infinite := Infinite.diff F.hX $ finite_singleton y
   obtain ⟨Y, hY1, hY2, i, hY3⟩ := ramsey_key φ (F.X \ {y}) hXy y
   refine ⟨⟨y, Y, i, by grind, hY2, hY3⟩, hy, by grind⟩
 
@@ -42,16 +44,16 @@ theorem ramsey2 (φ : G.EdgeLabeling ι) : ∃ S : Set α, S.Infinite ∧ ∃ i 
     ∀ u ∈ S, ∀ v ∈ S, ∀ h : G.Adj u v, φ.get u v h = i := by
 
   let x₀ := Classical.choice $ Infinite.nonempty α
-  have : (Set.univ \ {x₀}).Infinite :=
-    Set.Infinite.diff Set.infinite_univ (Set.finite_singleton _)
-  obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := ramsey_key φ (Set.univ \ {x₀}) this x₀
+  have : (univ \ {x₀}).Infinite :=
+    Infinite.diff infinite_univ (finite_singleton _)
+  obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := ramsey_key φ (univ \ {x₀}) this x₀
   let F₀ : Fan φ := ⟨x₀, X₀, i₀, by grind, hX₀', h₀⟩
 
   choose Φ hΦ using next_fan φ
   let F (n : ℕ) : Fan φ := Φ^[n] F₀
   let C (i : ι) : Set ℕ := { n | (F n).i = i }
   have key0 : ∃ i : ι, (C i).Infinite := by
-    simp [C, ← Set.infinite_coe_iff]
+    simp [C, ← infinite_coe_iff]
     exact Finite.exists_infinite_fiber _
   obtain ⟨i, hi⟩ := key0
 
