@@ -1,20 +1,20 @@
 import Mathlib
 
-variable {α β : Type*} [hα : Infinite α] {c : ℕ} {G : SimpleGraph α}
+variable {α ι : Type*} [Infinite α] [Finite ι] [Nonempty ι] {G : SimpleGraph α}
 
-structure Fan (φ : G.EdgeLabeling (Fin c)) where
+structure Fan (φ : G.EdgeLabeling ι) where
   x : α
   X : Set α
-  i : Fin c
+  i : ι
   --
   hx : x ∉ X
   hX : X.Infinite
   hC : ∀ u ∈ X, ∀ h : G.Adj x u, φ.get x u h = i
 
-def ramsey_key (hc : 0 < c) (φ : G.EdgeLabeling (Fin c)) (X : Set α) (hx : X.Infinite) (x : α) :
-    ∃ Y ⊆ X, Y.Infinite ∧ ∃ C : Fin c, ∀ u ∈ Y, ∀ h : G.Adj x u, φ.get x u h = C := by
-  let f : Fin c → Set α := fun i ↦ { y ∈ X | ∀ h : G.Adj x y, φ.get x y h = i }
-  suffices ∃ i : Fin c, (f i).Infinite by
+def ramsey_key (φ : G.EdgeLabeling ι) (X : Set α) (hx : X.Infinite) (x : α) :
+    ∃ Y ⊆ X, Y.Infinite ∧ ∃ C : ι, ∀ u ∈ Y, ∀ h : G.Adj x u, φ.get x u h = C := by
+  let f : ι → Set α := fun i ↦ { y ∈ X | ∀ h : G.Adj x y, φ.get x y h = i }
+  suffices ∃ i : ι, (f i).Infinite by
     obtain ⟨i, hi⟩ := this
     refine ⟨f i, by grind, hi, i, by grind⟩
   have key : ⋃ i, f i = X := by
@@ -25,32 +25,32 @@ def ramsey_key (hc : 0 < c) (φ : G.EdgeLabeling (Fin c)) (X : Set α) (hx : X.I
     · intro h
       by_cases hy : G.Adj x y
       · use φ.get x y hy ; grind
-      · use ⟨0, hc⟩ ; grind
+      · use Classical.choice inferInstance ; grind
   have : (⋃ i, f i).Infinite := by grind
   contrapose! this
   exact Set.finite_iUnion this
 
-def next_fan (hc : 0 < c) (φ : G.EdgeLabeling (Fin c)) (F : Fan φ) :
+def next_fan (φ : G.EdgeLabeling ι) (F : Fan φ) :
     ∃ G : Fan φ, G.x ∈ F.X ∧ G.X ⊂ F.X := by
   obtain ⟨y, hy⟩ := F.hX.nonempty
   have hXy : (F.X \ {y}).Infinite := Set.Infinite.diff F.hX $ Set.finite_singleton y
-  obtain ⟨Y, hY1, hY2, i, hY3⟩ := ramsey_key hc φ (F.X \ {y}) hXy y
+  obtain ⟨Y, hY1, hY2, i, hY3⟩ := ramsey_key φ (F.X \ {y}) hXy y
   refine ⟨⟨y, Y, i, by grind, hY2, hY3⟩, hy, by grind⟩
 
 -- Like (9.1.2) in Diestel's Graph Theory book
-theorem ramsey2 (hc : 0 < c) (φ : G.EdgeLabeling (Fin c)) :
-    ∃ S : Set α, S.Infinite ∧ ∃ i : Fin c,
+theorem ramsey2 (φ : G.EdgeLabeling ι) :
+    ∃ S : Set α, S.Infinite ∧ ∃ i : ι,
     ∀ u ∈ S, ∀ v ∈ S, ∀ h : G.Adj u v, φ.get u v h = i := by
 
   let x₀ := Classical.choice $ Infinite.nonempty α
   have : (Set.univ \ {x₀}).Infinite := sorry
-  obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := ramsey_key hc φ _ this x₀
+  obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := ramsey_key φ (Set.univ \ {x₀}) this x₀
   let F₀ : Fan φ := ⟨x₀, X₀, i₀, by grind, hX₀', h₀⟩
 
-  choose Φ hΦ using next_fan hc φ
+  choose Φ hΦ using next_fan φ
   let F (n : ℕ) : Fan φ := Φ^[n] F₀
-  let C (i : Fin c) : Set ℕ := { n | (F n).i = i }
-  have key0 : ∃ i : Fin c, (C i).Infinite := by sorry
+  let C (i : ι) : Set ℕ := { n | (F n).i = i }
+  have key0 : ∃ i : ι, (C i).Infinite := by sorry
   obtain ⟨i, hi⟩ := key0
 
   let X (n : ℕ) : Set α := (F n).X
