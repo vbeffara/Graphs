@@ -2,7 +2,7 @@ import Mathlib
 
 open Set
 
-variable {α ι : Type*} [Infinite α] [Finite ι] [Nonempty ι] {G : SimpleGraph α}
+variable {α ι : Type*} [Finite ι] [Nonempty ι] {G : SimpleGraph α}
 
 structure Fan (φ : G.EdgeLabeling ι) where
   x : α
@@ -13,7 +13,10 @@ structure Fan (φ : G.EdgeLabeling ι) where
   hX : X.Infinite
   hC : ∀ u ∈ X, ∀ h : G.Adj x u, φ.get x u h = i
 
-def ramsey_key (φ : G.EdgeLabeling ι) (X : Set α) (hx : X.Infinite) (x : α) :
+def Monochromatic (φ : G.EdgeLabeling ι) (S : Set α) : Prop :=
+  ∃ i : ι, ∀ u ∈ S, ∀ v ∈ S, ∀ h : G.Adj u v, φ.get u v h = i
+
+theorem ramsey_key (φ : G.EdgeLabeling ι) (X : Set α) (hx : X.Infinite) (x : α) :
     ∃ Y ⊆ X, Y.Infinite ∧ ∃ C : ι, ∀ u ∈ Y, ∀ h : G.Adj x u, φ.get x u h = C := by
   let f : ι → Set α := fun i ↦ { y ∈ X | ∀ h : G.Adj x y, φ.get x y h = i }
   suffices ∃ i : ι, (f i).Infinite by
@@ -32,16 +35,15 @@ def ramsey_key (φ : G.EdgeLabeling ι) (X : Set α) (hx : X.Infinite) (x : α) 
   contrapose! this
   exact finite_iUnion this
 
-def next_fan (φ : G.EdgeLabeling ι) (F : Fan φ) :
-    ∃ G : Fan φ, G.x ∈ F.X ∧ G.X ⊂ F.X := by
+theorem next_fan (φ : G.EdgeLabeling ι) (F : Fan φ) : ∃ G : Fan φ, G.x ∈ F.X ∧ G.X ⊂ F.X := by
   obtain ⟨y, hy⟩ := F.hX.nonempty
   have hXy : (F.X \ {y}).Infinite := Infinite.diff F.hX $ finite_singleton y
   obtain ⟨Y, hY1, hY2, i, hY3⟩ := ramsey_key φ (F.X \ {y}) hXy y
   refine ⟨⟨y, Y, i, by grind, hY2, hY3⟩, hy, by grind⟩
 
 -- Special case of Theorem 9.1.2 in Diestel's Graph Theory book, for `k=2`
-theorem ramsey2 (φ : G.EdgeLabeling ι) : ∃ S : Set α, S.Infinite ∧ ∃ i : ι,
-    ∀ u ∈ S, ∀ v ∈ S, ∀ h : G.Adj u v, φ.get u v h = i := by
+theorem ramsey2 [Infinite α] (φ : G.EdgeLabeling ι) :
+    ∃ S : Set α, S.Infinite ∧ Monochromatic φ S := by
 
   let x₀ := Classical.choice $ Infinite.nonempty α
   have : (univ \ {x₀}).Infinite :=
@@ -49,7 +51,7 @@ theorem ramsey2 (φ : G.EdgeLabeling ι) : ∃ S : Set α, S.Infinite ∧ ∃ i 
   obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := ramsey_key φ (univ \ {x₀}) this x₀
   let F₀ : Fan φ := ⟨x₀, X₀, i₀, by grind, hX₀', h₀⟩
 
-  choose Φ hΦ using next_fan φ
+  choose Φ hΦ₁ hΦ₂ using next_fan φ
   let F (n : ℕ) : Fan φ := Φ^[n] F₀
   let C (i : ι) : Set ℕ := { n | (F n).i = i }
   have key0 : ∃ i : ι, (C i).Infinite := by
@@ -70,31 +72,25 @@ theorem ramsey2 (φ : G.EdgeLabeling ι) : ∃ S : Set α, S.Infinite ∧ ∃ i 
     | zero => contradiction
     | succ n =>
       simp [x, F, -Function.iterate_succ, Function.iterate_succ']
-      exact H1.antitone (Nat.le_of_lt_succ hmn) (hΦ (F n) |>.1)
+      exact H1.antitone (Nat.le_of_lt_succ hmn) (hΦ₁ (F n))
 
   have H2 : Function.Injective x := by
-    intro m n hmn
-    by_contra H
-    cases lt_or_gt_of_ne H with
-    | inl h =>
-      have h1 := H3 h
-      have h3 := (F m).hx
-      grind
-    | inr h =>
-      have h1 := H3 h
-      have h3 := (F n).hx
-      grind
+    apply injective_of_lt_imp_ne
+    intro m n h₁
+    by_contra h₂
+    have h₃ := H3 h₁
+    rw [← h₂] at h₃
+    exact (F m).hx h₃
 
-  refine ⟨x '' C i, ?_, i, ?_⟩
-  · exact hi.image H2.injOn
-  · rintro u ⟨m, rfl, rfl⟩ v ⟨n, hn, rfl⟩ hmn
-    have : m ≠ n := by
-      rintro rfl
-      simp at hmn
-    cases lt_or_gt_of_ne this with
-    | inl h => exact (F m).hC (x n) (H3 h) hmn
-    | inr h =>
-      rw [SimpleGraph.EdgeLabeling.get_comm]
-      simp [C] at hn
-      have := (F n).hC (x m) (H3 h) hmn.symm
-      simpa [←hn]
+  refine ⟨x '' C i, hi.image H2.injOn, i, ?_⟩
+  rintro u ⟨m, rfl, rfl⟩ v ⟨n, hn, rfl⟩ hmn
+  have : m ≠ n := by
+    rintro rfl
+    simp at hmn
+  cases lt_or_gt_of_ne this with
+  | inl h => exact (F m).hC (x n) (H3 h) hmn
+  | inr h =>
+    rw [SimpleGraph.EdgeLabeling.get_comm]
+    simp [C] at hn
+    have := (F n).hC (x m) (H3 h) hmn.symm
+    simpa [←hn]

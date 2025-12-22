@@ -4,11 +4,9 @@ import Graphs.Ramsey
 
 theorem toto {X : Type*} [Preorder X] {f : ℕ → X} :
     StrictAnti f ↔ ∀ n, f (n + 1) < f n := by
-  constructor
-  · intro h n
-    apply h
-    exact lt_add_one n
-  · exact strictAnti_nat_of_succ_lt
+  refine ⟨?_, strictAnti_nat_of_succ_lt⟩
+  intro h n
+  exact h $ lt_add_one n
 
 example {X : Type*} [PartialOrder X] :
     WellQuasiOrderedLE X ↔
