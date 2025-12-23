@@ -9,8 +9,8 @@ structure PathEmbedding (G : SimpleGraph α) (H : SimpleGraph β) where
   df (e : G.Dart) : H.Path (f e.fst) (f e.snd)
   --
   symm e : df e.symm = (df e).reverse
-  ends e x : f x ∈ (df e).1.support ↔ x = e.fst ∨ x = e.snd
-  disj e e' v : v ∈ (df e).1.support → v ∈ (df e').1.support → e = e' ∨ v ∈ range f
+  ends {e x} : f x ∈ (df e).1.support ↔ x = e.fst ∨ x = e.snd
+  disj {e e' v} : v ∈ (df e).1.support → v ∈ (df e').1.support → e = e' ∨ v ∈ range f
 
 def IsTopologicalMinor (G : SimpleGraph α) (H : SimpleGraph β) := Nonempty (PathEmbedding G H)
 
@@ -55,14 +55,58 @@ lemma mem_follow (hp : 0 < p.length) :
   | nil => contradiction
   | cons e p ih => cases p <;> simp_all
 
+theorem append_isPath (hp : p.IsPath) (hp' : p'.IsPath)
+    (hpp' : ∀ a, a ∈ p.support → a ∈ p'.support → a = y) :
+    (p.append p').IsPath := by
+  induction p with
+  | nil => simpa
+  | cons h p ih =>
+    simp_all
+    have := p.end_mem_support
+    grind
+
 theorem isPath_follow (hp : p.IsPath) : (φ.follow p).IsPath := by
   induction p with
   | nil => simp
   | cons h p ih =>
-    simp at hp ⊢
-    specialize ih hp.1
-
-    sorry
+    wlog hp₀ : 0 < p.length ; cases p <;> simp_all
+    rw [follow_cons]
+    simp only [Walk.cons_isPath_iff] at hp
+    refine append_isPath (φ.df _).isPath (ih hp.1) ?_
+    dsimp
+    intro u hu hu'
+    rw [mem_follow hp₀] at hu'
+    obtain ⟨e, he₁, he₂⟩ := hu'
+    have := φ.disj he₂ hu
+    cases this with
+    | inl h1 =>
+      subst h1
+      have := p.dart_fst_mem_support_of_mem_darts he₁
+      simp_all
+    | inr h1 =>
+      obtain ⟨x, rfl⟩ := h1
+      cases φ.disj hu he₂ with
+      | inl h2 =>
+        subst h2
+        have := p.dart_fst_mem_support_of_mem_darts he₁
+        simp_all
+      | inr h2 =>
+        have h5 := φ.ends.1 hu
+        cases h5 with
+        | inl h3 =>
+          simp at h3
+          subst h3
+          have h4 := φ.ends.1 he₂
+          cases h4 with
+          | inl h6 =>
+            subst h6
+            have := p.dart_fst_mem_support_of_mem_darts he₁
+            simp_all
+          | inr h6 =>
+            have := p.dart_snd_mem_support_of_mem_darts he₁
+            simp_all
+        | inr h3 =>
+          simp [h3]
 
 def follow_path (p : G.Path x y) : H.Path (φ.f x) (φ.f y) :=
   ⟨φ.follow p.1, φ.isPath_follow p.isPath⟩
@@ -96,7 +140,7 @@ def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEm
   f := φ.f.trans ψ.f
   df e := ⟨ψ.follow (φ.df e), sorry⟩
   symm e := by congr ; simp [φ.symm]
-  ends e x := sorry
+  ends := sorry
   disj := sorry
 
 -- def comp (F : path_embedding G G') (F' : path_embedding G' G'') : path_embedding G G'' :=
