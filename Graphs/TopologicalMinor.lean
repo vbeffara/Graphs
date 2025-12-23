@@ -86,31 +86,6 @@ theorem isPath_follow (hp : p.IsPath) : (φ.follow p).IsPath := by
 def follow_path (p : G.Path x y) : H.Path (φ.f x) (φ.f y) :=
   ⟨φ.follow p.1, φ.isPath_follow p.isPath⟩
 
--- lemma follow_nodup {p : walk G x y} (h : p.support.nodup) : (follow F p).support.nodup :=
--- begin
---   induction p with u u v w h p ih,
---   { simp only [follow, support_nil, list.nodup_cons, list.not_mem_nil, not_false_iff,
---     list.nodup_nil, and_self] },
---   { simp only [follow], simp only [support_cons, list.nodup_cons] at h, apply nodup_concat.mpr,
---     refine ⟨F.nodup _, ih h.2, _⟩, rintros z h3 h4,
---     cases nat.eq_zero_or_pos p.length with h5 h5,
---     { cases p,
---       { simp only [follow, support_nil, list.mem_singleton] at h4, exact h4 },
---       { simp only [length_cons, nat.succ_ne_zero] at h5, contradiction } },
---     { obtain ⟨e,h7,h8⟩ := mem_follow F h5 h4,
---       cases F.disjoint h3 h8 with h9 h9,
---       { exfalso, apply h.1, apply (mem_of_edges h5).mpr ⟨e,h7,_⟩, rw <-h9,
---         exact sym2.mem_mk_left _ _ },
---       { obtain ⟨v,_⟩ := h9, subst z, have h10 := F.endpoint h3,
---         cases sym2.mem_iff.mp h10 with h10 h10,
---         { subst h10, exfalso, apply h.1,
---           have := F.endpoint h8, rw [dart.edge] at this, rcases e with ⟨⟨ex,ey⟩,he⟩, simp at this,
---           cases this with h12 h12,
---           { rw h12, exact p.dart_fst_mem_support_of_mem_darts h7 },
---           { rw h12, exact p.dart_snd_mem_support_of_mem_darts h7 } },
---         { rw h10 } } } }
--- end
-
 def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEmbedding G₁ G₃ where
   f := φ.f.trans ψ.f
   df e := ⟨ψ.follow (φ.df e), sorry⟩
