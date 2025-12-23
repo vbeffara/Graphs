@@ -97,11 +97,17 @@ theorem toto {w : G.Walk x y} (hw : 0 < w.length) :
     simp only [Walk.support_cons, List.mem_cons, Walk.darts_cons, exists_eq_or_imp, ← ih h]
     grind [p.start_mem_support]
 
+theorem length_pos {p : G.Walk x y} (h : x ≠ y) : 0 < p.length := by
+  contrapose! h ; cases p ; rfl ; contradiction
+
+theorem df_length_pos {e : G.Dart} : 0 < (φ.df e).1.length :=
+  length_pos $ φ.f.injective.ne e.fst_ne_snd
+
 def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEmbedding G₁ G₃ where
   f := φ.f.trans ψ.f
   df e := ⟨ψ.follow (φ.df e), isPath_follow (φ.df e).isPath⟩
   symm e := by congr ; simp [φ.symm]
-  ends := by simp [mem_follow sorry, ψ.ends, ← toto sorry, φ.ends]
+  ends := by simp [mem_follow df_length_pos, ψ.ends, ← toto df_length_pos, φ.ends]
   disj := sorry
 
 -- def comp (F : path_embedding G G') (F' : path_embedding G' G'') : path_embedding G G'' :=
