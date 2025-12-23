@@ -71,42 +71,17 @@ theorem isPath_follow (hp : p.IsPath) : (φ.follow p).IsPath := by
   | cons h p ih =>
     wlog hp₀ : 0 < p.length ; cases p <;> simp_all
     rw [follow_cons]
-    simp only [Walk.cons_isPath_iff] at hp
-    refine append_isPath (φ.df _).isPath (ih hp.1) ?_
-    dsimp
+    obtain ⟨hp₁, hp₂⟩ := (Walk.cons_isPath_iff _ _).1 hp
+    refine append_isPath (φ.df _).isPath (ih hp₁) ?_
     intro u hu hu'
-    rw [mem_follow hp₀] at hu'
-    obtain ⟨e, he₁, he₂⟩ := hu'
-    have := φ.disj he₂ hu
-    cases this with
-    | inl h1 =>
-      subst h1
-      have := p.dart_fst_mem_support_of_mem_darts he₁
-      simp_all
-    | inr h1 =>
-      obtain ⟨x, rfl⟩ := h1
-      cases φ.disj hu he₂ with
-      | inl h2 =>
-        subst h2
-        have := p.dart_fst_mem_support_of_mem_darts he₁
-        simp_all
-      | inr h2 =>
-        have h5 := φ.ends.1 hu
-        cases h5 with
-        | inl h3 =>
-          simp at h3
-          subst h3
-          have h4 := φ.ends.1 he₂
-          cases h4 with
-          | inl h6 =>
-            subst h6
-            have := p.dart_fst_mem_support_of_mem_darts he₁
-            simp_all
-          | inr h6 =>
-            have := p.dart_snd_mem_support_of_mem_darts he₁
-            simp_all
-        | inr h3 =>
-          simp [h3]
+    contrapose hp₂
+    obtain ⟨e, he₁, he₂⟩ := (mem_follow hp₀).1 hu'
+    have h7 := p.dart_fst_mem_support_of_mem_darts he₁
+    rcases φ.disj he₂ hu with rfl | ⟨x, rfl⟩ ; assumption
+    rcases φ.disj hu he₂ with rfl | h2 ; assumption
+    rcases φ.ends.1 hu with rfl | rfl ; swap ; contradiction
+    rcases φ.ends.1 he₂ with rfl | rfl ; assumption
+    exact p.dart_snd_mem_support_of_mem_darts he₁
 
 def follow_path (p : G.Path x y) : H.Path (φ.f x) (φ.f y) :=
   ⟨φ.follow p.1, φ.isPath_follow p.isPath⟩
