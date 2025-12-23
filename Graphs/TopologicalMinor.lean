@@ -85,11 +85,23 @@ theorem isPath_follow (hp : p.IsPath) : (φ.follow p).IsPath := by
 def follow_path (p : G.Path x y) : H.Path (φ.f x) (φ.f y) :=
   ⟨φ.follow p.1, φ.isPath_follow p.isPath⟩
 
+theorem toto {w : G.Walk x y} (hw : 0 < w.length) :
+    z ∈ w.support ↔ ∃ e ∈ w.darts, z = e.fst ∨ z = e.snd := by
+  induction w with
+  | nil => contradiction
+  | cons h p ih =>
+    wlog h : 0 < p.length
+    · cases p with
+      | nil => simp
+      | cons h p => simp at h
+    simp only [Walk.support_cons, List.mem_cons, Walk.darts_cons, exists_eq_or_imp, ← ih h]
+    grind [p.start_mem_support]
+
 def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEmbedding G₁ G₃ where
   f := φ.f.trans ψ.f
   df e := ⟨ψ.follow (φ.df e), isPath_follow (φ.df e).isPath⟩
   symm e := by congr ; simp [φ.symm]
-  ends := sorry
+  ends := by simp [mem_follow sorry, ψ.ends, ← toto sorry, φ.ends]
   disj := sorry
 
 -- def comp (F : path_embedding G G') (F' : path_embedding G' G'') : path_embedding G G'' :=
