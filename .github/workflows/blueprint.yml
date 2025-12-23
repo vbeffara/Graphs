@@ -38,7 +38,7 @@ jobs:
 
       - name: Build blueprint web
         run: |
-          apt install graphviz libcgraph-dev
+          sudo apt install -y graphviz libcgraph-dev
           pip install leanblueprint
           leanblueprint web
 
