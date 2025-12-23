@@ -55,7 +55,14 @@ lemma mem_follow (hp : 0 < p.length) :
   | nil => contradiction
   | cons e p ih => cases p <;> simp_all
 
-theorem isPath_follow (hp : p.IsPath) : (φ.follow p).IsPath := sorry
+theorem isPath_follow (hp : p.IsPath) : (φ.follow p).IsPath := by
+  induction p with
+  | nil => simp
+  | cons h p ih =>
+    simp at hp ⊢
+    specialize ih hp.1
+
+    sorry
 
 def follow_path (p : G.Path x y) : H.Path (φ.f x) (φ.f y) :=
   ⟨φ.follow p.1, φ.isPath_follow p.isPath⟩
