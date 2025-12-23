@@ -49,11 +49,16 @@ def follow (φ : PathEmbedding G H) : ∀ {x y : α}, G.Walk x y → H.Walk (φ.
   | nil => rfl
   | cons h p ih => have := φ.symm ⟨(_, _), h⟩ ; simp_all
 
-lemma mem_follow (hp : 0 < p.length)
-    (hz : u ∈ (φ.follow p).support) : ∃ e ∈ p.darts, u ∈ (φ.df e).1.support := by
+lemma mem_follow (hp : 0 < p.length) :
+    u ∈ (φ.follow p).support ↔ ∃ e ∈ p.darts, u ∈ (φ.df e).1.support := by
   induction p with
   | nil => contradiction
-  | cons e p ih => simp at hz ; cases hz <;> cases p <;> simp_all
+  | cons e p ih => cases p <;> simp_all
+
+theorem isPath_follow (hp : p.IsPath) : (φ.follow p).IsPath := sorry
+
+def follow_path (p : G.Path x y) : H.Path (φ.f x) (φ.f y) :=
+  ⟨φ.follow p.1, φ.isPath_follow p.isPath⟩
 
 -- lemma follow_nodup {p : walk G x y} (h : p.support.nodup) : (follow F p).support.nodup :=
 -- begin
@@ -84,7 +89,7 @@ def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEm
   f := φ.f.trans ψ.f
   df e := ⟨ψ.follow (φ.df e), sorry⟩
   symm e := by congr ; simp [φ.symm]
-  ends := sorry
+  ends e x := sorry
   disj := sorry
 
 -- def comp (F : path_embedding G G') (F' : path_embedding G' G'') : path_embedding G G'' :=
