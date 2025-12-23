@@ -78,7 +78,6 @@ theorem isPath_follow (hp : p.IsPath) : (φ.follow p).IsPath := by
     obtain ⟨e, he₁, he₂⟩ := (mem_follow hp₀).1 hu'
     have h7 := p.dart_fst_mem_support_of_mem_darts he₁
     rcases φ.disj he₂ hu with rfl | ⟨x, rfl⟩ ; assumption
-    rcases φ.disj hu he₂ with rfl | h2 ; assumption
     rcases φ.ends.1 hu with rfl | rfl ; swap ; contradiction
     rcases φ.ends.1 he₂ with rfl | rfl ; assumption
     exact p.dart_snd_mem_support_of_mem_darts he₁
@@ -88,7 +87,7 @@ def follow_path (p : G.Path x y) : H.Path (φ.f x) (φ.f y) :=
 
 def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEmbedding G₁ G₃ where
   f := φ.f.trans ψ.f
-  df e := ⟨ψ.follow (φ.df e), sorry⟩
+  df e := ⟨ψ.follow (φ.df e), isPath_follow (φ.df e).isPath⟩
   symm e := by congr ; simp [φ.symm]
   ends := sorry
   disj := sorry
