@@ -1,6 +1,6 @@
 import Mathlib
 
-open Set SimpleGraph
+open Set SimpleGraph Function
 
 variable {α β γ : Type*} {G G₁ : SimpleGraph α} {H G₂ : SimpleGraph β} {G₃ : SimpleGraph γ}
 
@@ -134,25 +134,11 @@ def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEm
 -- theorem trans : embeds_into G G' → embeds_into G' G'' → embeds_into G G'' :=
 -- λ ⟨F⟩ ⟨F'⟩, ⟨comp F F'⟩
 
--- def from_hom (f : G →g G') (inj : injective f) : path_embedding G G' :=
--- { f := ⟨f, inj⟩,
---   df := λ e, cons (f.map_rel' e.is_adj) nil,
---   nodup := λ e, by {
---     simp only [support_cons, embedding.coe_fn_mk, support_nil, rel_hom.coe_fn_to_fun,
---               list.nodup_cons, list.mem_singleton, list.not_mem_nil, not_false_iff,
---               list.nodup_nil, and_true],
---     exact G'.ne_of_adj (f.map_rel' e.is_adj) },
---   sym := λ e, by {
---     simp only [dart.symm, reverse_cons, reverse_nil, nil_append, rel_hom.coe_fn_to_fun,
---               embedding.coe_fn_mk, eq_self_iff_true, heq_iff_eq, and_self], simp },
---   --
---   endpoint := λ e x h, by {
---     simp only [embedding.coe_fn_mk, support_cons, support_nil, rel_hom.coe_fn_to_fun,
---               list.mem_cons_iff, list.mem_singleton] at h,
---     simp only [dart.edge, sym2.mem_iff], rcases e with ⟨⟨ex,ey⟩,eh⟩, simp,
---     cases h, { left, exact inj h }, { right, exact inj h } },
---   --
---   disjoint := by { intros e e' z h₁ h₂, right, cases h₁, subst h₁, exact ⟨e.fst,rfl⟩,
---     cases h₁, subst h₁, exact ⟨e.snd,rfl⟩, cases h₁ } }
+def of_hom (f : G →g H) (hf : Injective f) : PathEmbedding G H where
+  f := ⟨f, hf⟩
+  df e := .singleton $ f.map_rel e.adj
+  symm e := rfl
+  ends := by simp ; grind
+  disj := by simp
 
 end PathEmbedding
