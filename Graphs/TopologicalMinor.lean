@@ -2,7 +2,7 @@ import Mathlib
 
 open Set SimpleGraph
 
-variable {α β : Type*} {G : SimpleGraph α} {H : SimpleGraph β}
+variable {α β γ : Type*} {G G₁ : SimpleGraph α} {H G₂ : SimpleGraph β} {G₃ : SimpleGraph γ}
 
 structure PathEmbedding (G : SimpleGraph α) (H : SimpleGraph β) where
   f : α ↪ β
@@ -12,11 +12,13 @@ structure PathEmbedding (G : SimpleGraph α) (H : SimpleGraph β) where
   ends e x : f x ∈ (df e).1.support ↔ x = e.fst ∨ x = e.snd
   disj e e' v : v ∈ (df e).1.support → v ∈ (df e').1.support → e = e' ∨ v ∈ range f
 
-def TopologicalMinor (G : SimpleGraph α) (H : SimpleGraph β) := Nonempty (PathEmbedding G H)
+def IsTopologicalMinor (G : SimpleGraph α) (H : SimpleGraph β) := Nonempty (PathEmbedding G H)
 
-infix:50 " ≼t " => TopologicalMinor
+infix:50 " ≼t " => IsTopologicalMinor
 
 namespace PathEmbedding
+
+variable {φ : PathEmbedding G H} {x y z : α} {p : G.Walk x y} {p' : G.Walk y z} {u : β}
 
 def self (G : SimpleGraph α) : PathEmbedding G G where
   f := .refl α
@@ -27,58 +29,31 @@ def self (G : SimpleGraph α) : PathEmbedding G G where
 
 theorem refl (G : SimpleGraph α) : G ≼t G := ⟨self G⟩
 
-def follow (φ : PathEmbedding G H) : ∀ x y : α, G.Walk x y → H.Walk (φ.f x) (φ.f y)
+def follow (φ : PathEmbedding G H) : ∀ {x y : α}, G.Walk x y → H.Walk (φ.f x) (φ.f y)
   | _, _, Walk.nil      => Walk.nil
-  | _, _, Walk.cons h p => (φ.df ⟨(_, _), h⟩).1.append (follow φ _ _ p)
+  | _, _, Walk.cons h p => (φ.df ⟨(_, _), h⟩).1.append (φ.follow p)
 
+@[simp] lemma follow_nil : φ.follow (Walk.nil (u := x)) = Walk.nil := rfl
 
+@[simp] lemma follow_cons {h : G.Adj z x} : φ.follow (Walk.cons h p) =
+    (φ.df ⟨(_, _), h⟩).1.append (φ.follow p) :=
+  rfl
 
-end PathEmbedding
+@[simp] lemma follow_append : φ.follow (p.append p') = (φ.follow p).append (φ.follow p') := by
+  induction p with
+  | nil => rfl
+  | cons h p ih => simp [ih, Walk.append_assoc]
 
--- structure path_embedding (G : simple_graph V) (G' : simple_graph V') :=
---   (f        : V ↪ V')
---   (df       : Π e : G.dart, G'.walk (f e.fst) (f e.snd))
---   --
---   (nodup    : ∀ e : G.dart, (df e).support.nodup)
---   (sym      : ∀ e : G.dart, df e.symm = (df e).reverse)
---   --
---   (endpoint : ∀ {e x}, f x ∈ (df e).support → x ∈ e.edge)
---   --
---   (disjoint : ∀ {e e' z}, z ∈ (df e).support → z ∈ (df e').support →
---     e.edge = e'.edge ∨ ∃ x, z = f x)
+@[simp] lemma follow_reverse : φ.follow (p.reverse) = (φ.follow p).reverse := by
+  induction p with
+  | nil => rfl
+  | cons h p ih => have := φ.symm ⟨(_, _), h⟩ ; simp_all
 
--- def embeds_into (G : simple_graph V) (G' : simple_graph V') := nonempty (path_embedding G G')
-
--- infix ` ≼t `:50 := embeds_into -- TODO rename as topological minor
-
--- namespace path_embedding
-
--- variables {G : simple_graph V} {G' : simple_graph V'} {G'' : simple_graph V''}
--- variables (F : path_embedding G G')
--- variables {x y z : V} {x' y' z' : V'} {p : walk G x y} {p' : walk G y z}
-
--- lemma nop {e : G.dart} : 0 < (F.df e).length :=
--- pos_iff_ne_zero.mpr $ λ h, G.ne_of_adj e.is_adj $ F.f.injective $ point_of_size_0 h
-
--- @[simp] def follow : Π {x y : V}, walk G x y → walk G' (F.f x) (F.f y)
--- | _ _ nil        := nil
--- | _ _ (cons h p) := F.df ⟨⟨_,_⟩,h⟩ ++ follow p
-
--- @[simp] lemma follow_append : follow F (p ++ p') = follow F p ++ follow F p' :=
--- by { induction p, refl, simp only [cons_append,append_assoc,p_ih,follow] }
-
--- lemma mem_follow (h₁ : 0 < p.length) (h₂ : z' ∈ (follow F p).support) :
---   ∃ e ∈ darts p, z' ∈ (F.df e).support :=
--- begin
---   induction p with u u v w h p ih, {simp at h₁, contradiction}, clear h₁,
---   simp only [follow, mem_support_append_iff] at h₂, cases h₂,
---   { exact ⟨⟨⟨_,_⟩, h⟩, or.inl rfl, h₂⟩ },
---   { cases p,
---     { refine ⟨⟨⟨_,_⟩,h⟩, or.inl rfl, _⟩, simp only [follow, support_nil, list.mem_singleton] at h₂,
---       rw h₂, exact end_mem_support _ },
---     { specialize ih _ h₂, simp only [length_cons, nat.succ_pos'],
---       choose e h₃ h₄ using ih, exact ⟨e, or.inr h₃, h₄⟩ } }
--- end
+lemma mem_follow (hp : 0 < p.length)
+    (hz : u ∈ (φ.follow p).support) : ∃ e ∈ p.darts, u ∈ (φ.df e).1.support := by
+  induction p with
+  | nil => contradiction
+  | cons e p ih => simp at hz ; cases hz <;> cases p <;> simp_all
 
 -- lemma follow_nodup {p : walk G x y} (h : p.support.nodup) : (follow F p).support.nodup :=
 -- begin
@@ -105,12 +80,12 @@ end PathEmbedding
 --         { rw h10 } } } }
 -- end
 
--- lemma follow_rev {p : walk G x y} : follow F p.reverse = (follow F p).reverse :=
--- begin
---   induction p with u u v w h p ih, refl,
---   simp only [ih.symm, follow, reverse_cons, follow_append, append_nil, reverse_append],
---   congr, exact F.sym ⟨⟨_,_⟩,h⟩
--- end
+def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEmbedding G₁ G₃ where
+  f := φ.f.trans ψ.f
+  df e := ⟨ψ.follow (φ.df e), sorry⟩
+  symm e := by congr ; simp [φ.symm]
+  ends := sorry
+  disj := sorry
 
 -- def comp (F : path_embedding G G') (F' : path_embedding G' G'') : path_embedding G G'' :=
 -- { f := ⟨F'.f ∘ F.f, injective.comp F'.f.inj' F.f.inj'⟩,
@@ -175,5 +150,4 @@ end PathEmbedding
 --   disjoint := by { intros e e' z h₁ h₂, right, cases h₁, subst h₁, exact ⟨e.fst,rfl⟩,
 --     cases h₁, subst h₁, exact ⟨e.snd,rfl⟩, cases h₁ } }
 
--- end path_embedding
--- end simple_graph
+end PathEmbedding
