@@ -10,7 +10,7 @@ structure PathEmbedding (G : SimpleGraph α) (H : SimpleGraph β) where
   --
   symm e : df e.symm = (df e).reverse
   ends {e x} : f x ∈ (df e).1.support ↔ x = e.fst ∨ x = e.snd
-  disj {e e' v} : v ∈ (df e).1.support → v ∈ (df e').1.support → e = e' ∨ v ∈ range f
+  disj {e e' v} : v ∈ (df e).1.support → v ∈ (df e').1.support → (e = e' ∨ e = e'.symm) ∨ v ∈ range f
 
 def IsTopologicalMinor (G : SimpleGraph α) (H : SimpleGraph β) := Nonempty (PathEmbedding G H)
 
@@ -77,7 +77,8 @@ theorem isPath_follow (hp : p.IsPath) : (φ.follow p).IsPath := by
     contrapose hp₂
     obtain ⟨e, he₁, he₂⟩ := (mem_follow hp₀).1 hu'
     have h7 := p.dart_fst_mem_support_of_mem_darts he₁
-    rcases φ.disj he₂ hu with rfl | ⟨x, rfl⟩ ; assumption
+    have h8 := p.dart_snd_mem_support_of_mem_darts he₁
+    rcases φ.disj he₂ hu with h | ⟨x, rfl⟩ ; rcases h with rfl | rfl <;> assumption
     rcases φ.ends.1 hu with rfl | rfl ; swap ; contradiction
     rcases φ.ends.1 he₂ with rfl | rfl ; assumption
     exact p.dart_snd_mem_support_of_mem_darts he₁
@@ -108,46 +109,34 @@ def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEm
   df e := ⟨ψ.follow (φ.df e), isPath_follow (φ.df e).isPath⟩
   symm e := by congr ; simp [φ.symm]
   ends := by simp [mem_follow df_length_pos, ψ.ends, ← toto df_length_pos, φ.ends]
-  disj := sorry
+  disj {e₁ e₂ a ha₁ ha₂} := by
+    rw [mem_follow df_length_pos] at ha₁ ha₂
+    obtain ⟨e'₁, he'₁, h'e'₁⟩ := ha₁
+    obtain ⟨e'₂, he'₂, h'e'₂⟩ := ha₂
+    have h1 := Walk.dart_fst_mem_support_of_mem_darts _ he'₁
+    have h2 := Walk.dart_snd_mem_support_of_mem_darts _ he'₁
+    have h3 := Walk.dart_fst_mem_support_of_mem_darts _ he'₂
+    have h4 := Walk.dart_snd_mem_support_of_mem_darts _ he'₂
+    rcases ψ.disj h'e'₁ h'e'₂ with (rfl | rfl) | ⟨x, rfl⟩
+    · rcases φ.disj h1 h3 with (rfl | rfl) | ⟨x, h5⟩ ; simp ; simp
+      rcases φ.disj h2 h4 with (rfl | rfl) | ⟨y, h6⟩ ; simp ; simp
+      rw [← h5] at h1 h3 ; rw [← h6] at h2 h4 ; rw [φ.ends] at h1 h2 h3 h4
+      have h7 := G₁.ne_of_adj e₁.adj ; have h8 := G₁.ne_of_adj e₂.adj
+      rcases h1 with rfl | rfl <;> rcases h2 with rfl | rfl <;> cases h3 <;> cases h4 <;>
+        simp_all [Dart.ext_iff, Prod.ext_iff]
+    · rcases φ.disj h1 h4 with (rfl | rfl) | ⟨x, h5⟩ ; simp ; simp
+      rcases φ.disj h2 h3 with (rfl | rfl) | ⟨y, h6⟩ ; simp ; simp
+      simp_all ; rw [← h5] at h1 h4 ; rw [← h6] at h2 h3 ; rw [φ.ends] at h1 h2 h3 h4
+      have h7 := G₁.ne_of_adj e₁.adj ; have h8 := G₁.ne_of_adj e₂.adj
+      rcases h1 with rfl | rfl <;> rcases h2 with rfl | rfl <;> cases h3 <;> cases h4 <;>
+        simp_all [Dart.ext_iff, Prod.ext_iff]
+    · rw [ψ.ends] at h'e'₁ h'e'₂
+      have h7 : x ∈ (φ.df e₁).1.support := by rcases h'e'₁ with rfl | rfl <;> assumption
+      have h8 : x ∈ (φ.df e₂).1.support := by rcases h'e'₂ with rfl | rfl <;> assumption
+      rcases φ.disj h7 h8 with (rfl | rfl) | ⟨y, rfl⟩ <;> simp
 
--- def comp (F : path_embedding G G') (F' : path_embedding G' G'') : path_embedding G G'' :=
--- { f := ⟨F'.f ∘ F.f, injective.comp F'.f.inj' F.f.inj'⟩,
---   df := λ e, follow F' (F.df e),
---   --
---   nodup := λ e, (follow_nodup F') (F.nodup _),
---   sym := by { intro e, rewrite F.sym e, apply follow_rev },
---   --
---   endpoint := by {
---     intros e x h1, obtain ⟨e',h4,h5⟩ := mem_follow F' (nop F) h1,
---     exact F.endpoint ((walk.mem_of_edges (nop _)).mpr ⟨e',h4,F'.endpoint h5⟩)
---   },
---   --
---   disjoint := by {
---     intros e e' z h1 h2,
---     replace h1 := mem_follow _ (nop _) h1, obtain ⟨e1,h3,h4⟩ := h1,
---     replace h2 := mem_follow _ (nop _) h2, obtain ⟨e2,h5,h6⟩ := h2,
---     have h7 := F'.disjoint h4 h6, cases h7,
---     { left, clear h4 h6, replace h3 := walk.mem_edges h3, replace h5 := walk.mem_edges h5,
---       replace h5 : e1.fst ∈ (F.df e').support ∧ e1.snd ∈ (F.df e').support :=
---       by { cases (dart_edge_eq_iff e1 e2).mp h7; subst e1,
---         exact h5, simp only [dart.symm], exact h5.symm },
---       cases F.disjoint h3.1 h5.1 with h10 h10, exact h10, obtain ⟨x,h10⟩ := h10, rw h10 at h3 h5,
---       cases F.disjoint h3.2 h5.2 with h11 h11, exact h11, obtain ⟨y,h11⟩ := h11, rw h11 at h3 h5,
---       have h12 := F.endpoint h3.1, have h13 := F.endpoint h3.2,
---       have h14 := F.endpoint h5.1, have h15 := F.endpoint h5.2,
---       have h16 : x ≠ y := by { intro h, apply G'.ne_of_adj e1.is_adj, convert congr_arg F.f h },
---       exact sym2.eq_of_ne_mem h16 h12 h13 h14 h15 },
---     { obtain ⟨y,h8⟩ := h7, subst z, replace h4 := F'.endpoint h4, replace h6 := F'.endpoint h6,
---       replace h3 := walk.mem_edges h3, replace h5 := walk.mem_edges h5,
---       replace h3 : y ∈ (F.df e).support, by { simp only [dart.edge, sym2.mem_iff] at h4,
---         rcases e1 with ⟨⟨e1x,e1y⟩,e1h⟩, simp at h4,
---         cases h4; subst h4, exact h3.1, exact h3.2 },
---       replace h5 : y ∈ (F.df e').support, by { simp only [dart.edge, sym2.mem_iff] at h6,
---         rcases e2 with ⟨⟨e2x,e2y⟩,e2h⟩, simp at h6,
---         cases h6; subst h6, exact h5.1, exact h5.2 },
---       cases F.disjoint h3 h5 with h9 h9,
---       { left, exact h9 },
---       { obtain ⟨x,h9⟩ := h9, subst h9, right, use x, refl } } } }
+theorem IsTopologicalMinor.trans (h₁₂ : G₁ ≼t G₂) (h₂₃ : G₂ ≼t G₃) : G₁ ≼t G₃ := by
+  obtain ⟨φ⟩ := h₁₂ ; obtain ⟨ψ⟩ := h₂₃ ; exact ⟨φ.trans ψ⟩
 
 -- theorem trans : embeds_into G G' → embeds_into G' G'' → embeds_into G G'' :=
 -- λ ⟨F⟩ ⟨F'⟩, ⟨comp F F'⟩
