@@ -138,9 +138,6 @@ def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEm
 theorem IsTopologicalMinor.trans (h₁₂ : G₁ ≼t G₂) (h₂₃ : G₂ ≼t G₃) : G₁ ≼t G₃ := by
   obtain ⟨φ⟩ := h₁₂ ; obtain ⟨ψ⟩ := h₂₃ ; exact ⟨φ.trans ψ⟩
 
--- theorem trans : embeds_into G G' → embeds_into G' G'' → embeds_into G G'' :=
--- λ ⟨F⟩ ⟨F'⟩, ⟨comp F F'⟩
-
 def of_hom (f : G →g H) (hf : Injective f) : PathEmbedding G H where
   f := ⟨f, hf⟩
   df e := .singleton $ f.map_rel e.adj
