@@ -72,7 +72,7 @@ wheels = [
 
 [[package]]
 name = "leanblueprint"
-version = "0.0.19"
+version = "0.0.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -85,9 +85,9 @@ dependencies = [
     { name = "rich-click" },
     { name = "tomlkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/af/ee/f264c149e709dfd20f732f92cca77d11434e79db9929153040a4c52d1e0d/leanblueprint-0.0.19.tar.gz", hash = "sha256:f659ff511ffea9bf8861ca3198a95bea3fd4245c45ce53493b2d0298e0d2ac2f", size = 33933, upload-time = "2025-11-28T14:00:10.633Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b9/1d/48aa0c5e500ed155a8111d60a752cb9c11493d327b6018ebdc3fee4b80d2/leanblueprint-0.0.20.tar.gz", hash = "sha256:5e6a704519f2a58ce744870a01141bd768eff9718a1cb4ee0f77747ec7d4590f", size = 34184, upload-time = "2025-12-23T15:56:54.11Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/76/60/7af36b9daf4c20a618e6824420b7fd0d57a4927ae920b40717f2115d3757/leanblueprint-0.0.19-py3-none-any.whl", hash = "sha256:c029745bd623c97a5b21c0ecec585bb0fbc1290be370f79c6103631083daa58a", size = 34263, upload-time = "2025-11-28T14:00:08.4Z" },
+    { url = "https://files.pythonhosted.org/packages/51/fa/25ddd38e95e3ea1f0682cd3c69bfb655f02604c727597cf78c03c6bba4e8/leanblueprint-0.0.20-py3-none-any.whl", hash = "sha256:9973ec7c72b4ac125bdf3146955076bcaa57897f1997f39b4b99eb50567cc2a8", size = 34443, upload-time = "2025-12-23T15:56:52.733Z" },
 ]
 
 [[package]]
