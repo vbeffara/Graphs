@@ -2,7 +2,7 @@ import Mathlib
 
 -- No need for Ramsey theory for this, it is in mathlib already
 
-theorem toto {X : Type*} [Preorder X] {f : ℕ → X} :
+theorem StrictAnti_iff_descending {X : Type*} [Preorder X] {f : ℕ → X} :
     StrictAnti f ↔ ∀ n, f (n + 1) < f n := by
   refine ⟨?_, strictAnti_nat_of_succ_lt⟩
   intro h n
@@ -10,11 +10,17 @@ theorem toto {X : Type*} [Preorder X] {f : ℕ → X} :
 
 example {X : Type*} [PartialOrder X] :
     WellQuasiOrderedLE X ↔
-    (¬ ∃ s : Set X, Set.Infinite s ∧ IsAntichain (· ≤ ·) s) ∧
-    (¬ ∃ f : ℕ → X, StrictAnti f)
+    (∀ s : Set X, IsAntichain (· ≤ ·) s → Set.Finite s) ∧
+    (∀ f : ℕ → X, ¬ StrictAnti f)
     := by
   rw [wellQuasiOrderedLE_iff, and_comm]
-  convert Iff.rfl
-  · push_neg
-    simp only [← Set.not_finite, not_imp_not]
-  · simp [WellFoundedLT, isWellFounded_iff, wellFounded_iff_isEmpty_descending_chain, ← toto, isEmpty_subtype]
+  simp [WellFoundedLT, isWellFounded_iff, wellFounded_iff_isEmpty_descending_chain,
+    ← StrictAnti_iff_descending, isEmpty_subtype]
+
+variable {α : Type*} [Preorder α]
+
+def FinsetLE (s t : Finset α) : Prop := ∃ f : s ↪ t, ∀ x : s, x.val ≤ f x
+
+-- Lemma 12.1.3
+theorem WQO_Finset (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := α)) := by
+  sorry
