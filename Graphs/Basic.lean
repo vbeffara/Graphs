@@ -10,6 +10,25 @@ namespace SimpleGraph
 def IsSmaller (G : SimpleGraph V) (G' : SimpleGraph V') : Prop :=
   ∃ f : G →g G', Injective f
 
+def IsSmaller' (G : SimpleGraph V) (G' : SimpleGraph V') : Prop :=
+  ∃ H : Subgraph G', Nonempty (G ≃g H.coe)
+
+def subgraph_map (f : G →g G') : Subgraph G' where
+  verts := range f
+  Adj x' y' := ∃ x y, x' = f x ∧ y' = f y ∧ G.Adj x y
+  adj_sub := by rintro _ _ ⟨x, y, rfl, rfl, h⟩ ; exact f.map_rel h
+  edge_vert := by grind
+  symm := by rintro _ _ ⟨x, y, rfl, rfl, h⟩ ; refine ⟨y, x, rfl, rfl, h.symm⟩
+
+noncomputable def subgraph_map_iso (f : G →g G') (hf : Injective f) : G ≃g (subgraph_map f).coe where
+  toEquiv := Equiv.ofInjective f hf
+  map_rel_iff' {x y} := by simp only [subgraph_map, Equiv.ofInjective_apply, Subgraph.coe_adj] ; grind
+
+theorem isSmaller_iff_isSmaller' : IsSmaller G G' ↔ IsSmaller' G G' := by
+  constructor
+  · rintro ⟨f, hf⟩ ; exact ⟨_, ⟨subgraph_map_iso f hf⟩⟩
+  · rintro ⟨H, ⟨f⟩⟩ ; exact ⟨H.hom.comp f.toHom, by simpa using f.injective⟩
+
 infix:50 " ≼s " => IsSmaller
 
 namespace IsSmaller
