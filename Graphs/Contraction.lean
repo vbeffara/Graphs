@@ -1,4 +1,5 @@
 import Mathlib
+import Graphs.Map
 
 open Function
 
@@ -11,7 +12,10 @@ namespace SimpleGraph
 def Adapted (G : SimpleGraph V) (f : V → V') : Prop :=
   ∀ ⦃x y : V⦄, f x = f y → ∃ p : Walk G x y, ∀ z ∈ p.support, f z = f y
 
-theorem adapted_iff_preconnected : Adapted G f ↔ ∀ x' : V', (G.induce (f ⁻¹' {x'})).Preconnected := by
+def Adapted' (G : SimpleGraph V) (f : V → V') : Prop :=
+  ∀ v, Preconnected (G.induce (f ⁻¹' {v}))
+
+theorem adapted_iff_adapted' : Adapted G f ↔ Adapted' G f := by
   constructor
   · intro h x' ⟨x, hx⟩ ⟨y, hy⟩
     simp at hx hy
@@ -38,6 +42,9 @@ namespace Adapted
 
 lemma of_injective (h : Injective f) : Adapted G f := by
   rintro x y hxy ; rw [h hxy] ; exact ⟨Walk.nil, by simp⟩
+
+lemma of_injective' (h : Injective f) : Adapted' G f := by
+  rintro v ⟨x, hx⟩ ⟨y, hy⟩ ; simp only [h $ Eq.trans hx hy.symm, Reachable.rfl]
 
 -- -- noncomputable def lift_path_aux (hf : Adapted f G) (p : walk (map f G) x' y') :
 -- --   Π (x y : V), f x = x' → f y = y' → {q : walk G x y // ∀ z ∈ q.support, f z ∈ p.support} :=
@@ -90,10 +97,10 @@ lemma of_injective (h : Injective f) : Adapted G f := by
 
 end Adapted
 
--- -- def is_contraction (G : SimpleGraph V) (G' : SimpleGraph V') : Prop :=
--- -- ∃ φ : V' → V, surjective φ ∧ Adapted φ G' ∧ G = map φ G'
+def IsContraction (G : SimpleGraph V) (G' : SimpleGraph V') : Prop :=
+∃ φ : V' → V, Surjective φ ∧ Adapted G' φ ∧ G = G'.map' φ
 
--- -- infix ` ≼c `:50 := is_contraction
+infix:50 " ≼c " => IsContraction
 
 -- -- namespace is_contraction
 
