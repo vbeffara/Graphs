@@ -1,19 +1,29 @@
--- import Mathlib.Combinatorics.SimpleGraph.Connectivity
--- import Untitled.Graphs.Map
+import Mathlib
 
--- set_option autoImplicit false
+open Function
 
--- -- import graph_theory.pushforward graph_theory.path
--- -- open function classical
+variable {V V' V'' : Type*} {x y z : V} {x' y' z' : V'} {f : V → V'} {g : V' → V''}
+variable {G H : SimpleGraph V} {G' H' : SimpleGraph V'} {G'' : SimpleGraph V''}
 
--- variable {V V' V'' : Type*} {x y z : V} {x' y' z' : V'} {f : V → V'} {g : V' → V''}
--- variable {G H : SimpleGraph V} {G' H' : SimpleGraph V'} {G'' : SimpleGraph V''}
+namespace SimpleGraph
 
--- namespace SimpleGraph
+/-! A function is adapted to a graph if its level sets are connected -/
+def Adapted (G : SimpleGraph V) (f : V → V') : Prop :=
+  ∀ ⦃x y : V⦄, f x = f y → ∃ p : Walk G x y, ∀ z ∈ p.support, f z = f y
 
--- /-! A function is adapted to a graph if its level sets are connected -/
--- def Adapted (G : SimpleGraph V) (f : V → V') : Prop :=
---   ∀ ⦃x y : V⦄, f x = f y → ∃ p : Walk G x y, ∀ z ∈ p.support, f z = f y
+theorem adapted_iff_preconnected : Adapted G f ↔ ∀ x' : V', (G.induce (f ⁻¹' {x'})).Preconnected := by
+  constructor
+  · intro h x' ⟨x, hx⟩ ⟨y, hy⟩
+    simp at hx hy
+    subst hy
+    obtain ⟨p, hp⟩ := h hx
+    use p.induce (f ⁻¹' {f y}) hp
+  · intro h x y hxy
+    obtain ⟨p⟩ := h (f y) ⟨x, hxy⟩ ⟨y, rfl⟩
+    use Walk.map (Embedding.induce _).toHom p
+    simp only [Walk.support_map, List.mem_map]
+    rintro z ⟨a, ha1, rfl⟩
+    exact a.2
 
 -- lemma merge_edge_adapted [DecidableEq V] {e : G.Dart} : G.Adapted (merge_edge e) := by
 --   rintro x y hxy
@@ -24,13 +34,10 @@
 --   · use Walk.nil.cons e.is_adj ; simp
 --   · use Walk.nil ; simp [hy]
 
--- -- namespace Adapted
+namespace Adapted
 
--- -- lemma of_injective : injective f → Adapted f G :=
--- -- begin
--- --   rintro hf x y h, have := hf h, subst this, use walk.nil,
--- --   rintro z, simp only [walk.support_nil, list.mem_singleton], exact congr_arg f
--- -- end
+lemma of_injective (h : Injective f) : Adapted G f := by
+  rintro x y hxy ; rw [h hxy] ; exact ⟨Walk.nil, by simp⟩
 
 -- -- noncomputable def lift_path_aux (hf : Adapted f G) (p : walk (map f G) x' y') :
 -- --   Π (x y : V), f x = x' → f y = y' → {q : walk G x y // ∀ z ∈ q.support, f z ∈ p.support} :=
@@ -80,7 +87,8 @@
 -- --   rintro hf hg x y hxy, obtain ⟨p, hp⟩ := hg hxy,
 -- --   exact ⟨Adapted.lift_path' hf p, λ z hz, hp (f z) (Adapted.mem_lift_path' hz)⟩,
 -- -- end
--- -- end Adapted
+
+end Adapted
 
 -- -- def is_contraction (G : SimpleGraph V) (G' : SimpleGraph V') : Prop :=
 -- -- ∃ φ : V' → V, surjective φ ∧ Adapted φ G' ∧ G = map φ G'
@@ -147,4 +155,4 @@
 
 -- -- end is_contraction
 
--- end SimpleGraph
+end SimpleGraph
