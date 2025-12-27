@@ -1,7 +1,7 @@
 import Mathlib
 import Graphs.Map
 
-open Function
+open Function Set
 
 variable {V V' V'' : Type*} {x y z : V} {x' y' z' : V'} {f : V → V'} {g : V' → V''}
 variable {G H : SimpleGraph V} {G' H' : SimpleGraph V'} {G'' : SimpleGraph V''}
@@ -45,6 +45,8 @@ lemma of_injective (h : Injective f) : Adapted G f := by
 
 lemma of_injective' (h : Injective f) : Adapted' G f := by
   rintro v ⟨x, hx⟩ ⟨y, hy⟩ ; simp only [h $ Eq.trans hx hy.symm, Reachable.rfl]
+
+lemma id : Adapted G id := of_injective injective_id
 
 -- -- noncomputable def lift_path_aux (hf : Adapted f G) (p : walk (map f G) x' y') :
 -- --   Π (x y : V), f x = x' → f y = y' → {q : walk G x y // ∀ z ∈ q.support, f z ∈ p.support} :=
@@ -102,10 +104,32 @@ def IsContraction (G : SimpleGraph V) (G' : SimpleGraph V') : Prop :=
 
 infix:50 " ≼c " => IsContraction
 
--- -- namespace is_contraction
+namespace IsContraction
 
--- -- @[refl] lemma refl : G ≼c G :=
--- -- ⟨id,surjective_id,Adapted.of_injective injective_id,map.id.symm⟩
+@[refl] theorem refl : G ≼c G := ⟨id, surjective_id, Adapted.id, map'_id.symm⟩
+
+lemma equiv_left (h1 : G ≃g G') (h2 : G' ≼c G'') : G ≼c G'' := by
+  obtain ⟨φ, h3, h4, rfl⟩ := h2
+  refine ⟨h1.toEquiv.symm ∘ φ, by simpa using h3, ?_, ?_⟩
+  · rw [adapted_iff_adapted'] at h4 ⊢
+    intro v
+    rw [preimage_comp, ← Equiv.image_eq_preimage_symm, image_singleton]
+    apply h4
+  · ext x y
+    constructor
+    · intro h
+      have := h1.map_rel_iff.2 h
+      obtain ⟨huv, u, v, h5, h6, h7⟩ := this
+      refine ⟨h.ne, u, v, h5, ?_, ?_⟩
+      · simp [h6]
+        exact h1.symm_apply_apply x
+      · simp [h7]
+        exact h1.symm_apply_apply y
+    · rintro ⟨h5, u, v, h6, rfl, rfl⟩
+      rw [← h1.map_rel_iff]
+      refine ⟨h1.injective.ne h5, u, v, h6, ?_, ?_⟩
+      · exact h1.apply_symm_apply (φ u) |>.symm
+      · exact h1.apply_symm_apply (φ v) |>.symm
 
 -- -- lemma of_iso : G ≃g G' → G ≼c G' :=
 -- -- λ φ, let ψ := φ.symm in ⟨ψ, ψ.surjective, Adapted.of_injective ψ.injective, map.from_iso ψ⟩
@@ -160,6 +184,6 @@ infix:50 " ≼c " => IsContraction
 -- --       { simp only [select.fmap, subtype.map] at h₇, exact h₇ } } }
 -- -- end
 
--- -- end is_contraction
+end IsContraction
 
 end SimpleGraph

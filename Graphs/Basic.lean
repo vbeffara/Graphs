@@ -24,6 +24,13 @@ noncomputable def subgraph_map_iso (f : G →g G') (hf : Injective f) : G ≃g (
   toEquiv := Equiv.ofInjective f hf
   map_rel_iff' {x y} := by simp only [subgraph_map, Equiv.ofInjective_apply, Subgraph.coe_adj] ; grind
 
+def ofSet (G : SimpleGraph V) (S : Set V) : Subgraph G where
+  verts := S
+  Adj x y := x ∈ S ∧ y ∈ S ∧ G.Adj x y
+  adj_sub := by grind
+  symm := by grind [Symmetric, G.adj_comm]
+  edge_vert := by grind
+
 theorem isSmaller_iff_isSmaller' : IsSmaller G G' ↔ IsSmaller' G G' := by
   constructor
   · rintro ⟨f, hf⟩ ; exact ⟨_, ⟨subgraph_map_iso f hf⟩⟩

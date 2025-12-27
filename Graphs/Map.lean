@@ -18,6 +18,10 @@ theorem map'_eq_map_of_injective (hf : Injective f) : G.map' f = G.map ⟨f, hf�
   rintro u v huv rfl rfl
   apply hf.ne huv.ne
 
+@[simp] theorem map'_id : map' id G = G := by
+  ext x y
+  simpa [map'] using Adj.ne
+
 theorem map'_adj (h : G.Adj x y) : f x = f y ∨ (map' f G).Adj (f x) (f y) := by
   simp [map', Relation.Map] ; grind
 
