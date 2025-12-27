@@ -1,0 +1,29 @@
+\chapter{Graph Minors}
+
+\section{Well-quasi-ordering}
+
+\begin{proposition}
+  \label{WQO_iff} \lean{WQO_iff} \leanok
+  A quasi-ordering $\leq$ on $X$ is a well-quasi-ordering if and only if $X$
+  contains neither an infinite antichain nor an infinite strictly decreasing
+  sequence $x_0 > x_1 > \cdots$.
+\end{proposition}
+
+\begin{proof}
+  \leanok
+  Diestel's book uses Ramsey theory to prove this but in fact it is essentially
+  in mathlib already.
+\end{proof}
+
+\begin{corollary}
+  \label{WQO_incsubseq} \uses{WQO_iff}
+  If $X$ is well-quasi-ordered, then every infinite sequence in $X$ has an
+  infinite increasing subsequence.
+\end{corollary}
+
+\begin{lemma}
+  \label{WQO_finset} \lean{WQO_Finset}
+  If $X$ is well-quasi-ordered by , then so is $[X]^{<ω}$.
+\end{lemma}
+
+\section{The graph minor theorem for trees}
