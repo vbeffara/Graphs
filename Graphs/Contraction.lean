@@ -3,19 +3,19 @@ import Graphs.Map
 
 open Function Set
 
-variable {V V' V'' : Type*} {x y z : V} {x' y' z' : V'} {f : V → V'} {g : V' → V''}
-variable {G H : SimpleGraph V} {G' H' : SimpleGraph V'} {G'' : SimpleGraph V''}
+variable {α β γ : Type*} {x y z : α} {x' y' z' : β} {f : α → β} {g : β → γ}
+variable {G H : SimpleGraph α} {G' H' : SimpleGraph β} {G'' : SimpleGraph γ}
 
 namespace SimpleGraph
 
 /-! A function is adapted to a graph if its level sets are connected -/
-def Adapted' (G : SimpleGraph V) (f : V → V') : Prop :=
-  ∀ ⦃x y : V⦄, f x = f y → ∃ p : Walk G x y, ∀ z ∈ p.support, f z = f y
+def Adapted (G : SimpleGraph α) (f : α → β) : Prop :=
+  ∀ ⦃x y : α⦄, f x = f y → ∃ p : Walk G x y, ∀ z ∈ p.support, f z = f y
 
-def Adapted (G : SimpleGraph V) (f : V → V') : Prop :=
+def Adapted' (G : SimpleGraph α) (f : α → β) : Prop :=
   ∀ v, Preconnected (G.induce (f ⁻¹' {v}))
 
-theorem adapted_iff_adapted' : Adapted G f ↔ Adapted' G f := by
+theorem adapted_iff_adapted' : Adapted' G f ↔ Adapted G f := by
   constructor
   · intro h x y hxy
     obtain ⟨p⟩ := h (f y) ⟨x, hxy⟩ ⟨y, rfl⟩
@@ -24,7 +24,7 @@ theorem adapted_iff_adapted' : Adapted G f ↔ Adapted' G f := by
     rintro z ⟨a, ha1, rfl⟩
     exact a.2
   · intro h x' ⟨x, hx⟩ ⟨y, hy⟩
-    simp at hx hy
+    simp only [mem_preimage, mem_singleton_iff] at hx hy
     subst hy
     obtain ⟨p, hp⟩ := h hx
     use p.induce (f ⁻¹' {f y}) hp
@@ -40,17 +40,17 @@ theorem adapted_iff_adapted' : Adapted G f ↔ Adapted' G f := by
 
 namespace Adapted
 
-lemma of_injective' (h : Injective f) : Adapted' G f := by
-  rintro x y hxy ; rw [h hxy] ; exact ⟨Walk.nil, by simp⟩
-
 lemma of_injective (h : Injective f) : Adapted G f := by
+  rintro x y hxy ; rw [h hxy] ;
+  exact ⟨.nil, by simp only [Walk.support_nil, List.mem_cons, List.not_mem_nil, or_false, forall_eq]⟩
+
+lemma of_injective' (h : Injective f) : Adapted' G f := by
   rintro v ⟨x, hx⟩ ⟨y, hy⟩ ; simp only [h $ Eq.trans hx hy.symm, Reachable.rfl]
 
 lemma id : Adapted G id := of_injective injective_id
 
 noncomputable def lift_path (hf : Adapted G f) (p : Walk (map' f G) x' y') :
     ∀ x y, f x = x' → f y = y' → { q : Walk G x y // ∀ z ∈ q.support, f z ∈ p.support } := by
-  rw [adapted_iff_adapted'] at hf
   induction p with
   | nil =>
     rintro x y hxy rfl
@@ -73,7 +73,6 @@ noncomputable def lift_path' (hf : Adapted G f) (p : Walk (map' f G) (f x) (f y)
   lift_path hf p x y rfl rfl
 
 theorem comp (hf : Adapted G f) (hg : Adapted (map' f G) g) : Adapted G (g ∘ f) := by
-  rw [adapted_iff_adapted'] at hg ⊢
   intro x y hxy
   obtain ⟨p, hp⟩ := hg hxy
   exact ⟨lift_path' hf p, by grind⟩
@@ -100,8 +99,8 @@ theorem comp (hf : Adapted G f) (hg : Adapted (map' f G) g) : Adapted G (g ∘ f
 
 end Adapted
 
-def IsContraction (G : SimpleGraph V) (G' : SimpleGraph V') : Prop :=
-∃ φ : V' → V, Surjective φ ∧ Adapted G' φ ∧ G = G'.map' φ
+def IsContraction (G : SimpleGraph α) (G' : SimpleGraph β) : Prop :=
+∃ φ : β → α, Surjective φ ∧ Adapted G' φ ∧ G = G'.map' φ
 
 infix:50 " ≼c " => IsContraction
 
@@ -112,7 +111,8 @@ namespace IsContraction
 lemma iso_left (h1 : G ≃g G') (h2 : G' ≼c G'') : G ≼c G'' := by
   obtain ⟨φ, h3, h4, rfl⟩ := h2
   refine ⟨h1.toEquiv.symm ∘ φ, by simpa using h3, ?_, ?_⟩
-  · intro v
+  · rw [← adapted_iff_adapted'] at h4 ⊢
+    intro v
     rw [preimage_comp, ← Equiv.image_eq_preimage_symm, image_singleton]
     apply h4
   · ext x y
@@ -121,9 +121,9 @@ lemma iso_left (h1 : G ≃g G') (h2 : G' ≼c G'') : G ≼c G'' := by
       have := h1.map_rel_iff.2 h
       obtain ⟨huv, u, v, h5, h6, h7⟩ := this
       refine ⟨h.ne, u, v, h5, ?_, ?_⟩
-      · simp [h6]
+      · simp only [comp_apply, h6]
         exact h1.symm_apply_apply x
-      · simp [h7]
+      · simp only [comp_apply, h7]
         exact h1.symm_apply_apply y
     · rintro ⟨h5, u, v, h6, rfl, rfl⟩
       rw [← h1.map_rel_iff]
@@ -133,7 +133,7 @@ lemma iso_left (h1 : G ≃g G') (h2 : G' ≼c G'') : G ≼c G'' := by
 
 lemma iso_right (h1 : G ≼c G') (h2 : G' ≃g G'') : G ≼c G'' := by
   obtain ⟨φ, h3, h4, rfl⟩ := h1
-  refine ⟨φ ∘ h2.toEquiv.symm, by simp [h3], ?_⟩
+  refine ⟨φ ∘ h2.toEquiv.symm, by simp only [EquivLike.surjective_comp, h3], ?_⟩
 
   all_goals sorry
 
