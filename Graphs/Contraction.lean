@@ -108,46 +108,19 @@ namespace IsContraction
 
 @[refl] theorem refl : G ≼c G := ⟨id, surjective_id, Adapted.id, map'_id.symm⟩
 
-lemma iso_left (h1 : G ≃g G') (h2 : G' ≼c G'') : G ≼c G'' := by
-  obtain ⟨φ, h3, h4, rfl⟩ := h2
-  refine ⟨h1.toEquiv.symm ∘ φ, by simpa using h3, ?_, ?_⟩
-  · rw [← adapted_iff_adapted'] at h4 ⊢
-    intro v
-    rw [preimage_comp, ← Equiv.image_eq_preimage_symm, image_singleton]
-    apply h4
-  · ext x y
-    constructor
-    · intro h
-      have := h1.map_rel_iff.2 h
-      obtain ⟨huv, u, v, h5, h6, h7⟩ := this
-      refine ⟨h.ne, u, v, h5, ?_, ?_⟩
-      · simp only [comp_apply, h6]
-        exact h1.symm_apply_apply x
-      · simp only [comp_apply, h7]
-        exact h1.symm_apply_apply y
-    · rintro ⟨h5, u, v, h6, rfl, rfl⟩
-      rw [← h1.map_rel_iff]
-      refine ⟨h1.injective.ne h5, u, v, h6, ?_, ?_⟩
-      · exact h1.apply_symm_apply (φ u) |>.symm
-      · exact h1.apply_symm_apply (φ v) |>.symm
+@[trans] theorem trans : G ≼c G' → G' ≼c G'' → G ≼c G'' := by
+  rintro ⟨φ1, h1s, h1a, rfl⟩ ⟨φ2, h2s, h2a, rfl⟩
+  exact ⟨φ1 ∘ φ2, h1s.comp h2s, h2a.comp h1a, map'_map'⟩
 
-lemma iso_right (h1 : G ≼c G') (h2 : G' ≃g G'') : G ≼c G'' := by
-  obtain ⟨φ, h3, h4, rfl⟩ := h1
-  refine ⟨φ ∘ h2.toEquiv.symm, by simp only [EquivLike.surjective_comp, h3], ?_⟩
+theorem ofIso (φ : G ≃g G') : G ≼c G' := by
+  refine ⟨φ.symm, φ.symm.surjective, .of_injective φ.symm.injective, ?_⟩
+  ext x y ; refine ⟨fun h => ⟨h.ne, φ x, φ y, by simp [φ.map_rel_iff, h]⟩, ?_⟩
+  rintro ⟨-, u, v, h2, rfl, rfl⟩
+  simp only [← φ.map_rel_iff, RelIso.apply_symm_apply, h2]
 
-  all_goals sorry
+lemma iso_left (h1 : G ≃g G') (h2 : G' ≼c G'') : G ≼c G'' := trans (ofIso h1) h2
 
--- -- lemma of_iso : G ≃g G' → G ≼c G' :=
--- -- λ φ, let ψ := φ.symm in ⟨ψ, ψ.surjective, Adapted.of_injective ψ.injective, map.from_iso ψ⟩
-
--- -- @[trans] lemma trans : G ≼c G' → G' ≼c G'' → G ≼c G'' :=
--- -- begin
--- --   rintros ⟨φ,h₁,h₂,rfl⟩ ⟨ψ,h₄,h₅,rfl⟩,
--- --   exact ⟨φ ∘ ψ, h₁.comp h₄, h₅.comp_push h₂, congr_fun map.comp.symm G''⟩,
--- -- end
-
--- -- lemma iso_left : G ≃g G' -> G' ≼c G'' -> G ≼c G'' :=
--- -- trans ∘ of_iso
+lemma iso_right (h1 : G ≼c G') (h2 : G' ≃g G'') : G ≼c G'' := trans h1 (ofIso h2)
 
 -- -- lemma le_left_aux {f : V → V'} : H' ≤ map f G → H' = map f (G ⊓ pull' f H') :=
 -- -- begin
