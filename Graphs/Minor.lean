@@ -2,7 +2,7 @@ import Graphs.Contraction
 
 open SimpleGraph
 
-variable {α β γ : Type*} {G : SimpleGraph α} {H : SimpleGraph β} {K : SimpleGraph γ}
+variable {α β γ : Type*} {G G' : SimpleGraph α} {H : SimpleGraph β} {K : SimpleGraph γ}
 
 def IsMinor (G : SimpleGraph α) (H : SimpleGraph β) : Prop :=
   ∃ K : Subgraph H, G ≼c K.coe
@@ -26,6 +26,27 @@ theorem ofIso (h : G ≃g H) : G ≼ H :=
 theorem ofSubgraph (K : Subgraph H) : K.coe ≼ H := ⟨K, .refl⟩
 
 theorem ofContraction (h : G ≼c H) : G ≼ H := ⟨⊤, .iso_right h Subgraph.topIso.symm⟩
+
+theorem contract_left (h1 : G ≼c H) (h2 : H ≼ K) : G ≼ K := by
+  obtain ⟨L, hL⟩ := h2
+  refine ⟨L, h1.trans hL⟩
+
+theorem le_left (h1 : G ≤ G') (h2 : G' ≼ K) : G ≼ K := by
+  obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h2
+  let L' := L.coe ⊓ comap' φ G
+  all_goals sorry
+
+theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
+  obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
+  let ψ : L.coe →g map' φ L.coe := by
+    refine ⟨φ, ?_⟩
+    rintro a b hab
+    refine ⟨?_, ?_⟩
+    sorry
+  let L' := Subgraph.comap (G := L.coe) ?_ K
+
+
+  all_goals sorry
 
 theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by
   sorry
