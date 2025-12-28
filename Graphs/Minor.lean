@@ -51,14 +51,16 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   · ext ⟨x, hx⟩ ⟨y, hy⟩
     constructor
     · intro h
-      simp at h
       obtain ⟨hxy, a, b, h1, rfl, rfl⟩ := K.adj_sub h
-      refine ⟨by simpa, ⟨a, ?_⟩, ⟨b, ?_⟩, ?_, rfl, rfl⟩
-      · simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, hx]
-      · simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, hy]
-      · simpa [L', comap'_subgraph', comap'_subgraph, subgraph_inter, hx, hy, h1.ne, h] using h1
-    · sorry
-  all_goals sorry
+      simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter]
+      simp only [Subgraph.coe_adj] at h
+      refine ⟨by simpa, ⟨a, by simp [hx]⟩, ⟨b, by simp [hy]⟩, ?_, rfl, rfl⟩
+      simpa [hx, hy, h1.ne, h] using h1
+    · rintro ⟨h, ⟨a, ha⟩, ⟨b, hb⟩, hab, h1, h2⟩
+      simp at h1 h2 ⊢ ; subst h1 ; subst h2
+      simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter] at hab
+      obtain ⟨c, d, ⟨⟨h3, h4, h5, h6⟩⟩, rfl, rfl⟩ := hab
+      simp_all
 
 theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by
   sorry
