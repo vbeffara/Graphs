@@ -46,7 +46,10 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
     simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter] at hx
     obtain ⟨h, h'⟩ := hx
     exact h'
-  · sorry
+  · intro ⟨v, hv⟩
+    obtain ⟨a, ha'⟩ := hφ₁ v
+    refine ⟨⟨a, ?_⟩, by simp only [ha']⟩
+    simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, ha', hv]
   · sorry
   · ext ⟨x, hx⟩ ⟨y, hy⟩
     constructor
@@ -57,8 +60,6 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
       refine ⟨by simpa, ⟨a, by simp [hx]⟩, ⟨b, by simp [hy]⟩, ?_, rfl, rfl⟩
       simpa [hx, hy, h1.ne, h] using h1
     · rintro ⟨h, ⟨a, ha⟩, ⟨b, hb⟩, hab, h1, h2⟩
-      simp at h1 h2 ⊢ ; subst h1 ; subst h2
-      simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter] at hab
       obtain ⟨c, d, ⟨⟨h3, h4, h5, h6⟩⟩, rfl, rfl⟩ := hab
       simp_all
 
