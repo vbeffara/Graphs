@@ -9,25 +9,25 @@ variable {G H : SimpleGraph V} {G' H' : SimpleGraph V'} {G'' : SimpleGraph V''}
 namespace SimpleGraph
 
 /-! A function is adapted to a graph if its level sets are connected -/
-def Adapted (G : SimpleGraph V) (f : V → V') : Prop :=
+def Adapted' (G : SimpleGraph V) (f : V → V') : Prop :=
   ∀ ⦃x y : V⦄, f x = f y → ∃ p : Walk G x y, ∀ z ∈ p.support, f z = f y
 
-def Adapted' (G : SimpleGraph V) (f : V → V') : Prop :=
+def Adapted (G : SimpleGraph V) (f : V → V') : Prop :=
   ∀ v, Preconnected (G.induce (f ⁻¹' {v}))
 
 theorem adapted_iff_adapted' : Adapted G f ↔ Adapted' G f := by
   constructor
-  · intro h x' ⟨x, hx⟩ ⟨y, hy⟩
-    simp at hx hy
-    subst hy
-    obtain ⟨p, hp⟩ := h hx
-    use p.induce (f ⁻¹' {f y}) hp
   · intro h x y hxy
     obtain ⟨p⟩ := h (f y) ⟨x, hxy⟩ ⟨y, rfl⟩
     use Walk.map (Embedding.induce _).toHom p
     simp only [Walk.support_map, List.mem_map]
     rintro z ⟨a, ha1, rfl⟩
     exact a.2
+  · intro h x' ⟨x, hx⟩ ⟨y, hy⟩
+    simp at hx hy
+    subst hy
+    obtain ⟨p, hp⟩ := h hx
+    use p.induce (f ⁻¹' {f y}) hp
 
 -- lemma merge_edge_adapted [DecidableEq V] {e : G.Dart} : G.Adapted (merge_edge e) := by
 --   rintro x y hxy
@@ -40,42 +40,43 @@ theorem adapted_iff_adapted' : Adapted G f ↔ Adapted' G f := by
 
 namespace Adapted
 
-lemma of_injective (h : Injective f) : Adapted G f := by
+lemma of_injective' (h : Injective f) : Adapted' G f := by
   rintro x y hxy ; rw [h hxy] ; exact ⟨Walk.nil, by simp⟩
 
-lemma of_injective' (h : Injective f) : Adapted' G f := by
+lemma of_injective (h : Injective f) : Adapted G f := by
   rintro v ⟨x, hx⟩ ⟨y, hy⟩ ; simp only [h $ Eq.trans hx hy.symm, Reachable.rfl]
 
 lemma id : Adapted G id := of_injective injective_id
 
--- -- noncomputable def lift_path_aux (hf : Adapted f G) (p : walk (map f G) x' y') :
--- --   Π (x y : V), f x = x' → f y = y' → {q : walk G x y // ∀ z ∈ q.support, f z ∈ p.support} :=
--- -- begin
--- --   induction p with a a b c h₁ p ih,
--- --   { rintros x y h₁ rfl, choose p hp using hf h₁,
--- --     refine ⟨p, λ z hz, _⟩, rw hp z hz, apply walk.start_mem_support },
--- --   { rintro x y rfl rfl, cases h₁ with h₁ h₂,
--- --     choose xx hx using h₂, choose yy hy using hx, rcases hy with ⟨h₂,h₃,h₄⟩,
--- --     choose pp hp using hf h₃.symm, use pp.append (walk.cons h₂ $ ih yy y h₄ rfl),
--- --     rintro z hz, rw [walk.support_append, list.mem_append] at hz, cases hz,
--- --     { left, rw hp z hz, exact h₃ },
--- --     { rw [walk.support_cons, list.tail_cons] at hz, right, exact (ih yy y h₄ rfl).prop z hz } }
--- -- end
+noncomputable def lift_path (hf : Adapted G f) (p : Walk (map' f G) x' y') :
+    ∀ x y, f x = x' → f y = y' → { q : Walk G x y // ∀ z ∈ q.support, f z ∈ p.support } := by
+  rw [adapted_iff_adapted'] at hf
+  induction p with
+  | nil =>
+    rintro x y hxy rfl
+    choose q hq using hf hxy
+    refine ⟨q, by simpa⟩
+  | cons h p ih =>
+    rintro x y rfl rfl
+    obtain ⟨h1, h2⟩ := h
+    have := h2 ; choose a b h3 h4 h5 using this
+    subst h5
+    obtain ⟨q₂, hq₂⟩ := ih b y rfl rfl
+    choose q₁ hq₁ using hf h4.symm
+    refine ⟨q₁.append (q₂.cons h3), ?_⟩
+    intro z hz
+    simp only [Walk.mem_support_append_iff, Walk.support_cons, List.mem_cons] at hz
+    obtain h | h | h := hz <;> simp_all
 
--- -- noncomputable def lift_path (hf : Adapted f G) (p : walk (map f G) x' y') :
--- --   Π (x y : V), f x = x' → f y = y' → walk G x y :=
--- -- λ x y hx hy, (lift_path_aux hf p x y hx hy).val
+noncomputable def lift_path' (hf : Adapted G f) (p : Walk (map' f G) (f x) (f y)) :
+    { q : Walk G x y // ∀ z ∈ q.support, f z ∈ p.support } :=
+  lift_path hf p x y rfl rfl
 
--- -- lemma mem_lift_path {hf : Adapted f G} {p : (map f G).walk x' y'} {hx : f x = x'} {hy : f y = y'} :
--- --   z ∈ (lift_path hf p x y hx hy).support → f z ∈ p.support :=
--- -- (lift_path_aux hf p x y hx hy).prop z
-
--- -- noncomputable def lift_path' (hf : Adapted f G) (p : walk (map f G) (f x) (f y)) : walk G x y :=
--- -- lift_path hf p x y rfl rfl
-
--- -- lemma mem_lift_path' {hf : Adapted f G} {p : (map f G).walk (f x) (f y)} :
--- --   z ∈ (lift_path' hf p).support → f z ∈ p.support :=
--- -- mem_lift_path
+theorem comp (hf : Adapted G f) (hg : Adapted (map' f G) g) : Adapted G (g ∘ f) := by
+  rw [adapted_iff_adapted'] at hg ⊢
+  intro x y hxy
+  obtain ⟨p, hp⟩ := hg hxy
+  exact ⟨lift_path' hf p, by grind⟩
 
 -- -- lemma connected (hf : Adapted f G) (hc : connected (map f G)) : preconnected G :=
 -- -- begin
@@ -108,11 +109,10 @@ namespace IsContraction
 
 @[refl] theorem refl : G ≼c G := ⟨id, surjective_id, Adapted.id, map'_id.symm⟩
 
-lemma equiv_left (h1 : G ≃g G') (h2 : G' ≼c G'') : G ≼c G'' := by
+lemma iso_left (h1 : G ≃g G') (h2 : G' ≼c G'') : G ≼c G'' := by
   obtain ⟨φ, h3, h4, rfl⟩ := h2
   refine ⟨h1.toEquiv.symm ∘ φ, by simpa using h3, ?_, ?_⟩
-  · rw [adapted_iff_adapted'] at h4 ⊢
-    intro v
+  · intro v
     rw [preimage_comp, ← Equiv.image_eq_preimage_symm, image_singleton]
     apply h4
   · ext x y
@@ -130,6 +130,12 @@ lemma equiv_left (h1 : G ≃g G') (h2 : G' ≼c G'') : G ≼c G'' := by
       refine ⟨h1.injective.ne h5, u, v, h6, ?_, ?_⟩
       · exact h1.apply_symm_apply (φ u) |>.symm
       · exact h1.apply_symm_apply (φ v) |>.symm
+
+lemma iso_right (h1 : G ≼c G') (h2 : G' ≃g G'') : G ≼c G'' := by
+  obtain ⟨φ, h3, h4, rfl⟩ := h1
+  refine ⟨φ ∘ h2.toEquiv.symm, by simp [h3], ?_⟩
+
+  all_goals sorry
 
 -- -- lemma of_iso : G ≃g G' → G ≼c G' :=
 -- -- λ φ, let ψ := φ.symm in ⟨ψ, ψ.surjective, Adapted.of_injective ψ.injective, map.from_iso ψ⟩

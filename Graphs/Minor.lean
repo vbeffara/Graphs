@@ -13,34 +13,19 @@ infix:50 " ≼ " => IsMinor
 
 namespace IsMinor
 
-@[refl] theorem refl : G ≼ G := by
-  refine ⟨⊤, ?_⟩
-  sorry
+@[refl] theorem refl : G ≼ G := ⟨⊤, .iso_left Subgraph.topIso.symm .refl⟩
 
-theorem of_Iso (h : G ≃g H) : G ≼ H := by
-  sorry
+theorem iso_left (h1 : G ≃g H) (h2 : H ≼ K) : G ≼ K := by
+  obtain ⟨L, hL⟩ := h2
+  exact ⟨L, .iso_left h1 hL⟩
+
+theorem of_iso (h : G ≃g H) : G ≼ H := iso_left h .refl
 
 theorem of_Subgraph (K : Subgraph H) : K.coe ≼ H := ⟨K, .refl⟩
 
-theorem of_isContraction : G ≼c H → G ≼ H := by
-  rintro ⟨φ, h1, h2, rfl⟩
-  refine ⟨⊤, fun x => φ x, ?_, ?_, ?_⟩
-  · intro y ; obtain ⟨x, rfl⟩ := h1 y ; simp
-  · simp
-    sorry
-  all_goals sorry
+theorem of_isContraction (h : G ≼c H) : G ≼ H := ⟨⊤, .iso_right h Subgraph.topIso.symm⟩
 
 theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by
-  obtain ⟨H', ⟨φ, h3, h4, rfl⟩⟩ := h1
-  obtain ⟨K', ⟨ψ, h6, h7, rfl⟩⟩ := h2
-  let SK : Set γ := { z : γ | ∃ hz : z ∈ K'.verts, ψ ⟨z, hz⟩ ∈ H'.verts }
-  let SK' := Subtype.val '' (ψ ⁻¹' H'.verts)
-  have : SK = SK' := by ext z ; simp [SK, SK']
-  let ad (z z' : γ) : Prop := z ∈ SK ∧ z' ∈ SK ∧ K.Adj z z'
-  let K'' : Subgraph K := by
-    refine ⟨SK, ?_, ?_, ?_, ?_⟩
-    all_goals sorry
-  refine ⟨?_, ?_⟩
-  all_goals sorry
+  sorry
 
 end IsMinor
