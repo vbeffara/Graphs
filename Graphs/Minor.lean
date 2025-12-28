@@ -38,10 +38,26 @@ theorem le_left (h1 : G ≤ G') (h2 : G' ≼ K) : G ≼ K := by
 
 theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
-  refine ⟨.coeSubgraph (comap'_subgraph' K), ?_, ?_⟩
+  let L' := Subgraph.coeSubgraph (comap'_subgraph' K)
+  have hL' : L'.verts ⊆ L.verts := by simp [L']
+  refine ⟨L', ?_, ?_, ?_, ?_⟩
   · intro ⟨x, hx⟩
-    choose a ha hb using hx
-    refine ⟨φ a, ha⟩
+    refine ⟨φ ⟨x, hL' hx⟩, ?_⟩
+    simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter] at hx
+    obtain ⟨h, h'⟩ := hx
+    exact h'
+  · sorry
+  · sorry
+  · ext ⟨x, hx⟩ ⟨y, hy⟩
+    constructor
+    · intro h
+      simp at h
+      obtain ⟨hxy, a, b, h1, rfl, rfl⟩ := K.adj_sub h
+      refine ⟨by simpa, ⟨a, ?_⟩, ⟨b, ?_⟩, ?_, rfl, rfl⟩
+      · simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, hx]
+      · simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, hy]
+      · simpa [L', comap'_subgraph', comap'_subgraph, subgraph_inter, hx, hy, h1.ne, h] using h1
+    · sorry
   all_goals sorry
 
 theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by
