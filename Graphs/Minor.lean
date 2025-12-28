@@ -38,14 +38,10 @@ theorem le_left (h1 : G ≤ G') (h2 : G' ≼ K) : G ≼ K := by
 
 theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
-  let ψ : L.coe →g map' φ L.coe := by
-    refine ⟨φ, ?_⟩
-    rintro a b hab
-    refine ⟨?_, ?_⟩
-    sorry
-  let L' := Subgraph.comap (G := L.coe) ?_ K
-
-
+  refine ⟨.coeSubgraph (comap'_subgraph' K), ?_, ?_⟩
+  · intro ⟨x, hx⟩
+    choose a ha hb using hx
+    refine ⟨φ a, ha⟩
   all_goals sorry
 
 theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by

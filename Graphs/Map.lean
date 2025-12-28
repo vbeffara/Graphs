@@ -64,7 +64,7 @@ def subgraph_inter (H : G.Subgraph) (G' : SimpleGraph V) : G'.Subgraph where
   edge_vert h := H.edge_vert h.1
   symm x y := by simp [H.adj_comm, G'.adj_comm]
 
-def comap'_subgraph' (f : V → V') (H' : (map' f G).Subgraph) : Subgraph G :=
+def comap'_subgraph' (H' : (map' f G).Subgraph) : Subgraph G :=
   subgraph_inter (comap'_subgraph f H') G
 
 @[simp] theorem comap'_comap' : comap' f (comap' g G'') = comap' (g ∘ f) G'' := by
