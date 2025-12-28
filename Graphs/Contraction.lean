@@ -1,4 +1,5 @@
-import Mathlib
+import Mathlib.Combinatorics.SimpleGraph.Connectivity.Connected
+import Mathlib.Combinatorics.SimpleGraph.Walks.Maps
 import Graphs.Map
 
 open Function Set

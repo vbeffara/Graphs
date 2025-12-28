@@ -1,4 +1,6 @@
-import Mathlib
+import Mathlib.Combinatorics.SimpleGraph.Maps
+import Mathlib.Order.BourbakiWitt
+import Mathlib.Order.ConditionallyCompleteLattice.Basic
 
 open Function
 

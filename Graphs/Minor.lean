@@ -1,5 +1,3 @@
-import Mathlib
-import Graphs.Basic
 import Graphs.Contraction
 
 open SimpleGraph
@@ -9,23 +7,69 @@ variable {α β γ : Type*} {G : SimpleGraph α} {H : SimpleGraph β} {K : Simpl
 def IsMinor (G : SimpleGraph α) (H : SimpleGraph β) : Prop :=
   ∃ K : Subgraph H, G ≼c K.coe
 
+def IsForbidden (G : SimpleGraph α) (H : SimpleGraph β) : Prop :=
+  ¬ (IsMinor G H)
+
 infix:50 " ≼ " => IsMinor
+infix:50 " ⋠ " => IsForbidden
 
 namespace IsMinor
 
 @[refl] theorem refl : G ≼ G := ⟨⊤, .iso_left Subgraph.topIso.symm .refl⟩
 
-theorem iso_left (h1 : G ≃g H) (h2 : H ≼ K) : G ≼ K := by
-  obtain ⟨L, hL⟩ := h2
-  exact ⟨L, .iso_left h1 hL⟩
+theorem iso_left : G ≃g H → H ≼ K → G ≼ K :=
+  fun h1 ⟨L, hL⟩ => ⟨L, .iso_left h1 hL⟩
 
-theorem of_iso (h : G ≃g H) : G ≼ H := iso_left h .refl
+theorem ofIso (h : G ≃g H) : G ≼ H :=
+  iso_left h .refl
 
-theorem of_Subgraph (K : Subgraph H) : K.coe ≼ H := ⟨K, .refl⟩
+theorem ofSubgraph (K : Subgraph H) : K.coe ≼ H := ⟨K, .refl⟩
 
-theorem of_isContraction (h : G ≼c H) : G ≼ H := ⟨⊤, .iso_right h Subgraph.topIso.symm⟩
+theorem ofContraction (h : G ≼c H) : G ≼ H := ⟨⊤, .iso_right h Subgraph.topIso.symm⟩
 
 theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by
   sorry
 
 end IsMinor
+
+-- universe u
+-- variables {V V' V'' : Type u}
+-- variables {G H : simple_graph V} {G' : simple_graph V'} {G'' : simple_graph V''}
+
+-- namespace is_minor
+
+-- lemma le_left : G ≤ H -> H ≼ G' -> G ≼ G' :=
+-- begin
+--   rintro h₁ ⟨U,H',h₂,h₃⟩,
+--   obtain ⟨H'',h₄,h₅⟩ := h₂.le_left h₁,
+--   exact ⟨_,_,h₄,h₃.le_left h₅⟩
+-- end
+
+-- lemma select_left {P : V → Prop} : G ≼ G' -> select P G ≼ G' :=
+-- begin
+--   rintro ⟨U,H',h₂,h₃⟩,
+--   obtain ⟨P,h₄⟩ := h₂.select_left,
+--   exact ⟨_,_,h₄,h₃.select_left⟩
+-- end
+
+-- lemma smaller_left : G ≼s G' -> G' ≼ G'' -> G ≼ G'' :=
+-- begin
+--   rintro ⟨f₁,h₁⟩ h₂,
+--   let H := embed f₁ G,
+--   let H' := select (set.range f₁) G',
+--   have h₃ : H' ≼ G'' := select_left h₂,
+--   have h₄ : H ≼ G'' := le_left (embed.le_select h₁) h₃,
+--   exact iso_left (embed.iso h₁) h₄
+-- end
+
+-- lemma contract_left : G ≼c G' -> G' ≼ G'' -> G ≼ G'' :=
+-- λ h₁ ⟨U,H,h₂,h₃⟩, ⟨_,_,h₁.trans h₂,h₃⟩
+
+-- @[refl] lemma refl : G ≼ G
+-- := ⟨_,G,is_contraction.refl,is_smaller.refl⟩
+
+-- @[trans] lemma trans : G ≼ G' -> G' ≼ G'' -> G ≼ G'' :=
+-- λ ⟨U,H,h1,h2⟩ h3, is_minor.contract_left h1 (is_minor.smaller_left h2 h3)
+
+-- end is_minor
+-- end simple_graph
