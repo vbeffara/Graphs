@@ -60,13 +60,14 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   have hL' : L'.verts ⊆ L.verts := by simp [L']
   have key {b : β} : b ∈ L'.verts ↔ ∃ h : b ∈ L.verts, φ ⟨b, h⟩ ∈ K.verts := by
     simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter]
-  refine ⟨L', ?_, ?_, ?_, ?_⟩
-  · intro x ; refine ⟨_, key.1 x.2 |>.2⟩
+  let ψ (x : L'.verts) : K.verts := ⟨φ ⟨x, hL' x.2⟩, key.1 x.2 |>.2⟩
+  refine ⟨L', ψ, ?_, ?_, ?_⟩
   · intro ⟨v, hv⟩
     obtain ⟨a, ha'⟩ := hφ₁ v
-    refine ⟨⟨a, ?_⟩, by simp only [ha']⟩
+    refine ⟨⟨a, ?_⟩, by simp only [ψ, ha']⟩
     simp [key, ha', hv]
   · intro ⟨u, hu⟩ ⟨v, hv⟩ huv
+    simp only [ψ] at *
     simp at huv
     obtain ⟨p, hp⟩ := hφ₂ huv
     let p' : H.Walk u v := p.map L.hom
@@ -97,7 +98,8 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
       simp only [Subgraph.coe_adj] at h
       refine ⟨by simpa, ⟨a, by simp [hx]⟩, ⟨b, by simp [hy]⟩, ?_, rfl, rfl⟩
       simpa [hx, hy, h1.ne, h] using h1
-    · rintro ⟨h, ⟨a, ha⟩, ⟨b, hb⟩, hab, h1, h2⟩
+    · simp only [ψ]
+      rintro ⟨h, ⟨a, ha⟩, ⟨b, hb⟩, hab, h1, h2⟩
       obtain ⟨c, d, ⟨⟨h3, h4, h5, h6⟩⟩, rfl, rfl⟩ := hab
       simp_all
 
