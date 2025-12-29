@@ -36,6 +36,18 @@ theorem le_left (h1 : G ≤ G') (h2 : G' ≼ K) : G ≼ K := by
   let L' := L.coe ⊓ comap' φ G
   all_goals sorry
 
+noncomputable def walk_in_subgraph {H : G.Subgraph} {x y} {hx : x ∈ H.verts} {hy : y ∈ H.verts}
+    (p : G.Walk x y) (hp1 : ∀ z ∈ p.support, z ∈ H.verts) (hp2 : ∀ e ∈ p.darts, H.Adj e.fst e.snd) :
+    H.coe.Walk ⟨x, hx⟩ ⟨y, hy⟩ := by
+  induction p with
+  | nil => exact Walk.nil
+  | cons h p ih =>
+    expose_names
+    simp at hp1 hp2
+    specialize @ih (hp1.2 v (Walk.start_mem_support _)) hy hp1.2 hp2.2
+    refine Walk.cons ?_ ih
+    simp [hp2]
+
 theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
   let L' := Subgraph.coeSubgraph (comap'_subgraph' K)
@@ -50,7 +62,19 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
     obtain ⟨a, ha'⟩ := hφ₁ v
     refine ⟨⟨a, ?_⟩, by simp only [ha']⟩
     simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, ha', hv]
-  · sorry
+  · intro ⟨u, hu⟩ ⟨v, hv⟩ huv
+    simp at huv
+    obtain ⟨p, hp⟩ := hφ₂ huv
+    let p' : H.Walk u v := p.map L.hom
+    refine ⟨walk_in_subgraph p' ?_ ?_, ?_⟩
+    · simp [p']
+      rintro z hz hzp
+      specialize hp _ hzp
+      simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, hz, hp] at hv ⊢
+      exact hv.2
+    · sorry
+    · sorry
+    all_goals sorry
   · ext ⟨x, hx⟩ ⟨y, hy⟩
     constructor
     · intro h
