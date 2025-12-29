@@ -54,6 +54,34 @@ theorem walk_in_support {H : G.Subgraph} {x y z} {hx : x ∈ H.verts} {hy} {p : 
     | inl h => simp only [Walk.support_cons, h, List.mem_cons, true_or]
     | inr h => simp only [Walk.support_cons, List.mem_cons, ih h, or_true]
 
+theorem Adapted.restrict₀ (L : SimpleGraph γ) (φ : γ → α) (hφ₂ : L.Adapted φ)
+    (K : (map' φ L).Subgraph) (key : ∀ {b : γ}, b ∈ (comap'_subgraph' K).verts ↔ φ b ∈ K.verts) :
+    let ψ : (comap'_subgraph' K).verts → K.verts := fun x ↦ ⟨φ x, key.1 x.2⟩;
+    (comap'_subgraph' K).coe.Adapted ψ := by
+  intro ψ
+  rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
+  simp only [ψ] at *
+  simp at huv
+  obtain ⟨p, hp⟩ := hφ₂ huv
+  let p' : L.Walk u v := p
+  have hp'1 : ∀ z ∈ p'.support, z ∈ (comap'_subgraph' K).verts := by
+    simp [p']
+    rintro z hz
+    simp [key, hz, hp _] at hv ⊢
+    exact hv
+  have hp'2 : ∀ e ∈ p'.darts, (comap'_subgraph' K).Adj e.toProd.1 e.toProd.2 := by
+    simp [p']
+    rintro e he
+    have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
+    have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
+    simp [key] at hu hv
+    simp [comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv, h2]
+  refine ⟨walk_in_subgraph hu hv p' hp'1 hp'2, ?_⟩
+  simp [p', key]
+  rintro w hw hw'
+  have := walk_in_support hw'
+  exact hp _ this
+
 theorem Adapted.restrict (L : H.Subgraph) (φ : ↑L.verts → α) (hφ₂ : L.coe.Adapted φ)
   (K : (map' φ L.coe).Subgraph) :
   let L' := Subgraph.coeSubgraph (comap'_subgraph' K);
