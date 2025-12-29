@@ -42,17 +42,19 @@ noncomputable def walk_in_subgraph {H : G.Subgraph} {x y} (hx : x ∈ H.verts) (
     refine Walk.cons ?_ ih
     simp [hp2]
 
-theorem walk_in_support {H : G.Subgraph} {x y z} {hx : x ∈ H.verts} {hy} {p : G.Walk x y} {hp1 hp2}
-    (h : z ∈ (walk_in_subgraph hx hy p hp1 hp2).support) :
-    z.1 ∈ p.support := by
+@[simp] theorem walk_in_subgraph.support {H : G.Subgraph} {x y} {hx : x ∈ H.verts} {hy : y ∈ H.verts}
+    {p : G.Walk x y} {hp1 hp2} :
+    (walk_in_subgraph hx hy p hp1 hp2).support = p.support.attachWith _ hp1 := by
   induction p with
-  | nil => simp [walk_in_subgraph] at h ; simp [h]
+  | nil => simp [walk_in_subgraph]
   | cons h p ih =>
-    simp only [walk_in_subgraph, Walk.support_nil, Walk.darts_nil, Walk.support_cons,
-      Walk.darts_cons, List.mem_cons] at h
-    cases h with
-    | inl h => simp only [Walk.support_cons, h, List.mem_cons, true_or]
-    | inr h => simp only [Walk.support_cons, List.mem_cons, ih h, or_true]
+    simp [walk_in_subgraph] at hp1 hp2 ⊢
+    simp [← @ih (hp1.2 _ (Walk.start_mem_support _)) hy hp1.2 hp2.2]
+    rfl
+
+theorem walk_in_support {H : G.Subgraph} {x y z} {hx : x ∈ H.verts} {hy} {p : G.Walk x y} {hp1 hp2}
+    (h : z ∈ (walk_in_subgraph hx hy p hp1 hp2).support) : z.1 ∈ p.support := by
+  simpa using h
 
 @[simp] theorem key₀ {φ : β → α} {K : G.Subgraph} :
     (comap'_subgraph φ K).verts = φ ⁻¹' K.verts := by
@@ -91,8 +93,7 @@ theorem Adapted.restrict₀ (L : SimpleGraph β) (φ : β → α) (hφ₂ : L.Ad
   refine ⟨walk_in_subgraph hu hv p' hp'1 hp'2, ?_⟩
   simp [p']
   rintro w hw hw'
-  have := walk_in_support hw'
-  exact hp _ this
+  exact hp _ hw'
 
 theorem Adapted.restrict (L : H.Subgraph) (φ : ↑L.verts → α) (hφ₂ : L.coe.Adapted φ)
   (K : (map' φ L.coe).Subgraph) :
