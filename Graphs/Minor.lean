@@ -36,17 +36,31 @@ theorem le_left (h1 : G ≤ G') (h2 : G' ≼ K) : G ≼ K := by
   let L' := L.coe ⊓ comap' φ G
   all_goals sorry
 
-noncomputable def walk_in_subgraph {H : G.Subgraph} {x y} {hx : x ∈ H.verts} {hy : y ∈ H.verts}
+noncomputable def walk_in_subgraph {H : G.Subgraph} {x y} (hx : x ∈ H.verts) (hy : y ∈ H.verts)
     (p : G.Walk x y) (hp1 : ∀ z ∈ p.support, z ∈ H.verts) (hp2 : ∀ e ∈ p.darts, H.Adj e.fst e.snd) :
     H.coe.Walk ⟨x, hx⟩ ⟨y, hy⟩ := by
   induction p with
   | nil => exact Walk.nil
   | cons h p ih =>
-    expose_names
     simp at hp1 hp2
-    specialize @ih (hp1.2 v (Walk.start_mem_support _)) hy hp1.2 hp2.2
+    specialize ih (hp1.2 _ (Walk.start_mem_support _)) hy hp1.2 hp2.2
     refine Walk.cons ?_ ih
     simp [hp2]
+
+theorem walk_in_support {H : G.Subgraph} {x y z} (hx : x ∈ H.verts) (hy : y ∈ H.verts)
+    {p : G.Walk x y} (hp1 : ∀ z ∈ p.support, z ∈ H.verts)
+    (hp2 : ∀ e ∈ p.darts, H.Adj e.fst e.snd) (h : z ∈ (walk_in_subgraph hx hy p hp1 hp2).support) :
+    z.1 ∈ p.support := by
+  induction p with
+  | nil => simp [walk_in_subgraph] at h ; simp [h]
+  | cons h p ih =>
+    simp [walk_in_subgraph] at h
+    cases h with
+    | inl h => simp [h]
+    | inr h =>
+      simp at hp1 hp2
+      specialize ih (hp1.2 _ (Walk.start_mem_support _)) hy hp1.2 hp2.2 h
+      simp [ih]
 
 theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
@@ -66,15 +80,25 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
     simp at huv
     obtain ⟨p, hp⟩ := hφ₂ huv
     let p' : H.Walk u v := p.map L.hom
-    refine ⟨walk_in_subgraph p' ?_ ?_, ?_⟩
-    · simp [p']
+    have hp'1 : ∀ z ∈ p'.support, z ∈ L'.verts := by
+      simp [p']
       rintro z hz hzp
       specialize hp _ hzp
       simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, hz, hp] at hv ⊢
       exact hv.2
-    · sorry
-    · sorry
-    all_goals sorry
+    have hp'2 : ∀ e ∈ p'.darts, L'.Adj e.toProd.1 e.toProd.2 := by
+      simp [p']
+      rintro e he
+      have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
+      have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
+      simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter] at hu hv ⊢
+      simpa [h1, hv.2, h2] using e.adj
+    refine ⟨walk_in_subgraph hu hv p' hp'1 hp'2, ?_⟩
+    · simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, p']
+      rintro w hw hw' hw''
+      have := walk_in_support hu hv (p := p') hp'1 hp'2 hw''
+      · simp [p'] at this
+        exact hp _ this.2
   · ext ⟨x, hx⟩ ⟨y, hy⟩
     constructor
     · intro h
