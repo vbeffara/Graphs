@@ -47,35 +47,30 @@ noncomputable def walk_in_subgraph {H : G.Subgraph} {x y} (hx : x ∈ H.verts) (
     refine Walk.cons ?_ ih
     simp [hp2]
 
-theorem walk_in_support {H : G.Subgraph} {x y z} (hx : x ∈ H.verts) (hy : y ∈ H.verts)
-    {p : G.Walk x y} (hp1 : ∀ z ∈ p.support, z ∈ H.verts)
-    (hp2 : ∀ e ∈ p.darts, H.Adj e.fst e.snd) (h : z ∈ (walk_in_subgraph hx hy p hp1 hp2).support) :
+theorem walk_in_support {H : G.Subgraph} {x y z} {hx : x ∈ H.verts} {hy} {p : G.Walk x y} {hp1 hp2}
+    (h : z ∈ (walk_in_subgraph hx hy p hp1 hp2).support) :
     z.1 ∈ p.support := by
   induction p with
   | nil => simp [walk_in_subgraph] at h ; simp [h]
   | cons h p ih =>
-    simp [walk_in_subgraph] at h
+    simp only [walk_in_subgraph, Walk.support_nil, Walk.darts_nil, Walk.support_cons,
+      Walk.darts_cons, List.mem_cons] at h
     cases h with
-    | inl h => simp [h]
-    | inr h =>
-      simp at hp1 hp2
-      specialize ih (hp1.2 _ (Walk.start_mem_support _)) hy hp1.2 hp2.2 h
-      simp [ih]
+    | inl h => simp only [Walk.support_cons, h, List.mem_cons, true_or]
+    | inr h => simp only [Walk.support_cons, List.mem_cons, ih h, or_true]
 
 theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
   let L' := Subgraph.coeSubgraph (comap'_subgraph' K)
   have hL' : L'.verts ⊆ L.verts := by simp [L']
+  have key {b : β} : b ∈ L'.verts ↔ ∃ h : b ∈ L.verts, φ ⟨b, h⟩ ∈ K.verts := by
+    simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter]
   refine ⟨L', ?_, ?_, ?_, ?_⟩
-  · intro ⟨x, hx⟩
-    refine ⟨φ ⟨x, hL' hx⟩, ?_⟩
-    simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter] at hx
-    obtain ⟨h, h'⟩ := hx
-    exact h'
+  · intro x ; refine ⟨_, key.1 x.2 |>.2⟩
   · intro ⟨v, hv⟩
     obtain ⟨a, ha'⟩ := hφ₁ v
     refine ⟨⟨a, ?_⟩, by simp only [ha']⟩
-    simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, ha', hv]
+    simp [key, ha', hv]
   · intro ⟨u, hu⟩ ⟨v, hv⟩ huv
     simp at huv
     obtain ⟨p, hp⟩ := hφ₂ huv
@@ -83,22 +78,22 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
     have hp'1 : ∀ z ∈ p'.support, z ∈ L'.verts := by
       simp [p']
       rintro z hz hzp
-      specialize hp _ hzp
-      simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, hz, hp] at hv ⊢
+      simp [key, hz, hp _ hzp] at hv ⊢
       exact hv.2
     have hp'2 : ∀ e ∈ p'.darts, L'.Adj e.toProd.1 e.toProd.2 := by
       simp [p']
       rintro e he
       have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
       have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
-      simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter] at hu hv ⊢
-      simpa [h1, hv.2, h2] using e.adj
+      simp [key] at hu hv
+      simpa [L', comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv.2, h2] using e.adj
     refine ⟨walk_in_subgraph hu hv p' hp'1 hp'2, ?_⟩
-    · simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter, p']
-      rintro w hw hw' hw''
-      have := walk_in_support hu hv (p := p') hp'1 hp'2 hw''
-      · simp [p'] at this
-        exact hp _ this.2
+    simp [p', key]
+    rintro w hw hw' hw''
+    have := walk_in_support hw''
+    simp only [Walk.support_map, Subgraph.coe_hom, List.map_subtype, List.map_id_fun', id_eq,
+      List.mem_unattach] at this
+    exact hp _ this.2
   · ext ⟨x, hx⟩ ⟨y, hy⟩
     constructor
     · intro h
