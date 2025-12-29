@@ -54,8 +54,7 @@ theorem walk_in_support {H : G.Subgraph} {x y z} {hx : x ∈ H.verts} {hy} {p : 
     | inl h => simp only [Walk.support_cons, h, List.mem_cons, true_or]
     | inr h => simp only [Walk.support_cons, List.mem_cons, ih h, or_true]
 
-theorem Adapted.restrict {α : Type u_1} {β : Type u_2} {H : SimpleGraph β}
-  (L : H.Subgraph) (φ : ↑L.verts → α) (hφ₁ : Function.Surjective φ) (hφ₂ : L.coe.Adapted φ)
+theorem Adapted.restrict (L : H.Subgraph) (φ : ↑L.verts → α) (hφ₂ : L.coe.Adapted φ)
   (K : (map' φ L.coe).Subgraph) :
   let L' := Subgraph.coeSubgraph (comap'_subgraph' K);
   ∀ (hL' : L'.verts ⊆ L.verts) (key : ∀ {b : β}, b ∈ L'.verts ↔ ∃ (h : b ∈ L.verts), φ ⟨b, h⟩ ∈ K.verts),
@@ -99,7 +98,7 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
     obtain ⟨a, ha'⟩ := hφ₁ v
     refine ⟨⟨a, ?_⟩, by simp only [ψ, ha']⟩
     simp [key, ha', hv]
-  · exact Adapted.restrict _ _ hφ₁ hφ₂ _ _ key
+  · exact Adapted.restrict _ _ hφ₂ _ _ key
   · ext ⟨x, hx⟩ ⟨y, hy⟩
     constructor
     · intro h
