@@ -54,6 +54,39 @@ theorem walk_in_support {H : G.Subgraph} {x y z} {hx : x ∈ H.verts} {hy} {p : 
     | inl h => simp only [Walk.support_cons, h, List.mem_cons, true_or]
     | inr h => simp only [Walk.support_cons, List.mem_cons, ih h, or_true]
 
+theorem Adapted.restrict {α : Type u_1} {β : Type u_2} {H : SimpleGraph β}
+  (L : H.Subgraph) (φ : ↑L.verts → α) (hφ₁ : Function.Surjective φ) (hφ₂ : L.coe.Adapted φ)
+  (K : (map' φ L.coe).Subgraph) :
+  let L' := Subgraph.coeSubgraph (comap'_subgraph' K);
+  ∀ (hL' : L'.verts ⊆ L.verts) (key : ∀ {b : β}, b ∈ L'.verts ↔ ∃ (h : b ∈ L.verts), φ ⟨b, h⟩ ∈ K.verts),
+    let ψ : L'.verts → K.verts := fun x ↦ ⟨φ ⟨x, hL' x.2⟩, key.1 x.2 |>.2⟩;
+    L'.coe.Adapted ψ := by
+  intro L' hL' key ψ
+  rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
+  simp only [ψ] at *
+  simp at huv
+  obtain ⟨p, hp⟩ := hφ₂ huv
+  let p' : H.Walk u v := p.map L.hom
+  have hp'1 : ∀ z ∈ p'.support, z ∈ L'.verts := by
+    simp [p']
+    rintro z hz hzp
+    simp [key, hz, hp _ hzp] at hv ⊢
+    exact hv.2
+  have hp'2 : ∀ e ∈ p'.darts, L'.Adj e.toProd.1 e.toProd.2 := by
+    simp [p']
+    rintro e he
+    have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
+    have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
+    simp [key] at hu hv
+    simpa [L', comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv.2, h2] using e.adj
+  refine ⟨walk_in_subgraph hu hv p' hp'1 hp'2, ?_⟩
+  simp [p', key]
+  rintro w hw hw' hw''
+  have := walk_in_support hw''
+  simp only [Walk.support_map, Subgraph.coe_hom, List.map_subtype, List.map_id_fun', id_eq,
+    List.mem_unattach] at this
+  exact hp _ this.2
+
 theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
   let L' := Subgraph.coeSubgraph (comap'_subgraph' K)
@@ -66,30 +99,7 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
     obtain ⟨a, ha'⟩ := hφ₁ v
     refine ⟨⟨a, ?_⟩, by simp only [ψ, ha']⟩
     simp [key, ha', hv]
-  · intro ⟨u, hu⟩ ⟨v, hv⟩ huv
-    simp only [ψ] at *
-    simp at huv
-    obtain ⟨p, hp⟩ := hφ₂ huv
-    let p' : H.Walk u v := p.map L.hom
-    have hp'1 : ∀ z ∈ p'.support, z ∈ L'.verts := by
-      simp [p']
-      rintro z hz hzp
-      simp [key, hz, hp _ hzp] at hv ⊢
-      exact hv.2
-    have hp'2 : ∀ e ∈ p'.darts, L'.Adj e.toProd.1 e.toProd.2 := by
-      simp [p']
-      rintro e he
-      have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
-      have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
-      simp [key] at hu hv
-      simpa [L', comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv.2, h2] using e.adj
-    refine ⟨walk_in_subgraph hu hv p' hp'1 hp'2, ?_⟩
-    simp [p', key]
-    rintro w hw hw' hw''
-    have := walk_in_support hw''
-    simp only [Walk.support_map, Subgraph.coe_hom, List.map_subtype, List.map_id_fun', id_eq,
-      List.mem_unattach] at this
-    exact hp _ this.2
+  · exact Adapted.restrict _ _ hφ₁ hφ₂ _ _ key
   · ext ⟨x, hx⟩ ⟨y, hy⟩
     constructor
     · intro h
