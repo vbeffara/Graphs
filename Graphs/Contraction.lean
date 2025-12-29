@@ -1,5 +1,4 @@
-import Mathlib.Combinatorics.SimpleGraph.Connectivity.Connected
-import Mathlib.Combinatorics.SimpleGraph.Walks.Maps
+import Mathlib
 import Graphs.Map
 
 open Function Set
@@ -15,8 +14,17 @@ noncomputable def Subgraph.attach (H : G.Subgraph) (p : G.Walk x y)
   induction p with
   | nil => exact Walk.nil
   | cons h p ih =>
-    simp at hp1 hp2
+    simp only [Walk.support_cons, List.mem_cons, forall_eq_or_imp, Walk.darts_cons] at hp1 hp2
     exact Walk.cons (by exact hp2.1) (ih hp1.2 hp2.2)
+
+@[simp] theorem Subgraph.support_attach {H : G.Subgraph} {p : G.Walk x y} {hp1 hp2} :
+    (H.attach p hp1 hp2).support = p.support.attachWith _ hp1 := by
+  induction p with
+  | nil => simp [Subgraph.attach]
+  | cons h p ih =>
+    simp [Subgraph.attach] at hp1 hp2 ⊢
+    simp [← @ih hp1.2 hp2.2]
+    rfl
 
 /-! A function is adapted to a graph if its level sets are connected -/
 def Adapted (G : SimpleGraph α) (f : α → β) : Prop :=

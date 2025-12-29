@@ -31,19 +31,6 @@ theorem contract_left (h1 : G ≼c H) (h2 : H ≼ K) : G ≼ K := by
   obtain ⟨L, hL⟩ := h2
   refine ⟨L, h1.trans hL⟩
 
-@[simp] theorem walk_in_subgraph.support {H : G.Subgraph} {x y} {p : G.Walk x y} {hp1 hp2} :
-    (H.attach p hp1 hp2).support = p.support.attachWith _ hp1 := by
-  induction p with
-  | nil => simp [Subgraph.attach]
-  | cons h p ih =>
-    simp [Subgraph.attach] at hp1 hp2 ⊢
-    simp [← @ih hp1.2 hp2.2]
-    rfl
-
-theorem walk_in_support {H : G.Subgraph} {x y z} {p : G.Walk x y} {hp1 hp2}
-    (h : z ∈ (H.attach p hp1 hp2).support) : z.1 ∈ p.support := by
-  simpa using h
-
 @[simp] theorem key₀ {φ : β → α} {K : G.Subgraph} :
     (comap'_subgraph φ K).verts = φ ⁻¹' K.verts := by
   rfl
@@ -56,85 +43,67 @@ theorem key {φ : β → α} (K : (map' φ H).Subgraph) {b : β} :
     b ∈ (comap'_subgraph' K).verts ↔ φ b ∈ K.verts := by
   simp
 
-theorem Adapted.restrict₀ (L : SimpleGraph β) (φ : β → α) (hφ₂ : L.Adapted φ)
-    (K : (map' φ L).Subgraph) :
-    let ψ : (comap'_subgraph' K).verts → K.verts := fun x ↦ ⟨φ x, (key K).1 x.2⟩;
-    (comap'_subgraph' K).coe.Adapted ψ := by
-  intro ψ
-  rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
-  simp only [ψ] at *
-  simp at huv
-  obtain ⟨p, hp⟩ := hφ₂ huv
-  let p' : L.Walk u v := p
-  have hp'1 : ∀ z ∈ p'.support, z ∈ (comap'_subgraph' K).verts := by
-    simp [p']
-    rintro z hz
-    simp [hz, hp _] at hv ⊢
-    exact hv
-  have hp'2 : ∀ e ∈ p'.darts, (comap'_subgraph' K).Adj e.toProd.1 e.toProd.2 := by
-    simp [p']
-    rintro e he
-    have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
-    have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
-    simp at hu hv
-    simp [comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv, h2]
-  refine ⟨(comap'_subgraph' K).attach p' hp'1 hp'2, ?_⟩
-  simp [p']
-  rintro w hw hw'
-  exact hp _ hw'
+def Adapted.L' {L : H.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) : H.Subgraph :=
+    Subgraph.coeSubgraph (comap'_subgraph' K)
 
-theorem Adapted.restrict (L : H.Subgraph) (φ : ↑L.verts → α) (hφ₂ : L.coe.Adapted φ)
-  (K : (map' φ L.coe).Subgraph) :
-  let L' := Subgraph.coeSubgraph (comap'_subgraph' K);
-  ∀ (hL' : L'.verts ⊆ L.verts) (key : ∀ {b : β}, b ∈ L'.verts ↔ ∃ (h : b ∈ L.verts), φ ⟨b, h⟩ ∈ K.verts),
-    let ψ : L'.verts → K.verts := fun x ↦ ⟨φ ⟨x, hL' x.2⟩, key.1 x.2 |>.2⟩;
-    L'.coe.Adapted ψ := by
-  intro L' hL' key ψ
+theorem Adapted.hL' {L : H.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) :
+    (L' φ K).verts ⊆ L.verts := by
+  simp [L']
+
+theorem Adapted.key' {L : H.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) ⦃b : β⦄ :
+    b ∈ (L' φ K).verts ↔ ∃ (h : b ∈ L.verts), φ ⟨b, h⟩ ∈ K.verts := by
+  simp [L']
+
+def Adapted.ψ {L : H.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) :
+    (L' φ K).verts → K.verts :=
+  fun x ↦ ⟨φ ⟨x, hL' φ K x.2⟩, (key' φ K).1 x.2 |>.2⟩
+
+theorem Adapted.restrict₀ {φ : β → α} (hφ₂ : H.Adapted φ) (K : (map' φ H).Subgraph) :
+    (comap'_subgraph' K).coe.Adapted (fun x ↦ (⟨φ x, x.2⟩ : K.verts)) := by
   rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
-  simp only [ψ] at *
   simp at huv
   obtain ⟨p, hp⟩ := hφ₂ huv
-  let p' : H.Walk u v := p.map L.hom
-  have hp'1 : ∀ z ∈ p'.support, z ∈ L'.verts := by
-    simp [p']
-    rintro z hz hzp
-    simp [key, hz, hp _ hzp] at hv ⊢
-    exact hv.2
-  have hp'2 : ∀ e ∈ p'.darts, L'.Adj e.toProd.1 e.toProd.2 := by
-    simp [p']
+  have hp'1 z (hz : z ∈ p.support) : z ∈ (comap'_subgraph' K).verts := by simpa [hz, hp _] using hv
+  have hp'2 e (he : e ∈ p.darts) : (comap'_subgraph' K).Adj e.toProd.1 e.toProd.2 := by
+    refine ⟨?_, Dart.adj e⟩
+    have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
+    have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
+    simpa [comap'_subgraph, h1, h2] using hv
+  exact ⟨(comap'_subgraph' K).attach p hp'1 hp'2, by { simp ; grind }⟩
+
+-- This looks too similar to the previous one, should merge?
+theorem Adapted.restrict {L : H.Subgraph} (φ : ↑L.verts → α) (hφ₂ : L.coe.Adapted φ)
+    (K : (map' φ L.coe).Subgraph) :
+    (L' φ K).coe.Adapted (ψ φ K) := by
+  rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
+  simp [ψ] at huv
+  obtain ⟨p, hp⟩ := hφ₂ huv
+  refine ⟨Subgraph.attach _ (p.map L.hom) ?_ ?_, ?_⟩
+  · simp [L'] at hv ⊢ ; grind
+  · simp [L'] at hv ⊢
     rintro e he
     have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
     have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
-    simp [key] at hu hv
-    simpa [L', comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv.2, h2] using e.adj
-  refine ⟨L'.attach p' hp'1 hp'2, ?_⟩
-  simp [p', key]
-  rintro w hw hw' hw'' hw'''
-  apply hp
-  assumption
+    simpa [comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv.2, h2] using e.adj
+  · simp [ψ] ; grind
 
 theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
-  let L' := Subgraph.coeSubgraph (comap'_subgraph' K)
-  have hL' : L'.verts ⊆ L.verts := by simp [L']
-  have key {b : β} : b ∈ L'.verts ↔ ∃ h : b ∈ L.verts, φ ⟨b, h⟩ ∈ K.verts := by
-    simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter]
-  let ψ (x : L'.verts) : K.verts := ⟨φ ⟨x, hL' x.2⟩, key.1 x.2 |>.2⟩
-  refine ⟨L', ψ, ?_, ?_, ?_⟩
+  refine ⟨Adapted.L' φ K, Adapted.ψ φ K, ?_, ?_, ?_⟩
   · intro ⟨v, hv⟩
     obtain ⟨a, ha'⟩ := hφ₁ v
-    refine ⟨⟨a, ?_⟩, by simp only [ψ, ha']⟩
-    simp [key, ha', hv]
-  · exact Adapted.restrict _ _ hφ₂ _ _ key
+    refine ⟨⟨a, ?_⟩, by simp only [Adapted.ψ, ha']⟩
+    simp [Adapted.key', ha', hv]
+  · exact Adapted.restrict _ hφ₂ _
   · ext ⟨x, hx⟩ ⟨y, hy⟩
     constructor
     · intro h
       obtain ⟨hxy, a, b, h1, rfl, rfl⟩ := K.adj_sub h
-      simp [L', comap'_subgraph', comap'_subgraph, subgraph_inter]
+      simp [Adapted.L', comap'_subgraph', comap'_subgraph, subgraph_inter]
       simp only [Subgraph.coe_adj] at h
       refine ⟨by simpa, ⟨a, by simp [hx]⟩, ⟨b, by simp [hy]⟩, ?_, rfl, rfl⟩
       simpa [hx, hy, h1.ne, h] using h1
-    · simp only [ψ]
+    · unfold Adapted.ψ
       rintro ⟨h, ⟨a, ha⟩, ⟨b, hb⟩, hab, h1, h2⟩
       obtain ⟨c, d, ⟨⟨h3, h4, h5, h6⟩⟩, rfl, rfl⟩ := hab
       simp_all
