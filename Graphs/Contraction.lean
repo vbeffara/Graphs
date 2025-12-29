@@ -9,6 +9,15 @@ variable {G H : SimpleGraph α} {G' H' : SimpleGraph β} {G'' : SimpleGraph γ}
 
 namespace SimpleGraph
 
+noncomputable def Subgraph.attach (H : G.Subgraph) (p : G.Walk x y)
+    (hp1 : ∀ z ∈ p.support, z ∈ H.verts) (hp2 : ∀ e ∈ p.darts, H.Adj e.fst e.snd) :
+    H.coe.Walk ⟨x, hp1 _ p.start_mem_support⟩ ⟨y, hp1 _ p.end_mem_support⟩ := by
+  induction p with
+  | nil => exact Walk.nil
+  | cons h p ih =>
+    simp at hp1 hp2
+    exact Walk.cons (by exact hp2.1) (ih hp1.2 hp2.2)
+
 /-! A function is adapted to a graph if its level sets are connected -/
 def Adapted (G : SimpleGraph α) (f : α → β) : Prop :=
   ∀ ⦃x y : α⦄, f x = f y → ∃ p : Walk G x y, ∀ z ∈ p.support, f z = f y

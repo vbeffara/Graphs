@@ -54,3 +54,5 @@ lemma iso_left (h1 : G ≃g G') (h2 : G' ≼s G'') : G ≼s G'' := of_iso h1 |>.
 lemma le_left (h1 : G ≤ H) (h2 : H ≼s G') : G ≼s G' := of_le h1 |>.trans h2
 
 lemma iso_right (h1 : G ≼s G') (h2 : G' ≃g G'') : G ≼s G'' := h1.trans (of_iso h2)
+
+end IsSmaller

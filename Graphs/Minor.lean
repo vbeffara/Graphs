@@ -31,29 +31,17 @@ theorem contract_left (h1 : G ≼c H) (h2 : H ≼ K) : G ≼ K := by
   obtain ⟨L, hL⟩ := h2
   refine ⟨L, h1.trans hL⟩
 
-noncomputable def walk_in_subgraph {H : G.Subgraph} {x y} (hx : x ∈ H.verts) (hy : y ∈ H.verts)
-    (p : G.Walk x y) (hp1 : ∀ z ∈ p.support, z ∈ H.verts) (hp2 : ∀ e ∈ p.darts, H.Adj e.fst e.snd) :
-    H.coe.Walk ⟨x, hx⟩ ⟨y, hy⟩ := by
+@[simp] theorem walk_in_subgraph.support {H : G.Subgraph} {x y} {p : G.Walk x y} {hp1 hp2} :
+    (H.attach p hp1 hp2).support = p.support.attachWith _ hp1 := by
   induction p with
-  | nil => exact Walk.nil
+  | nil => simp [Subgraph.attach]
   | cons h p ih =>
-    simp at hp1 hp2
-    specialize ih (hp1.2 _ (Walk.start_mem_support _)) hy hp1.2 hp2.2
-    refine Walk.cons ?_ ih
-    simp [hp2]
-
-@[simp] theorem walk_in_subgraph.support {H : G.Subgraph} {x y} {hx : x ∈ H.verts} {hy : y ∈ H.verts}
-    {p : G.Walk x y} {hp1 hp2} :
-    (walk_in_subgraph hx hy p hp1 hp2).support = p.support.attachWith _ hp1 := by
-  induction p with
-  | nil => simp [walk_in_subgraph]
-  | cons h p ih =>
-    simp [walk_in_subgraph] at hp1 hp2 ⊢
-    simp [← @ih (hp1.2 _ (Walk.start_mem_support _)) hy hp1.2 hp2.2]
+    simp [Subgraph.attach] at hp1 hp2 ⊢
+    simp [← @ih hp1.2 hp2.2]
     rfl
 
-theorem walk_in_support {H : G.Subgraph} {x y z} {hx : x ∈ H.verts} {hy} {p : G.Walk x y} {hp1 hp2}
-    (h : z ∈ (walk_in_subgraph hx hy p hp1 hp2).support) : z.1 ∈ p.support := by
+theorem walk_in_support {H : G.Subgraph} {x y z} {p : G.Walk x y} {hp1 hp2}
+    (h : z ∈ (H.attach p hp1 hp2).support) : z.1 ∈ p.support := by
   simpa using h
 
 @[simp] theorem key₀ {φ : β → α} {K : G.Subgraph} :
@@ -90,7 +78,7 @@ theorem Adapted.restrict₀ (L : SimpleGraph β) (φ : β → α) (hφ₂ : L.Ad
     have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
     simp at hu hv
     simp [comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv, h2]
-  refine ⟨walk_in_subgraph hu hv p' hp'1 hp'2, ?_⟩
+  refine ⟨(comap'_subgraph' K).attach p' hp'1 hp'2, ?_⟩
   simp [p']
   rintro w hw hw'
   exact hp _ hw'
@@ -119,13 +107,11 @@ theorem Adapted.restrict (L : H.Subgraph) (φ : ↑L.verts → α) (hφ₂ : L.c
     have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
     simp [key] at hu hv
     simpa [L', comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv.2, h2] using e.adj
-  refine ⟨walk_in_subgraph hu hv p' hp'1 hp'2, ?_⟩
+  refine ⟨L'.attach p' hp'1 hp'2, ?_⟩
   simp [p', key]
-  rintro w hw hw' hw''
-  have := walk_in_support hw''
-  simp only [Walk.support_map, Subgraph.coe_hom, List.map_subtype, List.map_id_fun', id_eq,
-    List.mem_unattach] at this
-  exact hp _ this.2
+  rintro w hw hw' hw'' hw'''
+  apply hp
+  assumption
 
 theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
