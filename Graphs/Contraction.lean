@@ -115,6 +115,18 @@ theorem comp (hf : Adapted G f) (hg : Adapted (map' f G) g) : Adapted G (g ∘ f
 -- --   exact ⟨Adapted.lift_path' hf p, λ z hz, hp (f z) (Adapted.mem_lift_path' hz)⟩,
 -- -- end
 
+@[simp] theorem key₀ {φ : β → α} {K : G.Subgraph} :
+    (comap'_subgraph φ K).verts = φ ⁻¹' K.verts := by
+  rfl
+
+@[simp] theorem key₀' {φ : β → α} {K : (map' φ H').Subgraph} :
+    (comap'_subgraph' K).verts = φ ⁻¹' K.verts := by
+  rfl
+
+theorem key {φ : β → α} (K : (map' φ H').Subgraph) {b : β} :
+    b ∈ (comap'_subgraph' K).verts ↔ φ b ∈ K.verts := by
+  simp
+
 end Adapted
 
 def IsContraction (G : SimpleGraph α) (G' : SimpleGraph β) : Prop :=

@@ -1,6 +1,6 @@
 import Graphs.Contraction
 
-open SimpleGraph
+open SimpleGraph Subgraph
 
 variable {α β β : Type*} {G G' : SimpleGraph α} {H : SimpleGraph β} {K : SimpleGraph β}
 
@@ -17,11 +17,8 @@ namespace IsMinor
 
 @[refl] theorem refl : G ≼ G := ⟨⊤, .iso_left Subgraph.topIso.symm .refl⟩
 
-theorem iso_left : G ≃g H → H ≼ K → G ≼ K :=
-  fun h1 ⟨L, hL⟩ => ⟨L, .iso_left h1 hL⟩
-
-theorem ofIso (h : G ≃g H) : G ≼ H :=
-  iso_left h .refl
+theorem ofIso (h : G ≃g H) : G ≼ H := by
+  refine ⟨⊤, .ofIso $ topIso.symm.comp h⟩
 
 theorem ofSubgraph (K : Subgraph H) : K.coe ≼ H := ⟨K, .refl⟩
 
@@ -30,18 +27,6 @@ theorem ofContraction (h : G ≼c H) : G ≼ H := ⟨⊤, .iso_right h Subgraph.
 theorem contract_left (h1 : G ≼c H) (h2 : H ≼ K) : G ≼ K := by
   obtain ⟨L, hL⟩ := h2
   refine ⟨L, h1.trans hL⟩
-
-@[simp] theorem key₀ {φ : β → α} {K : G.Subgraph} :
-    (comap'_subgraph φ K).verts = φ ⁻¹' K.verts := by
-  rfl
-
-@[simp] theorem key₀' {φ : β → α} {K : (map' φ H).Subgraph} :
-    (comap'_subgraph' K).verts = φ ⁻¹' K.verts := by
-  rfl
-
-theorem key {φ : β → α} (K : (map' φ H).Subgraph) {b : β} :
-    b ∈ (comap'_subgraph' K).verts ↔ φ b ∈ K.verts := by
-  simp
 
 def Adapted.L' {L : H.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) : H.Subgraph :=
     Subgraph.coeSubgraph (comap'_subgraph' K)
