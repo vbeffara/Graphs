@@ -109,12 +109,6 @@ theorem comp (hf : Adapted G f) (hg : Adapted (map' f G) g) : Adapted G (g ∘ f
 -- --   exact hp z (select.mem_push_walk.mp h)
 -- -- end
 
--- -- lemma comp_push : Adapted f G → Adapted g (map f G) → Adapted (g ∘ f) G :=
--- -- begin
--- --   rintro hf hg x y hxy, obtain ⟨p, hp⟩ := hg hxy,
--- --   exact ⟨Adapted.lift_path' hf p, λ z hz, hp (f z) (Adapted.mem_lift_path' hz)⟩,
--- -- end
-
 @[simp] theorem key₀ {φ : β → α} {K : G.Subgraph} :
     (comap'_subgraph φ K).verts = φ ⁻¹' K.verts := by
   rfl

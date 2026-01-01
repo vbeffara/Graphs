@@ -15,7 +15,7 @@ theorem WQO_iff : WellQuasiOrderedLE α ↔
   simp [WellFoundedLT, isWellFounded_iff, wellFounded_iff_isEmpty_descending_chain,
     ← StrictAnti_iff_descending, isEmpty_subtype]
 
-def FinsetLE (s t : Finset α) : Prop := ∃ f : s ↪ t, ∀ x : s, x.val ≤ f x
+def FinsetLE (s t : Finset α) : Prop := ∃ f : s ↪ t, ∀ x, x.val ≤ f x
 
 -- Lemma 12.1.3
 theorem WQO_Finset (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := α)) := by

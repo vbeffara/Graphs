@@ -1,3 +1,4 @@
+import Graphs.Basic
 import Graphs.Contraction
 
 open SimpleGraph Subgraph
@@ -33,8 +34,7 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   refine ⟨Adapted.L' φ K, Adapted.ψ φ K, ?_, ?_, ?_⟩
   · intro ⟨v, hv⟩
     obtain ⟨a, ha'⟩ := hφ₁ v
-    refine ⟨⟨a, ?_⟩, by simp only [Adapted.ψ, ha']⟩
-    simp [Adapted.key', ha', hv]
+    refine ⟨⟨a, by simp [Adapted.key', ha', hv]⟩, by simp only [Adapted.ψ, ha']⟩
   · exact Adapted.restrict _ hφ₂ _
   · ext ⟨x, hx⟩ ⟨y, hy⟩
     constructor
@@ -62,38 +62,12 @@ end IsMinor
 
 -- namespace is_minor
 
--- lemma le_left : G ≤ H -> H ≼ G' -> G ≼ G' :=
--- begin
---   rintro h₁ ⟨U,H',h₂,h₃⟩,
---   obtain ⟨H'',h₄,h₅⟩ := h₂.le_left h₁,
---   exact ⟨_,_,h₄,h₃.le_left h₅⟩
--- end
-
 -- lemma select_left {P : V → Prop} : G ≼ G' -> select P G ≼ G' :=
 -- begin
 --   rintro ⟨U,H',h₂,h₃⟩,
 --   obtain ⟨P,h₄⟩ := h₂.select_left,
 --   exact ⟨_,_,h₄,h₃.select_left⟩
 -- end
-
--- lemma smaller_left : G ≼s G' -> G' ≼ G'' -> G ≼ G'' :=
--- begin
---   rintro ⟨f₁,h₁⟩ h₂,
---   let H := embed f₁ G,
---   let H' := select (set.range f₁) G',
---   have h₃ : H' ≼ G'' := select_left h₂,
---   have h₄ : H ≼ G'' := le_left (embed.le_select h₁) h₃,
---   exact iso_left (embed.iso h₁) h₄
--- end
-
--- lemma contract_left : G ≼c G' -> G' ≼ G'' -> G ≼ G'' :=
--- λ h₁ ⟨U,H,h₂,h₃⟩, ⟨_,_,h₁.trans h₂,h₃⟩
-
--- @[refl] lemma refl : G ≼ G
--- := ⟨_,G,is_contraction.refl,is_smaller.refl⟩
-
--- @[trans] lemma trans : G ≼ G' -> G' ≼ G'' -> G ≼ G'' :=
--- λ ⟨U,H,h1,h2⟩ h3, is_minor.contract_left h1 (is_minor.smaller_left h2 h3)
 
 -- end is_minor
 -- end simple_graph

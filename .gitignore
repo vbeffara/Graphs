@@ -1,5 +1,6 @@
 /.lake
+/.vscode/settings.json
+/blueprint/lean_decls
 /blueprint/print
 /blueprint/src/web.paux
 /blueprint/web
-blueprint/lean_decls
