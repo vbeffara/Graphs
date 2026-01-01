@@ -127,6 +127,50 @@ theorem key {φ : β → α} (K : (map' φ H').Subgraph) {b : β} :
     b ∈ (comap'_subgraph' K).verts ↔ φ b ∈ K.verts := by
   simp
 
+def L' {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) : H'.Subgraph :=
+    Subgraph.coeSubgraph (comap'_subgraph' K)
+
+theorem hL' {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) :
+    (L' φ K).verts ⊆ L.verts := by
+  simp [L']
+
+theorem key' {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) ⦃b : β⦄ :
+    b ∈ (L' φ K).verts ↔ ∃ (h : b ∈ L.verts), φ ⟨b, h⟩ ∈ K.verts := by
+  simp [L']
+
+def ψ {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) :
+    (L' φ K).verts → K.verts :=
+  fun x ↦ ⟨φ ⟨x, hL' φ K x.2⟩, (key' φ K).1 x.2 |>.2⟩
+
+theorem restrict₀ {φ : β → α} (hφ₂ : H'.Adapted φ) (K : (map' φ H').Subgraph) :
+    (comap'_subgraph' K).coe.Adapted (fun x ↦ (⟨φ x, x.2⟩ : K.verts)) := by
+  rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
+  simp at huv
+  obtain ⟨p, hp⟩ := hφ₂ huv
+  have hp'1 z (hz : z ∈ p.support) : z ∈ (comap'_subgraph' K).verts := by simpa [hz, hp _] using hv
+  have hp'2 e (he : e ∈ p.darts) : (comap'_subgraph' K).Adj e.toProd.1 e.toProd.2 := by
+    refine ⟨?_, Dart.adj e⟩
+    have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
+    have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
+    simpa [comap'_subgraph, h1, h2] using hv
+  exact ⟨(comap'_subgraph' K).attach p hp'1 hp'2, by { simp ; grind }⟩
+
+-- This looks too similar to the previous one, should merge?
+theorem restrict {L : H'.Subgraph} (φ : ↑L.verts → α) (hφ₂ : L.coe.Adapted φ)
+    (K : (map' φ L.coe).Subgraph) :
+    (L' φ K).coe.Adapted (ψ φ K) := by
+  rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
+  simp [ψ] at huv
+  obtain ⟨p, hp⟩ := hφ₂ huv
+  refine ⟨Subgraph.attach _ (p.map L.hom) ?_ ?_, ?_⟩
+  · simp [L'] at hv ⊢ ; grind
+  · simp [L'] at hv ⊢
+    rintro e he
+    have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
+    have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
+    simpa [comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv.2, h2] using e.adj
+  · simp [ψ] ; grind
+
 end Adapted
 
 def IsContraction (G : SimpleGraph α) (G' : SimpleGraph β) : Prop :=
