@@ -1,4 +1,7 @@
-import Mathlib
+-- import Mathlib
+import Mathlib.Combinatorics.SimpleGraph.Subgraph
+import Mathlib.Order.BourbakiWitt
+import Mathlib.Order.ConditionallyCompleteLattice.Basic
 
 open Function
 

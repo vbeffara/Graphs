@@ -1,3 +1,4 @@
+import Mathlib.Order.WellQuasiOrder
 import Graphs.Minor
 
 open SimpleGraph

@@ -1,4 +1,9 @@
-import Mathlib
+-- import Mathlib
+import Mathlib.Combinatorics.SimpleGraph.EdgeLabeling
+import Mathlib.Data.Fintype.Pigeonhole
+import Mathlib.Data.Nat.SuccPred
+import Mathlib.Data.Set.Finite.Lattice
+import Mathlib.Order.BourbakiWitt
 
 open Set
 
