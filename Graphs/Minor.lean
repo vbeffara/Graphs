@@ -3,7 +3,7 @@ import Graphs.Contraction
 
 open SimpleGraph Subgraph
 
-variable {α β β : Type*} {G G' : SimpleGraph α} {H : SimpleGraph β} {K : SimpleGraph β}
+variable {α β γ : Type*} {G G' : SimpleGraph α} {H : SimpleGraph β} {K : SimpleGraph γ}
 
 def IsMinor (G : SimpleGraph α) (H : SimpleGraph β) : Prop :=
   ∃ K : Subgraph H, G ≼c K.coe
@@ -49,12 +49,17 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
       obtain ⟨c, d, ⟨⟨h3, h4, h5, h6⟩⟩, rfl, rfl⟩ := hab
       simp_all
 
-theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by
+@[trans] theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by
   obtain ⟨L₁, hL₁⟩ := h1
   obtain ⟨L', hL'⟩ := subgraph_left L₁ h2
   exact ⟨L', hL₁.trans hL'⟩
 
 end IsMinor
+
+instance : Preorder FiniteGraph where
+  le G H := G.graph ≼ H.graph
+  le_refl G := IsMinor.refl
+  le_trans G H K := IsMinor.trans
 
 -- universe u
 -- variables {V V' V'' : Type u}

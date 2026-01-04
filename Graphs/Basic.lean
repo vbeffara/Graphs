@@ -7,6 +7,11 @@ variable {G H : SimpleGraph V} {G' : SimpleGraph V'} {G'' : SimpleGraph V''}
 
 namespace SimpleGraph
 
+structure FiniteGraph where
+  support : Type*
+  finite : Fintype support
+  graph : SimpleGraph support
+
 def IsSmaller (G : SimpleGraph V) (G' : SimpleGraph V') : Prop :=
   ∃ f : G →g G', Injective f
 

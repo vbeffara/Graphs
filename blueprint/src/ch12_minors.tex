@@ -3,7 +3,7 @@
 \section{Well-quasi-ordering}
 
 \begin{proposition}
-  \label{WQO_iff} \lean{WQO_iff} \leanok
+  \label{WQO_iff} \lean{WQO_iff} \leanok \mathlibok
   A quasi-ordering $\leq$ on $X$ is a well-quasi-ordering if and only if $X$
   contains neither an infinite antichain nor an infinite strictly decreasing
   sequence $x_0 > x_1 > \cdots$.
@@ -22,7 +22,7 @@
 \end{corollary}
 
 \begin{lemma}
-  \label{WQO_finset} \lean{WQO_Finset}
+  \label{WQO_finset} \lean{WQO_Finset} \leanok
   If $X$ is well-quasi-ordered by , then so is $[X]^{<ω}$.
 \end{lemma}
 
@@ -32,6 +32,6 @@
 \section{The graph minor theorem}
 
 \begin{theorem}
-  \label{theo:GraphMinorTheorem} \lean{RobertsonSeymour} \uses{def:minor} \leanok
+  \label{theo:GraphMinorTheorem} \lean{GraphMinorTheorem} \uses{def:minor} \leanok
   The finite graphs are well-quasi-ordered by the minor relation $\preceq$.
 \end{theorem}
