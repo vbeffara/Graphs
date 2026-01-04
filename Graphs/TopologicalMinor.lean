@@ -30,7 +30,7 @@ def self (G : SimpleGraph α) : PathEmbedding G G where
   ends := by simp
   disj := by simp
 
-theorem refl (G : SimpleGraph α) : G ≼t G := ⟨self G⟩
+@[refl] theorem refl (G : SimpleGraph α) : G ≼t G := ⟨self G⟩
 
 def follow (φ : PathEmbedding G H) : ∀ {x y : α}, G.Walk x y → H.Walk (φ.f x) (φ.f y)
   | _, _, Walk.nil      => Walk.nil
@@ -45,7 +45,7 @@ def follow (φ : PathEmbedding G H) : ∀ {x y : α}, G.Walk x y → H.Walk (φ.
 @[simp] lemma follow_append : φ.follow (p.append p') = (φ.follow p).append (φ.follow p') := by
   induction p with
   | nil => rfl
-  | cons h p ih => simp [ih, Walk.append_assoc]
+  | cons h p ih => simp only [Walk.cons_append, follow_cons, ih, Walk.append_assoc]
 
 @[simp] lemma follow_reverse : φ.follow (p.reverse) = (φ.follow p).reverse := by
   induction p with
