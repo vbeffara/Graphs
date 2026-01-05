@@ -209,8 +209,13 @@ theorem ramsey912 (k : ℕ) (φ : parts k α → ι) : ∃ S : Set α,
     refine ⟨x '' C i, hi.image H2.injOn, i, ?_⟩
 
     rintro s hs
+    have s_nonempty : s.1.Nonempty := by simp [← Finset.card_pos, s.2]
     let ns : Set ℕ := { n | x n ∈ s.1 }
-    have hns : ns.Nonempty := sorry
+    have hns : ns.Nonempty := by
+      obtain ⟨a, ha⟩ := s_nonempty
+      have := hs ha
+      obtain ⟨n, hn, rfl⟩ := this
+      exact ⟨n, ha⟩
     classical
     let n₀ := Nat.find hns
     have h1 : x n₀ ∈ s.1 := Nat.find_spec hns
