@@ -30,8 +30,7 @@ structure Fan' (φ : parts (k+1) α → ι) where
   --
   hx : x ∉ X
   hX : X.Infinite
-  hC : ∀ (s : parts k α) (hs : (s.1 : Set α) ⊆ X),
-    φ ⟨s.1.cons x (by grind), by simp only [card_cons, s.2]⟩ = i
+  hC : ∀ (s : parts.of k α X), φ ⟨s.1.1.cons x (by grind), by simp only [card_cons, s.1.2]⟩ = i
 
 theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Infinite ∧ Monochromatic' φ S := by
   induction k generalizing α with
@@ -39,9 +38,8 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
     refine ⟨univ, infinite_univ, φ ⟨∅, rfl⟩, ?_⟩
     simp [parts, parts.of] ; grind
   | succ k ih =>
-    have key (X : Set α) (hX : X.Infinite) (x : α) (hxX : x ∉ X) :
-        ∃ Y : Set α, ∃ hY : Y ⊆ X, Y.Infinite ∧ ∃ C : ι, ∀ u : parts k α, ∀ h : (u.1 : Set α) ⊆ Y,
-        φ (u.cons x (by grind)) = C := by
+    have key {X : Set α} (hX : X.Infinite) (x : α) (hxX : x ∉ X) : ∃ (Y : Set α) (hY : Y ⊆ X),
+        Y.Infinite ∧ ∃ C : ι, ∀ u : parts.of k α Y, φ (u.1.cons x (by grind)) = C := by
 
       let ψ (s : parts k X) : ι :=
         let s' : parts k α := ⟨Finset.map (Embedding.subtype _) s.1, by simp [s.2]⟩
@@ -49,77 +47,60 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
 
       obtain ⟨S, h1, C, h2⟩ := @ih X hX.to_subtype ψ
 
-      refine ⟨Embedding.subtype _ '' S, ?_, ?_, C, ?_⟩
-      · simp
+      refine ⟨Embedding.subtype _ '' S, by simp, ?_, C, ?_⟩
       · exact h1.image (Embedding.subtype_injective _ |>.injOn)
-      rintro s hs
-      simp at hs
-      have hs' : (s.1 : Set _) ⊆ X := by
-        intro u hu
-        have := hs hu
-        grind
-      let ss : parts k X := by
-        refine ⟨?_, ?_⟩
-        · classical exact Finset.subtype _ s.1
-        · simpa [← s.2, Finset.card_filter_eq_iff] using hs'
-      have h3 : (ss.1 : Set _) ⊆ S := by
-        simp [ss]
-        intro a ha
-        simp at ha
-        specialize hs ha
-        grind
-      simp [parts.cons, ψ, parts.of] at h2 ⊢
-      specialize h2 ss h3
-      convert h2
-      ext
-      simp [ss]
-      grind
+      · rintro ⟨s, hs⟩
+        change (s.1 : Set _) ⊆ Subtype.val '' S at hs
+        have hs' : (s.1 : Set _) ⊆ X := by grind
+        let ss : parts.of k X S := by
+          refine ⟨⟨Finset.subtype _ s.1, ?_⟩, ?_⟩
+          · simpa [← s.2, Finset.card_filter_eq_iff] using hs'
+          · intro a ha
+            simp only [SetLike.mem_coe, mem_subtype] at ha
+            grind [hs ha]
+        specialize h2 ss
+        simp [parts.cons, ψ, ss] at h2 ⊢
+        convert h2 ; grind
 
     have next (F : Fan' φ) : ∃ G : Fan' φ, G.x ∈ F.X ∧ G.X ⊂ F.X := by
       obtain ⟨y, hy⟩ := F.hX.nonempty
       have hXy : (F.X \ {y}).Infinite := Infinite.diff F.hX $ finite_singleton y
-      obtain ⟨Y, hY1, hY2, C, hY3⟩ := key _ hXy y (by grind)
+      obtain ⟨Y, hY1, hY2, C, hY3⟩ := key hXy y (by grind)
       refine ⟨⟨y, Y, C, by grind, hY2, hY3⟩, hy, by grind⟩
+    choose Φ hΦ₁ hΦ₂ using next
 
     let x₀ := Classical.choice $ Infinite.nonempty α
 
-    have : (univ \ {x₀}).Infinite :=
-      Infinite.diff infinite_univ (finite_singleton _)
-    obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := key (univ \ {x₀}) this x₀ (by grind)
+    have : (univ \ {x₀}).Infinite := Infinite.diff infinite_univ (finite_singleton _)
+    obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := key this x₀ (by grind)
     let F₀ : Fan' φ := ⟨x₀, X₀, i₀, by grind, hX₀', h₀⟩
-
-    choose Φ hΦ₁ hΦ₂ using next
 
     let F (n : ℕ) : Fan' φ := Φ^[n] F₀
     let C (i : ι) : Set ℕ := { n | (F n).i = i }
-
-    have key0 : ∃ i : ι, (C i).Infinite := by
-      simp [C, ← infinite_coe_iff]
-      exact Finite.exists_infinite_fiber _
-    obtain ⟨i, hi⟩ := key0
-
     let X (n : ℕ) : Set α := (F n).X
     let x (n : ℕ) : α := (F n).x
 
+    obtain ⟨i, hi⟩ : ∃ i : ι, (C i).Infinite := by
+      simp [C, ← infinite_coe_iff]
+      exact Finite.exists_infinite_fiber _
+
     have H1 : StrictAnti X := by
-      apply strictAnti_of_succ_lt
-      simp [X, F, -Function.iterate_succ, Function.iterate_succ']
-      grind
+      refine strictAnti_nat_of_succ_lt (fun n => ?_)
+      simpa [X, F, -Function.iterate_succ, Function.iterate_succ'] using hΦ₂ _
 
     have H3 ⦃m n : ℕ⦄ (hmn : m < n) : x n ∈ X m := by
       cases n with
       | zero => contradiction
       | succ n =>
         simp [x, F, -Function.iterate_succ, Function.iterate_succ']
-        exact H1.antitone (Nat.le_of_lt_succ hmn) (hΦ₁ (F n))
+        exact H1.antitone (Nat.le_of_lt_succ hmn) (hΦ₁ _)
 
     have H2 : Function.Injective x := by
       apply injective_of_lt_imp_ne
       intro m n h₁
-      by_contra h₂
-      have h₃ := H3 h₁
-      rw [← h₂] at h₃
-      exact (F m).hx h₃
+      have := (F m).hx
+      contrapose this
+      simpa only [← this] using H3 h₁
 
     refine ⟨x '' C i, hi.image H2.injOn, i, ?_⟩
 
@@ -134,23 +115,17 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
     classical
     let n₀ := Nat.find hns
     have h1 : x n₀ ∈ s.1 := Nat.find_spec hns
-    let s' : parts k α := by
-      refine ⟨s.1.erase (x n₀), ?_⟩
-      simp [h1, s.2]
-    have h2 : (s'.1 : Set _) ⊆ (F n₀).X := by
+    let s' : parts.of k α (X n₀) := by
+      refine ⟨⟨s.1.erase (x n₀), by simp [h1, s.2]⟩, ?_⟩
       intro a ha
-      simp [s'] at ha
+      simp at ha
       obtain ⟨m, hm, rfl⟩ := hs ha.1
-      have n₀_le_m : n₀ ≤ m := Nat.find_min' hns ha.1
       apply H3
-      apply lt_of_le_of_ne n₀_le_m
+      apply lt_of_le_of_ne (Nat.find_min' hns ha.1)
       grind
 
-    have := (F n₀).hC s' h2
-    simp [s', x, h1] at this
+    have : φ s = (F n₀).i := by simpa [s', x, h1] using (F n₀).hC s'
     convert ← this
-    change n₀ ∈ C i
-    have := hs h1
     exact (Injective.mem_set_image H2).mp (hs h1)
 
 namespace SimpleGraph
