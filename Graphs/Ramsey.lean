@@ -20,7 +20,7 @@ def of (k : ℕ) (α : Type*) (S : Set α) := { s : parts k α // (s.1 : Set α)
 
 end parts
 
-def Monochromatic' (φ : parts k α → ι) (S : Set α) : Prop :=
+def Monochromatic (φ : parts k α → ι) (S : Set α) : Prop :=
   ∃ i : ι, ∀ s : parts.of k α S, φ s.1 = i
 
 structure Fan' (φ : parts (k+1) α → ι) where
@@ -32,7 +32,7 @@ structure Fan' (φ : parts (k+1) α → ι) where
   hX : X.Infinite
   hC : ∀ (s : parts.of k α X), φ ⟨s.1.1.cons x (by grind), by simp only [card_cons, s.1.2]⟩ = i
 
-theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Infinite ∧ Monochromatic' φ S := by
+theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Infinite ∧ Monochromatic φ S := by
   induction k generalizing α with
   | zero =>
     refine ⟨univ, infinite_univ, φ ⟨∅, rfl⟩, ?_⟩
