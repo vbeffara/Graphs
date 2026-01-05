@@ -5,14 +5,23 @@ import Mathlib.Data.Nat.SuccPred
 import Mathlib.Data.Set.Finite.Lattice
 import Mathlib.Order.BourbakiWitt
 
-open Set Function
+open Set Function Finset Classical
 
 variable {α ι : Type*} [Finite ι] {k : ℕ}
 
 def parts (k : ℕ) (α : Type*) := { s : Finset α // s.card = k }
 
+namespace parts
+
+def cons (s : parts k α) (x : α) (hx : x ∉ s.1) : parts (k+1) α :=
+  ⟨s.1.cons x hx, by simp only [card_cons, s.2]⟩
+
+def of (k : ℕ) (α : Type*) (S : Set α) := { s : parts k α // (s.1 : Set α) ⊆ S }
+
+end parts
+
 def Monochromatic' (φ : parts k α → ι) (S : Set α) : Prop :=
-  ∃ i : ι, ∀ s : parts k α, (s.1 : Set α) ⊆ S → φ s = i
+  ∃ i : ι, ∀ s : parts.of k α S, φ s.1 = i
 
 structure Fan' (φ : parts (k+1) α → ι) where
   x : α
@@ -21,21 +30,22 @@ structure Fan' (φ : parts (k+1) α → ι) where
   --
   hx : x ∉ X
   hX : X.Infinite
-  hC : ∀ (s : parts k α) (hs : (s.1 : Set α) ⊆ X), φ ⟨Finset.cons x s.1 (by grind), by simp [s.2]⟩ = i
+  hC : ∀ (s : parts k α) (hs : (s.1 : Set α) ⊆ X),
+    φ ⟨s.1.cons x (by grind), by simp only [card_cons, s.2]⟩ = i
 
 theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Infinite ∧ Monochromatic' φ S := by
   induction k generalizing α with
   | zero =>
     refine ⟨univ, infinite_univ, φ ⟨∅, rfl⟩, ?_⟩
-    simp [parts] ; grind
+    simp [parts, parts.of] ; grind
   | succ k ih =>
     have key (X : Set α) (hX : X.Infinite) (x : α) (hxX : x ∉ X) :
         ∃ Y : Set α, ∃ hY : Y ⊆ X, Y.Infinite ∧ ∃ C : ι, ∀ u : parts k α, ∀ h : (u.1 : Set α) ⊆ Y,
-        φ ⟨Finset.cons x u.1 (by grind), by simp [u.2]⟩ = C := by
+        φ (u.cons x (by grind)) = C := by
 
       let ψ (s : parts k X) : ι :=
         let s' : parts k α := ⟨Finset.map (Embedding.subtype _) s.1, by simp [s.2]⟩
-        φ ⟨Finset.cons x s'.1 (by simp [s', hxX]), (by simp [s'.2])⟩
+        φ (s'.cons x (by simp [s', hxX]))
 
       obtain ⟨S, h1, C, h2⟩ := @ih X hX.to_subtype ψ
 
@@ -58,6 +68,7 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
         simp at ha
         specialize hs ha
         grind
+      simp [parts.cons, ψ, parts.of] at h2 ⊢
       specialize h2 ss h3
       convert h2
       ext
@@ -112,7 +123,7 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
 
     refine ⟨x '' C i, hi.image H2.injOn, i, ?_⟩
 
-    rintro s hs
+    rintro ⟨s, hs⟩
     have s_nonempty : s.1.Nonempty := by simp [← Finset.card_pos, s.2]
     let ns : Set ℕ := { n | x n ∈ s.1 }
     have hns : ns.Nonempty := by
@@ -142,7 +153,6 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
     have := hs h1
     exact (Injective.mem_set_image H2).mp (hs h1)
 
-
 namespace SimpleGraph
 
 variable {G : SimpleGraph α}
@@ -170,7 +180,7 @@ theorem ramsey2 [Nonempty ι] [Infinite α] (φ : G.EdgeLabeling ι) :
     · exact Classical.choice inferInstance
   obtain ⟨S, hS1, i, hS2⟩ := ramsey912 ψ
   refine ⟨S, hS1, i, fun x hx y hy h => ?_⟩
-  let s : parts 2 α := ⟨Finset.cons x {y} (by simp [h.ne]), by simp⟩
+  let s : parts 2 α := ⟨cons x {y} (by simp [h.ne]), by simp only [card_cons, Finset.card_singleton] ⟩
   have hs : (s.1 : Set α) ⊆ S := by grind
   let e : Sym2 α := s(x, y)
   have he1 : e ∈ G.edgeSet := by
@@ -178,7 +188,7 @@ theorem ramsey2 [Nonempty ι] [Infinite α] (φ : G.EdgeLabeling ι) :
   classical
   have he2 : ∃ e ∈ G.edgeSet, e.toFinset = {x, y} := ⟨e, he1, (by ext ; simp [e])⟩
   have he3 := Classical.choose_spec he2
-  convert hS2 s hs
+  convert hS2 ⟨s, hs⟩
   simp [ψ, s, he2, SimpleGraph.EdgeLabeling.get]
   congr
   ext u
