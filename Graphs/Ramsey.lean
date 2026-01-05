@@ -161,4 +161,62 @@ theorem ramsey912 (k : ℕ) (φ : parts k α → ι) : ∃ S : Set α,
       obtain ⟨Y, hY1, hY2, C, hY3⟩ := key _ hXy y (by grind)
       refine ⟨⟨y, Y, C, by grind, hY2, hY3⟩, hy, by grind⟩
 
-    all_goals sorry
+    let x₀ := Classical.choice $ Infinite.nonempty α
+
+    have : (univ \ {x₀}).Infinite :=
+      Infinite.diff infinite_univ (finite_singleton _)
+    obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := key (univ \ {x₀}) this x₀ (by grind)
+    let F₀ : Fan' φ := ⟨x₀, X₀, i₀, by grind, hX₀', h₀⟩
+
+    choose Φ hΦ₁ hΦ₂ using next
+
+    let F (n : ℕ) : Fan' φ := Φ^[n] F₀
+    let C (i : ι) : Set ℕ := { n | (F n).i = i }
+
+    have key0 : ∃ i : ι, (C i).Infinite := by
+      simp [C, ← infinite_coe_iff]
+      exact Finite.exists_infinite_fiber _
+    obtain ⟨i, hi⟩ := key0
+
+    let X (n : ℕ) : Set α := (F n).X
+    let x (n : ℕ) : α := (F n).x
+
+    have H1 : StrictAnti X := by
+      apply strictAnti_of_succ_lt
+      simp [X, F, -Function.iterate_succ, Function.iterate_succ']
+      grind
+
+    have H3 ⦃m n : ℕ⦄ (hmn : m < n) : x n ∈ X m := by
+      cases n with
+      | zero => contradiction
+      | succ n =>
+        simp [x, F, -Function.iterate_succ, Function.iterate_succ']
+        exact H1.antitone (Nat.le_of_lt_succ hmn) (hΦ₁ (F n))
+
+    have H2 : Function.Injective x := by
+      apply injective_of_lt_imp_ne
+      intro m n h₁
+      by_contra h₂
+      have h₃ := H3 h₁
+      rw [← h₂] at h₃
+      exact (F m).hx h₃
+
+    refine ⟨x '' C i, hi.image H2.injOn, i, ?_⟩
+
+    rintro s hs
+    let ns : Set ℕ := { n | x n ∈ s.1 }
+    have hns : ns.Nonempty := sorry
+    classical
+    let n₀ := Nat.find hns
+    have h1 : x n₀ ∈ s.1 := Nat.find_spec hns
+    let s' : parts k α := by
+      refine ⟨s.1.erase (x n₀), ?_⟩
+      simp [h1, s.2]
+    have h2 : (s'.1 : Set _) ⊆ (F n₀).X := sorry
+
+    have := (F n₀).hC s' h2
+    simp [s', x, h1] at this
+    convert ← this
+    change n₀ ∈ C i
+    have := hs h1
+    exact (Injective.mem_set_image H2).mp (hs h1)
