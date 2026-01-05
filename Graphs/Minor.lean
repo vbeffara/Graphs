@@ -25,10 +25,6 @@ theorem ofSubgraph (K : Subgraph H) : K.coe ≼ H := ⟨K, .refl⟩
 
 theorem ofContraction (h : G ≼c H) : G ≼ H := ⟨⊤, .iso_right h Subgraph.topIso.symm⟩
 
-theorem contract_left (h1 : G ≼c H) (h2 : H ≼ K) : G ≼ K := by
-  obtain ⟨L, hL⟩ := h2
-  refine ⟨L, h1.trans hL⟩
-
 theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L, φ, hφ₁, hφ₂, rfl⟩ := h
   refine ⟨Adapted.L' φ K, Adapted.ψ φ K, ?_, ?_, ?_⟩

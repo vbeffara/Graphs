@@ -1,5 +1,6 @@
 import Graphs.Basic
 import Graphs.Contraction
+import Graphs.Expander
 import Graphs.GraphMinorTheorem
 import Graphs.Map
 import Graphs.Minor
