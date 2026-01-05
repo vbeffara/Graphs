@@ -7,7 +7,7 @@ import Mathlib.Order.BourbakiWitt
 
 open Set Function
 
-variable {α ι : Type*} [Finite ι] [Nonempty ι] {G : SimpleGraph α}
+variable {α ι : Type*} [Finite ι] {G : SimpleGraph α}
 
 structure Fan (φ : G.EdgeLabeling ι) where
   x : α
@@ -21,7 +21,7 @@ structure Fan (φ : G.EdgeLabeling ι) where
 def Monochromatic (φ : G.EdgeLabeling ι) (S : Set α) : Prop :=
   ∃ i : ι, ∀ u ∈ S, ∀ v ∈ S, ∀ h : G.Adj u v, φ.get u v h = i
 
-theorem ramsey_key (φ : G.EdgeLabeling ι) (X : Set α) (hx : X.Infinite) (x : α) :
+theorem ramsey_key [Nonempty ι] (φ : G.EdgeLabeling ι) (X : Set α) (hx : X.Infinite) (x : α) :
     ∃ Y ⊆ X, Y.Infinite ∧ ∃ C : ι, ∀ u ∈ Y, ∀ h : G.Adj x u, φ.get x u h = C := by
   let f : ι → Set α := fun i ↦ { y ∈ X | ∀ h : G.Adj x y, φ.get x y h = i }
   suffices ∃ i : ι, (f i).Infinite by
@@ -40,14 +40,14 @@ theorem ramsey_key (φ : G.EdgeLabeling ι) (X : Set α) (hx : X.Infinite) (x : 
   contrapose! this
   exact finite_iUnion this
 
-theorem next_fan (φ : G.EdgeLabeling ι) (F : Fan φ) : ∃ G : Fan φ, G.x ∈ F.X ∧ G.X ⊂ F.X := by
+theorem next_fan [Nonempty ι] (φ : G.EdgeLabeling ι) (F : Fan φ) : ∃ G : Fan φ, G.x ∈ F.X ∧ G.X ⊂ F.X := by
   obtain ⟨y, hy⟩ := F.hX.nonempty
   have hXy : (F.X \ {y}).Infinite := Infinite.diff F.hX $ finite_singleton y
   obtain ⟨Y, hY1, hY2, i, hY3⟩ := ramsey_key φ (F.X \ {y}) hXy y
   refine ⟨⟨y, Y, i, by grind, hY2, hY3⟩, hy, by grind⟩
 
 -- Special case of Theorem 9.1.2 in Diestel's Graph Theory book, for `k=2`
-theorem ramsey2 [Infinite α] (φ : G.EdgeLabeling ι) :
+theorem ramsey2 [Nonempty ι] [Infinite α] (φ : G.EdgeLabeling ι) :
     ∃ S : Set α, S.Infinite ∧ Monochromatic φ S := by
 
   let x₀ := Classical.choice $ Infinite.nonempty α
@@ -222,7 +222,14 @@ theorem ramsey912 (k : ℕ) (φ : parts k α → ι) : ∃ S : Set α,
     let s' : parts k α := by
       refine ⟨s.1.erase (x n₀), ?_⟩
       simp [h1, s.2]
-    have h2 : (s'.1 : Set _) ⊆ (F n₀).X := sorry
+    have h2 : (s'.1 : Set _) ⊆ (F n₀).X := by
+      intro a ha
+      simp [s'] at ha
+      obtain ⟨m, hm, rfl⟩ := hs ha.1
+      have n₀_le_m : n₀ ≤ m := Nat.find_min' hns ha.1
+      apply H3
+      apply lt_of_le_of_ne n₀_le_m
+      grind
 
     have := (F n₀).hC s' h2
     simp [s', x, h1] at this
