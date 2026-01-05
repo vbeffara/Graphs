@@ -52,11 +52,6 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
 
 end IsMinor
 
-instance : Preorder FiniteGraph where
-  le G H := G.graph ≼ H.graph
-  le_refl G := IsMinor.refl
-  le_trans G H K := IsMinor.trans
-
 -- universe u
 -- variables {V V' V'' : Type u}
 -- variables {G H : simple_graph V} {G' : simple_graph V'} {G'' : simple_graph V''}
