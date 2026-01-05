@@ -142,7 +142,8 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
     have := hs h1
     exact (Injective.mem_set_image H2).mp (hs h1)
 
--- PRevious special case
+
+namespace SimpleGraph
 
 variable {G : SimpleGraph α}
 
@@ -155,13 +156,13 @@ structure Fan (φ : G.EdgeLabeling ι) where
   hX : X.Infinite
   hC : ∀ u ∈ X, ∀ h : G.Adj x u, φ.get x u h = i
 
-def Monochromatic (φ : G.EdgeLabeling ι) (S : Set α) : Prop :=
+def EdgeLabeling.isMonochromatic (φ : G.EdgeLabeling ι) (S : Set α) : Prop :=
   ∃ i : ι, ∀ u ∈ S, ∀ v ∈ S, ∀ h : G.Adj u v, φ.get u v h = i
 
--- Special case of Theorem 9.1.2 in Diestel's Graph Theory book, for `k=2`
+-- Graph version, obtained as a special case of Theorem 9.1.2 in Diestel's Graph
+-- Theory book, for `k=2`
 theorem ramsey2 [Nonempty ι] [Infinite α] (φ : G.EdgeLabeling ι) :
-    ∃ S : Set α, S.Infinite ∧ Monochromatic φ S := by
-
+    ∃ S : Set α, S.Infinite ∧ φ.isMonochromatic S := by
   let ψ (s : parts 2 α) : ι := by
     by_cases h : ∃ e ∈ G.edgeSet, e.toFinset = s.1
     · choose e he1 he2 using h
@@ -171,15 +172,16 @@ theorem ramsey2 [Nonempty ι] [Infinite α] (φ : G.EdgeLabeling ι) :
   refine ⟨S, hS1, i, fun x hx y hy h => ?_⟩
   let s : parts 2 α := ⟨Finset.cons x {y} (by simp [h.ne]), by simp⟩
   have hs : (s.1 : Set α) ⊆ S := by grind
-  specialize hS2 s hs
   let e : Sym2 α := s(x, y)
   have he1 : e ∈ G.edgeSet := by
     exact (SimpleGraph.mem_edgeSet G).mpr h
   classical
-  have he2 : e.toFinset = {x, y} := by ext ; simp [e]
-  have : ∃ e ∈ G.edgeSet, e.toFinset = {x, y} := ⟨e, he1, he2⟩
-  have he3 := Classical.choose_spec this
-  simp [ψ, s, this, SimpleGraph.EdgeLabeling.get] at hS2 ⊢
-  convert hS2
+  have he2 : ∃ e ∈ G.edgeSet, e.toFinset = {x, y} := ⟨e, he1, (by ext ; simp [e])⟩
+  have he3 := Classical.choose_spec he2
+  convert hS2 s hs
+  simp [ψ, s, he2, SimpleGraph.EdgeLabeling.get]
+  congr
   ext u
   simp [← Sym2.mem_toFinset, he3] ; simp
+
+end SimpleGraph
