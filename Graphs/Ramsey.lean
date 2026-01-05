@@ -148,7 +148,12 @@ theorem ramsey912 (k : ℕ) (φ : parts k α → ι) : ∃ S : Set α,
         refine ⟨?_, ?_⟩
         · classical exact Finset.subtype _ s.1
         · simpa [← s.2, Finset.card_filter_eq_iff] using hs'
-      have h3 : (ss.1 : Set _) ⊆ S := sorry
+      have h3 : (ss.1 : Set _) ⊆ S := by
+        simp [ss]
+        intro a ha
+        simp at ha
+        specialize hs ha
+        grind
       specialize h2 ss h3
       convert h2
       ext
