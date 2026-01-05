@@ -5,7 +5,7 @@ import Mathlib.Data.Nat.SuccPred
 import Mathlib.Data.Set.Finite.Lattice
 import Mathlib.Order.BourbakiWitt
 
-open Set
+open Set Function
 
 variable {α ι : Type*} [Finite ι] [Nonempty ι] {G : SimpleGraph α}
 
@@ -99,3 +99,66 @@ theorem ramsey2 [Infinite α] (φ : G.EdgeLabeling ι) :
     simp [C] at hn
     have := (F n).hC (x m) (H3 h) hmn.symm
     simpa [←hn]
+
+-- Now for the more general version (without a graph)
+
+variable {k : ℕ} [Infinite α]
+
+def parts (k : ℕ) (α : Type*) := { s : Finset α // s.card = k }
+
+def Monochromatic' (φ : parts k α → ι) (S : Set α) : Prop :=
+  ∃ i : ι, ∀ s : parts k α, (s.1 : Set α) ⊆ S → φ s = i
+
+structure Fan' (φ : parts (k+1) α → ι) where
+  x : α
+  X : Set α
+  i : ι
+  --
+  hx : x ∉ X
+  hX : X.Infinite
+  hC : ∀ (s : parts k α) (hs : (s.1 : Set α) ⊆ X), φ ⟨Finset.cons x s.1 (by grind), by simp [s.2]⟩ = i
+
+theorem ramsey912 (k : ℕ) (φ : parts k α → ι) : ∃ S : Set α,
+    S.Infinite ∧ Monochromatic' φ S := by
+  induction k generalizing α with
+  | zero =>
+    refine ⟨univ, infinite_univ, φ ⟨∅, rfl⟩, ?_⟩
+    simp [parts] ; grind
+  | succ k ih =>
+    have key (X : Set α) (hX : X.Infinite) (x : α) (hxX : x ∉ X) :
+        ∃ Y : Set α, ∃ hY : Y ⊆ X, Y.Infinite ∧ ∃ C : ι, ∀ u : parts k α, ∀ h : (u.1 : Set α) ⊆ Y,
+        φ ⟨Finset.cons x u.1 (by grind), by simp [u.2]⟩ = C := by
+
+      let ψ (s : parts k X) : ι :=
+        let s' : parts k α := ⟨Finset.map (Embedding.subtype _) s.1, by simp [s.2]⟩
+        φ ⟨Finset.cons x s'.1 (by simp [s', hxX]), (by simp [s'.2])⟩
+
+      obtain ⟨S, h1, C, h2⟩ := @ih X hX.to_subtype ψ
+
+      refine ⟨Embedding.subtype _ '' S, ?_, ?_, C, ?_⟩
+      · simp
+      · exact h1.image (Embedding.subtype_injective _ |>.injOn)
+      rintro s hs
+      simp at hs
+      have hs' : (s.1 : Set _) ⊆ X := by
+        intro u hu
+        have := hs hu
+        grind
+      let ss : parts k X := by
+        refine ⟨?_, ?_⟩
+        · classical exact Finset.subtype _ s.1
+        · simpa [← s.2, Finset.card_filter_eq_iff] using hs'
+      have h3 : (ss.1 : Set _) ⊆ S := sorry
+      specialize h2 ss h3
+      convert h2
+      ext
+      simp [ss]
+      grind
+
+    have next (F : Fan' φ) : ∃ G : Fan' φ, G.x ∈ F.X ∧ G.X ⊂ F.X := by
+      obtain ⟨y, hy⟩ := F.hX.nonempty
+      have hXy : (F.X \ {y}).Infinite := Infinite.diff F.hX $ finite_singleton y
+      obtain ⟨Y, hY1, hY2, C, hY3⟩ := key _ hXy y (by grind)
+      refine ⟨⟨y, Y, C, by grind, hY2, hY3⟩, hy, by grind⟩
+
+    all_goals sorry
