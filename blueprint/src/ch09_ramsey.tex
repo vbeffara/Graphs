@@ -1,0 +1,29 @@
+\chapter{Ramsey Theory for Graphs}
+
+\begin{theorem}[special case of Theorem~9.1.2 in Diestel]
+  \label{theo:ramsey2} \lean{ramsey2} \leanok
+  Let $c$ be a positive integer, and $X$ an infinite set. If $[X]^2$ is colored
+  with $c$ colors, then $X$ has an infinite monochromatic subset.
+\end{theorem}
+
+\begin{proof} \leanok
+  We follow Diestel, except for the induction on hyper-edge size.
+
+  Let $[X]^2$ be colored with $c$ colors. We shall construct an infinite
+  sequence $X_0, X_1, \ldots$ of infinite subsets of $X$ and choose elements
+  $x_i \in X_i$ with the following properties (for all $i$):
+  \begin{enumerate}
+    \item $X_{i+1} \subseteq X_i$;
+    \item all pairs $\{x_i, z\}$ with $z \in X_{i+1}$ have the same color, which
+    we associate with $x_i$.
+  \end{enumerate}
+  We start with $X_0 := X$ and pick $x_0 \in X_0$ arbitrarily. By assumption,
+  $X_0$ is infinite. Having chosen an infinite set $X_i$ and $x_i \in X_i$ for
+  some $i$, we $c$-color $X_i \setminus \{xi\}$ by giving each vertex $z$ the
+  color of $\{x_i, z\}$ from our c-coloring of $[X]^2$. The infinite set $X_i
+  \setminus \{xi\}$ has an infinite monochromatic subset, which we choose as
+  $X_{i+1}$. Clearly, this choice satisfies the two conditions above. Finally,
+  we pick $x_{i+1} \in X_{i+1}$ arbitrarily. Since $c$ is finite, one of the $c$
+  colors is associated with infinitely many $x_i$. These $x_i$ form an infinite
+  monochromatic subset of $X$.
+\end{proof}
