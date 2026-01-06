@@ -46,7 +46,7 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
   induction k generalizing α with
   | zero =>
     refine ⟨univ, infinite_univ, φ ⟨∅, rfl⟩, ?_⟩
-    simp [parts, parts.of] ; grind
+    simp only [parts.of, parts, Subtype.forall, card_eq_zero] ; grind
   | succ k ih =>
     have key {X : Set α} (hX : X.Infinite) (x : α) (hxX : x ∉ X) : ∃ (Y : Set α) (hY : Y ⊆ X),
         Y.Infinite ∧ ∃ C : ι, ∀ u : parts.of k α Y, φ (u.1.cons x (by grind)) = C := by
@@ -84,48 +84,38 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
     obtain ⟨X₀, hX₀, hX₀', i₀, h₀⟩ := key this x₀ (by grind)
     let F₀ : Fan φ := ⟨x₀, X₀, i₀, by grind, hX₀', h₀⟩
 
-    let F (n : ℕ) : Fan φ := Φ^[n] F₀
-    let C (i : ι) : Set ℕ := { n | (F n).i = i }
-    let X (n : ℕ) : Set α := (F n).X
-    let x (n : ℕ) : α := (F n).x
+    let F (n : ℕ) := Φ^[n] F₀
+    let X (n : ℕ) := (F n).X
+    let x (n : ℕ) := (F n).x
 
-    obtain ⟨i, hi⟩ : ∃ i : ι, (C i).Infinite := by
-      simp only [← infinite_coe_iff, coe_setOf, C]
+    have X_anti : Antitone X := by
+      refine antitone_nat_of_succ_le (fun n => le_of_lt ?_)
+      convert hΦ₂ (F n) ; apply Function.iterate_succ_apply'
+    have x_mem_X {m n : ℕ} (hmn : m < n) : x n ∈ X m := by
+      obtain _ | n := n ; contradiction
+      apply X_anti (Nat.le_of_lt_succ hmn)
+      simpa [x, F, -Function.iterate_succ, Function.iterate_succ'] using hΦ₁ _
+    have x_injective : x.Injective := inj (fun n => (F n).hx) x_mem_X
+
+    obtain ⟨i, hi⟩ : ∃ i, Set.Infinite { n | (F n).i = i } := by
+      simp only [← infinite_coe_iff, coe_setOf]
       exact Finite.exists_infinite_fiber _
+    refine ⟨x '' { n | (F n).i = i }, hi.image x_injective.injOn, i, fun s => ?_⟩
 
-    have H1 : StrictAnti X := by
-      refine strictAnti_nat_of_succ_lt (fun n => ?_)
-      simpa [X, F, -Function.iterate_succ, Function.iterate_succ'] using hΦ₂ _
-
-    have H3 {m n : ℕ} (hmn : m < n) : x n ∈ X m := by
-      cases n with
-      | zero => contradiction
-      | succ n =>
-        apply H1.antitone (Nat.le_of_lt_succ hmn)
-        simpa [x, F, -Function.iterate_succ, Function.iterate_succ'] using hΦ₁ _
-
-    have x_injective : x.Injective := inj (fun n => (F n).hx) H3
-
-    refine ⟨x '' C i, hi.image x_injective.injOn, i, fun s => ?_⟩
-
-    have s_nonempty : s.1.1.Nonempty := by simp [← Finset.card_pos, s.1.2]
-    let ns : Set ℕ := { n | x n ∈ s.1.1 }
-    have hns : ns.Nonempty := by
-      obtain ⟨a, ha⟩ := s_nonempty
-      have := s.2 ha
-      obtain ⟨n, hn, rfl⟩ := this
+    let ns : Set ℕ := x ⁻¹' s.1.1
+    have ns_nonempty : ns.Nonempty := by
+      obtain ⟨a, ha⟩ : s.1.1.Nonempty := by simp [← Finset.card_pos, s.1.2]
+      obtain ⟨n, hn, rfl⟩ := s.2 ha
       exact ⟨n, ha⟩
-    classical
-    let n₀ := Nat.find hns
-    have h1 : x n₀ ∈ s.1.1 := Nat.find_spec hns
+    let n₀ := Nat.find ns_nonempty
+    have h1 : x n₀ ∈ s.1.1 := Nat.find_spec ns_nonempty
     let s' : parts.of k α (X n₀) := by
       refine ⟨⟨s.1.1.erase (x n₀), by simp [h1, s.1.2]⟩, fun a ha => ?_⟩
       simp at ha
       obtain ⟨m, hm, rfl⟩ := s.2 ha.1
-      exact H3 $ lt_of_le_of_ne (Nat.find_min' hns ha.1) (by grind)
-
-    have : φ s.1 = (F n₀).i := by simpa [s', x, h1, parts.cons] using (F n₀).hC s'
-    simpa [this] using (Injective.mem_set_image x_injective).mp (s.2 h1)
+      exact x_mem_X $ lt_of_le_of_ne (Nat.find_min' ns_nonempty ha.1) (by grind)
+    have : (F n₀).i = i := (Injective.mem_set_image x_injective).mp (s.2 h1)
+    simpa [s', parts.cons, x, h1, this] using (F n₀).hC s'
 
 namespace SimpleGraph
 
