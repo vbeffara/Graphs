@@ -18,5 +18,5 @@ theorem WQO_iff : WellQuasiOrderedLE α ↔
 def FinsetLE (s t : Finset α) : Prop := ∃ f : s ↪ t, ∀ x, x.val ≤ f x
 
 -- Lemma 12.1.3
-theorem WQO_Finset (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := α)) := by
+theorem Higman (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := α)) := by
   sorry
