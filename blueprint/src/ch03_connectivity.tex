@@ -1,0 +1,38 @@
+\chapter{Connectivity}
+
+\setcounter{section}{2}
+\section{Menger's theorem}
+
+\begin{theorem}[Menger 1927]
+  \label{theo:Menger}
+
+  Let $G = (V, E)$ be a graph and $A,B \subseteq V$. Then the minimum number of
+  vertices separating $A$ from $B$ in $G$ is equal to the maximum number of
+  disjoint $A--B$ paths in $G$.
+\end{theorem}
+
+\begin{proof}
+  This is copy-pasted from Diestel's book.
+
+  Whenever $G$, $A$, $B$ are given as in the theorem, we denote by $k=k(G,A,B)$
+  the minimum number of vertices separating $A$ from $B$ in $G$. Clearly, $G$
+  cannot contain more than $k$ disjoint $A--B$ paths; our task will be to show
+  that $k$ such paths exist.
+
+  We apply induction on $|G|$. If $G$ has no edge, then $|A \cap B|= k$ and we
+  have $k$ trivial $A--B$ paths. So we assume that $G$ has an edge $e = xy$. If
+  $G$ has no $k$ disjoint $A--B$ paths, then neither does $G/e$; here, we count
+  the contracted vertex $v_e$ as an element of $A$ (resp.\ $B$) in $G/e$ if in
+  $G$ at least one of $x,y$ lies in $A$ (resp.\ $B$). By the induction
+  hypothesis, $G/e$ contains an $A--B$ separator $Y$ of fewer than k vertices.
+  Among these must be the vertex $v_e$, since otherwise $Y \subseteq V$ would be
+  an $A--B$ separator in $G$. Then $X := (Y \setminus \{v_e\}) \cup \{x,y\}$ is
+  an $A--B$ separator in $G$ of exactly $k$ vertices.
+
+  We now consider the graph $G−e$. Since $x,y \in X$, every $A--X$ separator in
+  $G−e$ is also an $A--B$ separator in $G$ and hence contains at least $k$
+  vertices. So by induction there are $k$ disjoint $A--X$ paths in $G−e$, and
+  similarly there are $k$ disjoint $X--B$ paths in $G−e$. As $X$ separates $A$
+  from $B$, these two path systems do not meet outside $X$, and can thus be
+  combined to $k$ disjoint $A--B$ paths.
+\end{proof}
