@@ -1,34 +1,48 @@
--- import combinatorics.simple_graph.metric
--- import graph_theory.path
+import Mathlib
 
--- namespace simple_graph
--- namespace cayley
+variable {G : Type*} [Group G]
 
--- structure genset (G : Type*) [group G] :=
---   (els : finset G)
---   (sym : ∀ {s : G}, s ∈ els → s⁻¹ ∈ els)
---   (gen : subgroup.closure (coe els) = (⊤ : subgroup G))
---   (nem : els.nonempty)
---   (irr : (1:G) ∉ els)
+namespace Group
 
--- variables {G : Type*} [group G] {S S1 S2 : genset G} {a x y z : G}
+structure GenSet (G : Type*) [Group G] where
+  els : Finset G
+  sym {s : G} (hs : s ∈ els) : s⁻¹ ∈ els
+  gen : Subgroup.closure (els : Set G) = ⊤
+  nem : els.Nonempty
+  irr : 1 ∉ els
 
--- instance : has_mem G (genset G) := ⟨λ a s, a ∈ s.els⟩
+instance : Membership G (GenSet G) := ⟨fun s a => a ∈ s.els⟩
 
--- def genset.adj (S : genset G) (x y : G) := x⁻¹ * y ∈ S
+variable {S : GenSet G} {x y a b : G}
 
--- lemma shift_adj ⦃x y⦄ (h : S.adj x y) : S.adj (a*x) (a*y) :=
--- by { unfold genset.adj, convert h using 1, group }
+namespace GenSet
 
--- @[symm] lemma adj_symm ⦃x y⦄ (h : S.adj x y) : S.adj y x
--- := by { unfold genset.adj, convert S.sym h, group }
+def Adj (S : GenSet G) (x y : G) : Prop := x⁻¹ * y ∈ S.els
 
--- def Cay (S : genset G) : simple_graph G :=
--- { adj := S.adj,
---   symm := adj_symm,
---   loopless := λ x h, S.irr (by { convert h, group }) }
+@[simp] theorem Adj.mul_left (h : S.Adj x y) (a : G) : S.Adj (a * x) (a * y) := by
+  simp only [Adj] at h ⊢ ; group at h ⊢ ; assumption
 
--- def left_shift (a : G) : Cay S →g Cay S := ⟨(*) a, shift_adj⟩
+@[symm] theorem Adj.symm (h : S.Adj x y) : S.Adj y x := by
+  simpa [Adj] using S.sym h
+
+end GenSet
+
+end Group
+
+variable {S : Group.GenSet G}
+
+namespace SimpleGraph
+
+def CayleyGraph (S : Group.GenSet G) : SimpleGraph G where
+  Adj := S.Adj
+  symm x y h := h.symm
+  loopless x h := S.irr (by simpa [Group.GenSet.Adj] using h)
+
+namespace CayleyGraph
+
+def mul_left (a : G) : CayleyGraph S →g CayleyGraph S where
+  toFun x := a * x
+  map_rel' h := h.mul_left a
 
 -- lemma shift : reachable (Cay S) x y → reachable (Cay S) (a*x) (a*y) :=
 -- nonempty.map (walk.map (left_shift a))
@@ -79,5 +93,6 @@
 --     apply add_le_add ih, apply distorsion_le, exact h }
 -- end
 
--- end cayley
--- end simple_graph
+end CayleyGraph
+
+end SimpleGraph
