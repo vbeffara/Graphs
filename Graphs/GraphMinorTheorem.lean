@@ -1,6 +1,8 @@
 import Mathlib.Order.WellQuasiOrder
 import Graphs.Minor
 
+variable {α : Type*} [Fintype α] {G : SimpleGraph α}
+
 open SimpleGraph
 
 structure FiniteGraph where
@@ -13,3 +15,5 @@ instance : Preorder FiniteGraph where
   le_trans G H K := IsMinor.trans
 
 instance GraphMinorTheorem : WellQuasiOrderedLE FiniteGraph := sorry
+
+theorem Wagner : G ≼ Plane ↔ K5 ⋠ G ∧ K33 ⋠ G := sorry
