@@ -1,4 +1,5 @@
 import Graphs.Basic
+import Graphs.Cayley
 import Graphs.Contraction
 import Graphs.Expander
 import Graphs.GraphMinorTheorem
