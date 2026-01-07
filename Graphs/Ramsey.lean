@@ -1,5 +1,4 @@
 import Mathlib
-import Graphs.Aristotle.Sym2Equiv_v2
 
 open Set Function Finset Classical
 
@@ -128,6 +127,21 @@ structure Fan (φ : G.EdgeLabeling ι) where
 
 def EdgeLabeling.isMonochromatic (φ : G.EdgeLabeling ι) (S : Set α) : Prop :=
   ∃ i : ι, ∀ u ∈ S, ∀ v ∈ S, ∀ h : G.Adj u v, φ.get u v h = i
+
+-- This got some input from Aristotle.
+noncomputable def FinsetEquivSym2 : {s : Finset α // s.card = 2} ≃ {z : Sym2 α // ¬z.IsDiag} where
+  toFun s := ⟨(Sym2.equivMultiset α).symm ⟨s.1.val, s.2⟩,
+    by rcases s with ⟨s, hs⟩; rw [Finset.card_eq_two] at hs; aesop⟩
+  invFun z := ⟨z.1.toFinset, Sym2.card_toFinset_of_not_isDiag _ z.2⟩
+  left_inv s := by
+    obtain ⟨s, hs⟩ := s
+    obtain ⟨x, y, hxy, rfl⟩ := Finset.card_eq_two.mp hs
+    ext a ; simp ; erw [Sym2.mem_iff] ; simp [List.insert, hxy]
+  right_inv s := by
+    obtain ⟨⟨a, b⟩, hs⟩ := s
+    obtain rfl | h := eq_or_ne a b ; contradiction
+    have : s(a, b).toFinset = {a, b} := by { ext; simp_all }
+    simp_all ; rfl
 
 theorem ramsey2 [Nonempty ι] [Infinite α] (φ : G.EdgeLabeling ι) :
     ∃ S : Set α, S.Infinite ∧ φ.isMonochromatic S := by

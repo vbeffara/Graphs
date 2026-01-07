@@ -1,6 +1,3 @@
-import Graphs.Aristotle.Sym2Equiv
-import Graphs.Aristotle.Sym2Equiv_v2
-import Graphs.Aristotle.WQO
 import Graphs.Basic
 import Graphs.Contraction
 import Graphs.Expander
