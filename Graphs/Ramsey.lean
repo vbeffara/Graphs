@@ -1,9 +1,5 @@
--- import Mathlib
-import Mathlib.Combinatorics.SimpleGraph.EdgeLabeling
-import Mathlib.Data.Fintype.Pigeonhole
-import Mathlib.Data.Nat.SuccPred
-import Mathlib.Data.Set.Finite.Lattice
-import Mathlib.Order.BourbakiWitt
+import Mathlib
+import Graphs.Aristotle.Sym2Equiv_v2
 
 open Set Function Finset Classical
 
@@ -135,25 +131,12 @@ def EdgeLabeling.isMonochromatic (φ : G.EdgeLabeling ι) (S : Set α) : Prop :=
 
 theorem ramsey2 [Nonempty ι] [Infinite α] (φ : G.EdgeLabeling ι) :
     ∃ S : Set α, S.Infinite ∧ φ.isMonochromatic S := by
-  let ψ (s : parts 2 α) : ι := by
-    by_cases h : ∃ e ∈ G.edgeSet, e.toFinset = s.1
-    · choose e he1 he2 using h
-      exact φ ⟨e, he1⟩
-    · exact Classical.choice inferInstance
+  let ψ (s : parts 2 α) : ι := if h : (finsetCardTwoEquivSym2NotDiag s).1 ∈ G.edgeSet then φ ⟨_, h⟩
+    else Classical.choice inferInstance
   obtain ⟨S, hS1, i, hS2⟩ := ramsey912 ψ
   refine ⟨S, hS1, i, fun x hx y hy h => ?_⟩
-  let s : parts 2 α := ⟨cons x {y} (by simp [h.ne]), by simp only [card_cons, Finset.card_singleton]⟩
-  have hs : (s.1 : Set α) ⊆ S := by grind
-  let e : Sym2 α := s(x, y)
-  have he1 : e ∈ G.edgeSet := by
-    exact (SimpleGraph.mem_edgeSet G).mpr h
-  classical
-  have he2 : ∃ e ∈ G.edgeSet, e.toFinset = {x, y} := ⟨e, he1, (by ext ; simp [e])⟩
-  have he3 := Classical.choose_spec he2
-  convert hS2 ⟨s, hs⟩
-  simp [ψ, s, he2, SimpleGraph.EdgeLabeling.get]
-  congr
-  ext u
-  simp [← Sym2.mem_toFinset, he3] ; simp
+  let s : parts.of 2 α S := ⟨finsetCardTwoEquivSym2NotDiag.symm ⟨s(x, y), by aesop⟩,
+    by { simp [finsetCardTwoEquivSym2NotDiag, Sym2.toFinset_mk_eq]; grind }⟩
+  simpa [ψ, s, G.mem_edgeSet.mpr h] using hS2 s
 
 end SimpleGraph

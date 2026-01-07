@@ -12,10 +12,9 @@ The following was proved by Aristotle:
 
 import Mathlib
 import Batteries.Tactic.GeneralizeProofs
+import Graphs.WQO
 
 variable {α : Type*} [PartialOrder α] {s t : Finset α}
-
-def FinsetLE (s t : Finset α) : Prop := ∃ f : s ↪ t, ∀ x, x.val ≤ f x
 
 lemma SublistForall2_imp_FinsetLE (h : List.SublistForall₂ (· ≤ ·) s.toList t.toList) : FinsetLE s t := by
   have h1 {l1 l2 : List α} (h_sublist : List.SublistForall₂ (· ≤ ·) l1 l2) :
@@ -58,7 +57,7 @@ lemma SublistForall2_imp_FinsetLE (h : List.SublistForall₂ (· ≤ ·) s.toLis
   obtain ⟨ g, hg ⟩ := h_inj;
   exact ⟨ ⟨ fun x => f ( g x ), fun x y hxy => by simpa [ hg ] using g.injective ( hf₁ hxy ) ⟩, fun x => by simpa [ hg ] using hf₂ ( g x ) ⟩;
 
-theorem Higman (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := α)) := by
+theorem Higman' (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := α)) := by
   intro f
   obtain ⟨m, n, hmn, h_sub⟩ : ∃ m n : ℕ, m < n ∧ List.SublistForall₂ (· ≤ ·) (f m).toList (f n).toList := by
     have h_sublist : Set.PartiallyWellOrderedOn {l : List α | ∀ x ∈ l, x ∈ Set.univ} (List.SublistForall₂ (· ≤ ·)) := by
@@ -67,5 +66,3 @@ theorem Higman (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := �
     have := h_sublist ( fun n => ⟨ f n |> Finset.toList, fun x hx => trivial ⟩ );
     aesop;
   exact ⟨ m, n, hmn, SublistForall2_imp_FinsetLE h_sub ⟩
-
-#print axioms Higman
