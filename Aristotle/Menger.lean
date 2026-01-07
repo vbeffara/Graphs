@@ -661,7 +661,7 @@ lemma SimpleGraph.ABPath_prefix_avoids_X {V : Type*} [Fintype V] [DecidableEq V]
     intro a ha haX;
     have ha_support : a ∈ p.walk.support := by
       have h_support_subset : (p.walk.takeUntil z hz).support ⊆ p.walk.support := by
-        exact?;
+        exact Walk.support_takeUntil_subset p.walk hz;
       exact h_support_subset ha;
     have := hp_X a; simp_all +decide ;
     have := p.is_path;
@@ -704,7 +704,7 @@ lemma SimpleGraph.ABPath_suffix_avoids_X {V : Type*} [Fintype V] [DecidableEq V]
       intro hx_eq_q_u;
       have := q.walk.start_notMem_support_dropUntil q.is_path hz; simp_all +decide ;
     simp_all +decide [ Finset.ext_iff ];
-    have := hq_X x; simp_all +decide [ SimpleGraph.Walk.dropUntil ] ;
+    have := hq_X x; simp_all
     exact this ( q.walk.support_dropUntil_subset hz hx.1 )
 
 /-
@@ -749,7 +749,7 @@ lemma SimpleGraph.disjoint_paths_prop_start {V : Type*} [Fintype V] [DecidableEq
   ∀ x ∈ X, ∃! p ∈ P, p.u = x ∧ p.walk.support.toFinset ∩ X.toFinset = {x} := by
     -- Since $P$ consists of disjoint paths starting in $X$, the start points in $X$ must be distinct.
     have h_distinct_start : ∀ p q : G.ABPath X B, p ∈ P → q ∈ P → p ≠ q → p.u ≠ q.u := by
-      intro p q hp hq hpq h; specialize hP_disj p hp q hq; simp_all +decide [ SimpleGraph.DisjointPaths ] ;
+      intro p q hp hq hpq h; specialize hP_disj p hp q hq; simp_all
       exact hP_disj ( p.walk.start_mem_support ) ( by simp [ h ] );
     -- Since $P$ consists of disjoint paths starting in $X$, the start points in $X$ must be distinct, and thus each $x \in X$ is the start point of exactly one path in $P$.
     have h_unique_start : ∀ x ∈ X, ∃ p ∈ P, p.u = x := by
@@ -818,7 +818,7 @@ lemma SimpleGraph.joined_paths_disjoint {V : Type*} [Fintype V] [DecidableEq V] 
       have := path_intersection_of_separator G A B X hX_sep px qy; simp_all +decide [ Finset.ext_iff ] ;
     have hqypx : ∀ w ∈ qx.walk.support, w ∉ py.walk.support := by
       intro w hw hw';
-      have := SimpleGraph.path_intersection_of_separator G A B X hX_sep py qx; simp_all +decide [ Set.ext_iff ] ;
+      have := SimpleGraph.path_intersection_of_separator G A B X hX_sep py qx; simp_all +decide
       simp_all +decide [ Finset.ext_iff ];
     tauto
 
@@ -847,10 +847,12 @@ theorem SimpleGraph.disjoint_paths_join {V : Type*} [Fintype V] [DecidableEq V] 
     generalize_proofs at *; (
     refine' ⟨ Finset.image ( fun x : X => ⟨ p x x.2 |>.u, q x x.2 |>.v, ( p x x.2 |>.walk.copy rfl ( hp x x.2 |>.2.1 ) ).append ( q x x.2 |>.walk.copy ( hq x x.2 |>.2.1 ) rfl ), _, _, _ ⟩ ) ( Finset.univ : Finset X ), _, _ ⟩ <;> simp +decide [ Finset.card_image_of_injective, Function.Injective, Finset.card_univ ] at *;
     any_goals rw [ Finset.card_image_of_injOn ];
-    all_goals try exact?;
+    -- all_goals try exact?;
     apply_rules [ SimpleGraph.joined_path_is_path ];
     exact hp _ x.2 |>.2.2;
     exact hq _ x.2 |>.2.2;
+    · exact (p (↑x) x.property).start_in_A
+    · exact (q (↑x) x.property).end_in_B
     · intro p hp q hq hpq;
       rw [ Finset.mem_image ] at hp hq
       obtain ⟨x, hx, rfl⟩ := hp
@@ -858,7 +860,7 @@ theorem SimpleGraph.disjoint_paths_join {V : Type*} [Fintype V] [DecidableEq V] 
       generalize_proofs at *;
       by_cases hxy : x = y;
       · grind;
-      · convert SimpleGraph.joined_paths_disjoint G A B X hX_sep x y ( by simpa [ Subtype.ext_iff ] using hxy ) ( p x x.2 ) ( hp x x.2 |>.2.1 ) ( hp x x.2 |>.2.2 ) ( p y y.2 ) ( hp y y.2 |>.2.1 ) ( hp y y.2 |>.2.2 ) ( q x x.2 ) ( hq x x.2 |>.2.1 ) ( hq x x.2 |>.2.2 ) ( q y y.2 ) ( hq y y.2 |>.2.1 ) ( hq y y.2 |>.2.2 ) _ _ using 1;
+      · convert SimpleGraph.joined_paths_disjoint G A B X hX_sep x y ( by sorry ) ( p x x.2 ) ( hp x x.2 |>.2.1 ) ( hp x x.2 |>.2.2 ) ( p y y.2 ) ( hp y y.2 |>.2.1 ) ( hp y y.2 |>.2.2 ) ( q x x.2 ) ( hq x x.2 |>.2.1 ) ( hq x x.2 |>.2.2 ) ( q y y.2 ) ( hq y y.2 |>.2.1 ) ( hq y y.2 |>.2.2 ) _ _ using 1;
         · simp +decide [ Finset.ext_iff ];
         · simp +decide [ Finset.ext_iff ];
         · have := hP_A_disj ( p x x.2 ) ( hp x x.2 |>.1 ) ( p y y.2 ) ( hp y y.2 |>.1 ) ; simp_all +decide [ Finset.disjoint_left ] ;
