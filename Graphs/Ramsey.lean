@@ -131,12 +131,12 @@ def EdgeLabeling.isMonochromatic (φ : G.EdgeLabeling ι) (S : Set α) : Prop :=
 
 theorem ramsey2 [Nonempty ι] [Infinite α] (φ : G.EdgeLabeling ι) :
     ∃ S : Set α, S.Infinite ∧ φ.isMonochromatic S := by
-  let ψ (s : parts 2 α) : ι := if h : (finsetCardTwoEquivSym2NotDiag s).1 ∈ G.edgeSet then φ ⟨_, h⟩
+  let ψ (s : parts 2 α) : ι := if h : (FinsetEquivSym2 s).1 ∈ G.edgeSet then φ ⟨_, h⟩
     else Classical.choice inferInstance
   obtain ⟨S, hS1, i, hS2⟩ := ramsey912 ψ
   refine ⟨S, hS1, i, fun x hx y hy h => ?_⟩
-  let s : parts.of 2 α S := ⟨finsetCardTwoEquivSym2NotDiag.symm ⟨s(x, y), by aesop⟩,
-    by { simp [finsetCardTwoEquivSym2NotDiag, Sym2.toFinset_mk_eq]; grind }⟩
+  let s : parts.of 2 α S := ⟨FinsetEquivSym2.symm ⟨s(x, y), by aesop⟩,
+    by { simp [FinsetEquivSym2, Sym2.toFinset_mk_eq]; grind }⟩
   simpa [ψ, s, G.mem_edgeSet.mpr h] using hS2 s
 
 end SimpleGraph
