@@ -6,6 +6,7 @@ This project request had uuid: 92285974-ca7c-4130-b513-da721c60ddd6
 This project request had uuid: c9aae1d4-2808-455a-990f-7958bf3f6d20
 This project request had uuid: d1ce6a57-e3f2-43b4-986c-6e3ff38096a8
 This project request had uuid: 7abed785-bc53-494d-9616-270b30124249
+This project request had uuid: 478cff34-e83f-4e23-a417-4a081de48be1
 -/
 
 import Mathlib
@@ -941,3 +942,12 @@ lemma SimpleGraph.Walk.exists_prefix_path_of_path_ne {V : Type*} [DecidableEq V]
           refine' ⟨ w, hw₁, cons h₁ q, _, _, _ ⟩ <;> simp_all
           · exact fun h => hp.2 ( by simpa using hq₃ ( by simpa using h ) );
           · grind
+
+
+/-
+The preimages of disjoint sets in the contracted graph are disjoint in the original graph.
+-/
+lemma SimpleGraph.contractEdge_preimage_disjoint {V : Type*} [Fintype V] [DecidableEq V] (x y : V) (s t : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y))) (h : Disjoint s t) :
+  Disjoint (SimpleGraph.contractEdge_preimage x y s) (SimpleGraph.contractEdge_preimage x y t) := by
+    rw [ Finset.disjoint_left ] at *;
+    unfold contractEdge_preimage; aesop;
