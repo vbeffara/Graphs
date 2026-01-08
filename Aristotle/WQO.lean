@@ -14,7 +14,7 @@ import Mathlib
 import Batteries.Tactic.GeneralizeProofs
 import Graphs.WQO
 
-open Classical
+open Classical List
 
 variable {α : Type*} [PartialOrder α] {s t : Finset α} {l1 l2 : List α}
 
@@ -30,6 +30,16 @@ lemma lemma_1 (h : List.SublistForall₂ (· ≤ ·) l1 l2) : ∃ is : Fin l1.le
   | cons_right h ih =>
     obtain ⟨is, his₁, his₂⟩ := ih
     exact ⟨is.trans <| Fin.succEmb _, by simp_all [StrictMono]⟩
+
+lemma lemma_2 (h : List.SublistForall₂ (· ≤ ·) l1 l2) : ∃ is : Fin l1.length ↪ Fin l2.length,
+    StrictMono is ∧ ∀ i, l1[i] ≤ l2[is i] := by
+  obtain ⟨l, h1, h2⟩ := sublistForall₂_iff.mp h
+  obtain ⟨f, h3⟩ := sublist_iff_exists_fin_orderEmbedding_get_eq.mp h2
+  obtain h4 := h1.length_eq
+  refine ⟨⟨f ∘ Fin.cast h4, ?_⟩, ?_, fun i => ?_⟩
+  · simp_all [Function.Injective]
+  · simp_all [StrictMono]
+  · let i' := i.cast h4; exact le_of_le_of_eq ((List.forall₂_iff_get.mp h1).2 i i.2 i'.2) (h3 i')
 
 lemma SublistForall2_imp_FinsetLE (h : List.SublistForall₂ (· ≤ ·) s.toList t.toList) : FinsetLE s t := by
   obtain ⟨is, his⟩ := lemma_1 h
