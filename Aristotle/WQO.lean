@@ -41,13 +41,15 @@ lemma lemma_2 (h : List.SublistForall₂ (· ≤ ·) l1 l2) : ∃ is : Fin l1.le
   · simp_all [StrictMono]
   · let i' := i.cast h4; exact le_of_le_of_eq ((List.forall₂_iff_get.mp h1).2 i i.2 i'.2) (h3 i')
 
-lemma SublistForall2_imp_FinsetLE (h : List.SublistForall₂ (· ≤ ·) s.toList t.toList) : FinsetLE s t := by
+lemma lemma_3 (h : List.SublistForall₂ (· ≤ ·) s.toList t.toList) :
+    ∃ is : Fin s.card → Fin t.card, StrictMono is ∧ ∀ i, s.toList[i] ≤ t.toList[is i] := by
   obtain ⟨is, his⟩ := lemma_1 h
-  have h_sublist : ∃ is : Fin s.card → Fin t.card, StrictMono is ∧ ∀ i, s.toList[i] ≤ t.toList[is i] := by
-    refine ⟨Fin.cast (by simp) ∘ is ∘ Fin.cast (by simp), ?_, fun i => ?_⟩
-    · simp_all [Fin.cast, StrictMono]
-    · exact his.2 (Fin.cast (by simp) i)
-  choose is his his' using h_sublist;
+  refine ⟨Fin.cast (by simp) ∘ is ∘ Fin.cast (by simp), ?_, fun i => ?_⟩
+  · simp_all [Fin.cast, StrictMono]
+  · exact his.2 (Fin.cast (by simp) i)
+
+lemma SublistForall2_imp_FinsetLE (h : List.SublistForall₂ (· ≤ ·) s.toList t.toList) : FinsetLE s t := by
+  obtain ⟨is, his, his'⟩ := lemma_3 h
   have h_inj : ∃ f : Fin s.card → t, Function.Injective f ∧ ∀ i, s.toList[i] ≤ f i := by
     use fun i => ⟨t.toList[is i], Finset.mem_toList.mp (by simp)⟩
     simp_all +decide [ Function.Injective, Fin.ext_iff ];
