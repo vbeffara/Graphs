@@ -14,28 +14,33 @@ import Mathlib
 import Batteries.Tactic.GeneralizeProofs
 import Graphs.WQO
 
-variable {α : Type*} [PartialOrder α] {s t : Finset α}
+open Classical
+
+variable {α : Type*} [PartialOrder α] {s t : Finset α} {l1 l2 : List α}
+
+lemma lemma_1 (h : List.SublistForall₂ (· ≤ ·) l1 l2) : ∃ is : Fin l1.length ↪ Fin l2.length,
+    StrictMono is ∧ ∀ i, l1[i] ≤ l2[is i] := by
+  induction h with
+  | nil => simp [StrictMono]
+  | cons h h' ih =>
+    obtain ⟨is, his₁, his₂⟩ := ih
+    refine ⟨⟨Fin.cases ⟨0, by simp⟩ (fun i => (is i).succ), ?_⟩, ?_⟩
+    · simp [Fin.forall_fin_succ, Function.Injective] ; grind
+    · simp_all [Fin.forall_fin_succ, StrictMono]
+  | cons_right h ih =>
+    obtain ⟨is, his₁, his₂⟩ := ih
+    exact ⟨is.trans <| Fin.succEmb _, by simp_all [StrictMono]⟩
 
 lemma SublistForall2_imp_FinsetLE (h : List.SublistForall₂ (· ≤ ·) s.toList t.toList) : FinsetLE s t := by
-  have h1 {l1 l2 : List α} (h_sublist : List.SublistForall₂ (· ≤ ·) l1 l2) :
-      ∃ is : Fin l1.length ↪ Fin l2.length, StrictMono is ∧ ∀ i, l1[i] ≤ l2[is i] := by
-    induction' h_sublist with l1 l2 h_sublist ih;
-    · simp [StrictMono]
-    · rename_i l2 ih h_sublist ih';
-      obtain ⟨ is, his₁, his₂ ⟩ := ih';
-      refine' ⟨ ⟨ fun i => Fin.cases ⟨ 0, _ ⟩ ( fun i => ⟨ is i + 1, _ ⟩ ) i, _ ⟩, _, _ ⟩ <;> simp_all [ Fin.forall_fin_succ, StrictMono ];
-      all_goals simp_all [Fin.forall_fin_succ, Function.Injective, StrictMono]
-      exacts [ fun i j hij => is.injective <| Fin.ext hij, fun i => Nat.succ_pos _, his₂ ];
-    · rcases ‹_› with ⟨ is, his, h ⟩;
-      refine' ⟨ ⟨ fun i => Fin.succ ( is i ), fun i j hij => _ ⟩, _, _ ⟩ <;> simp_all [StrictMono];
+  obtain ⟨is, his⟩ := lemma_1 h
   have h_sublist : ∃ is : Fin s.card → Fin t.card, StrictMono is ∧ ∀ i, s.toList[i] ≤ t.toList[is i] := by
-    obtain ⟨ is, his ⟩ := h1 h;
-    exact ⟨ fun i => ⟨ is ⟨ i, by simp ⟩, by simpa using Fin.is_lt ( is ⟨ i, by simp ⟩ ) ⟩, fun i j hij => by simpa using his.1 ( by simpa using hij ), fun i => his.2 ⟨ i, by simp ⟩ ⟩
+    refine ⟨Fin.cast (by simp) ∘ is ∘ Fin.cast (by simp), ?_, fun i => ?_⟩
+    · simp_all [Fin.cast, StrictMono]
+    · exact his.2 (Fin.cast (by simp) i)
   choose is his his' using h_sublist;
   have h_inj : ∃ f : Fin s.card → t, Function.Injective f ∧ ∀ i, s.toList[i] ≤ f i := by
     use fun i => ⟨t.toList[is i], by
       exact Finset.mem_toList.mp ( by simp )⟩
-    generalize_proofs at *;
     simp_all +decide [ Function.Injective, Fin.ext_iff ];
     intro i j h_eq;
     have := List.nodup_iff_injective_get.mp ( Finset.nodup_toList t ) h_eq;
@@ -59,10 +64,7 @@ lemma SublistForall2_imp_FinsetLE (h : List.SublistForall₂ (· ≤ ·) s.toLis
 
 theorem Higman' (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := α)) := by
   intro f
-  obtain ⟨m, n, hmn, h_sub⟩ : ∃ m n : ℕ, m < n ∧ List.SublistForall₂ (· ≤ ·) (f m).toList (f n).toList := by
-    have h_sublist : Set.PartiallyWellOrderedOn {l : List α | ∀ x ∈ l, x ∈ Set.univ} (List.SublistForall₂ (· ≤ ·)) := by
-      apply_rules [ Set.PartiallyWellOrderedOn.partiallyWellOrderedOn_sublistForall₂ ];
-      exact Set.partiallyWellOrderedOn_univ_iff.mpr h.wqo
-    have := h_sublist ( fun n => ⟨ f n |> Finset.toList, fun x hx => trivial ⟩ );
-    aesop;
-  exact ⟨ m, n, hmn, SublistForall2_imp_FinsetLE h_sub ⟩
+  have h1 := Set.partiallyWellOrderedOn_univ_iff.mpr h.wqo
+  have h2 := Set.PartiallyWellOrderedOn.partiallyWellOrderedOn_sublistForall₂ _ h1
+  obtain ⟨m, n, hmn, h_sub⟩ := h2 (fun n => ⟨(f n).toList, by tauto⟩)
+  exact ⟨m, n, hmn, SublistForall2_imp_FinsetLE h_sub⟩
