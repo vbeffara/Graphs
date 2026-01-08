@@ -39,27 +39,22 @@ lemma SublistForall2_imp_FinsetLE (h : List.SublistForall₂ (· ≤ ·) s.toLis
     · exact his.2 (Fin.cast (by simp) i)
   choose is his his' using h_sublist;
   have h_inj : ∃ f : Fin s.card → t, Function.Injective f ∧ ∀ i, s.toList[i] ≤ f i := by
-    use fun i => ⟨t.toList[is i], by
-      exact Finset.mem_toList.mp ( by simp )⟩
+    use fun i => ⟨t.toList[is i], Finset.mem_toList.mp (by simp)⟩
     simp_all +decide [ Function.Injective, Fin.ext_iff ];
     intro i j h_eq;
     have := List.nodup_iff_injective_get.mp ( Finset.nodup_toList t ) h_eq;
     simpa [ Fin.ext_iff ] using his.injective ( Fin.ext <| by injection this );
   obtain ⟨ f, hf₁, hf₂ ⟩ := h_inj;
-  have h_inj : ∃ g : s ≃ Fin s.card, ∀ x : s, s.toList[g x] = x := by
-    have h_inj : ∀ x : s, ∃ i : Fin s.card, s.toList[i] = x := by
-      intro x
-      have h_mem : x.val ∈ s.toList := by
-        aesop;
-      obtain ⟨ i, hi ⟩ := List.mem_iff_get.mp h_mem;
-      exact ⟨ ⟨ i, by simpa using i.2 ⟩, hi ⟩;
+  have h_inj (x : s) : ∃ i : Fin s.card, s.toList[i] = x := by
+    obtain ⟨i, hi⟩ := List.mem_iff_get.mp <| Finset.mem_toList.mpr x.2
+    exact ⟨⟨i, by simpa using i.2⟩, hi⟩
+  have h_inj' : ∃ g : s ≃ Fin s.card, ∀ x : s, s.toList[g x] = x := by
     choose g hg using h_inj;
-    have h_inj : Function.Injective g := by
-      intro x y; have := hg x; have := hg y; aesop;
+    have h_inj : Function.Injective g := by intro x y; have := hg x; have := hg y; aesop;
     have h_surj : Function.Surjective g := by
       exact ( Fintype.bijective_iff_injective_and_card g ).mpr ⟨ h_inj, by simp +decide ⟩ |>.2;
     exact ⟨ Equiv.ofBijective g ⟨ h_inj, h_surj ⟩, hg ⟩;
-  obtain ⟨ g, hg ⟩ := h_inj;
+  obtain ⟨ g, hg ⟩ := h_inj';
   exact ⟨ ⟨ fun x => f ( g x ), fun x y hxy => by simpa [ hg ] using g.injective ( hf₁ hxy ) ⟩, fun x => by simpa [ hg ] using hf₂ ( g x ) ⟩;
 
 theorem Higman' (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := α)) := by
