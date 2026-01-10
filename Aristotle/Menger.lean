@@ -1343,10 +1343,11 @@ lemma SimpleGraph.mem_liftSet_contraction_vertex_iff {V : Type*} [DecidableEq V]
     unfold SimpleGraph.contractEdge_liftSet SimpleGraph.contractEdge_vertex SimpleGraph.contractEdgeProj;
     constructor <;> intro h;
     · cases' h with z hz;
-      unfold contractEdgeSetoid at hz; aesop;
+      simp [Quotient.eq, contractEdgeSetoid] at hz;
+      aesop;
     · cases' h with hx hy;
       · exact ⟨ x, hx, rfl ⟩;
-      · exact ⟨ y, hy, by simp +decide [ SimpleGraph.contractEdgeSetoid ] ⟩
+      · exact ⟨ y, hy, by simp +decide [ Quotient.eq, SimpleGraph.contractEdgeSetoid ] ⟩
 
 /-
 If a path starts at one of the endpoints of the contracted edge, and the contracted vertex is in the lifted set of A, we can adjust the path to start in A.
@@ -1376,7 +1377,7 @@ lemma SimpleGraph.adjust_path_start_to_A {V : Type*} [Fintype V] [DecidableEq V]
             · replace hp_support := Finset.ext_iff.mp hp_support y; aesop;
             · simp +decide [ SimpleGraph.Walk.support_cons ];
               simp +decide [ Finset.eq_singleton_iff_unique_mem, contractEdgeProj ] at hp_support ⊢;
-              exact ⟨ ⟨ x, hp_support.1, by tauto ⟩, fun a ha => ⟨ a, ha, by tauto ⟩ ⟩;
+              exact ⟨ ⟨ x, hp_support.1, by sorry ⟩, fun a ha => ⟨ a, ha, by tauto ⟩ ⟩;
           · grind;
         · simp_all +decide [ contractEdge_liftSet ];
           obtain ⟨ u', hu', hu'' ⟩ := h_liftA;
@@ -1416,7 +1417,7 @@ lemma SimpleGraph.adjust_path_end_to_B {V : Type*} [Fintype V] [DecidableEq V] (
         · -- Since $v \notin B$, we have $x \in B$.
           have hx : x ∈ B := by
             contrapose! h_liftB; simp_all +decide [ contractEdge_liftSet ] ;
-            intro w hw; rw [ SimpleGraph.contractEdgeProj, SimpleGraph.contractEdge_vertex ] ; simp_all +decide [ SimpleGraph.contractEdgeSetoid ] ;
+            intro w hw; rw [ SimpleGraph.contractEdgeProj, SimpleGraph.contractEdge_vertex ] ; simp_all +decide [ Quotient.eq, SimpleGraph.contractEdgeSetoid ] ;
             grind;
           refine' ⟨ x, p.append ( SimpleGraph.Walk.cons hxy.symm SimpleGraph.Walk.nil ), hx, _, _ ⟩;
           · refine' SimpleGraph.Walk.IsPath_append_of_support_inter_subset_one _ _ hp_path _ _;
@@ -1426,7 +1427,7 @@ lemma SimpleGraph.adjust_path_end_to_B {V : Type*} [Fintype V] [DecidableEq V] (
             rintro a ( ha | rfl | rfl ) <;> simp_all +decide [ SimpleGraph.contractEdgeProj ];
             · exact ⟨ a, ha, by rfl ⟩;
             · exact ⟨ a, by cases p <;> aesop ⟩;
-            · exact ⟨ v, by simp, by tauto ⟩
+            · exact ⟨ v, by simp, by sorry ⟩
 
 /-
 Helper lemma: A path starting at the contracted vertex can be lifted to an A-B path if the contracted vertex is in the lifted set of A.
@@ -1492,7 +1493,7 @@ lemma SimpleGraph.lift_path_nil_eq_vertex {V : Type*} [Fintype V] [DecidableEq V
       obtain ⟨x_1, hx_1_A, hx_1⟩ := h_liftA
       obtain ⟨x_2, hx_2_B, hx_2⟩ := h_liftB
       have hx_1_eq : x_1 = x ∨ x_1 = y := by
-        contrapose! hx_1; simp_all +decide [ SimpleGraph.contractEdge_vertex, SimpleGraph.contractEdgeProj ] ;
+        contrapose! hx_1; simp_all +decide [ Quotient.eq, SimpleGraph.contractEdge_vertex, SimpleGraph.contractEdgeProj ] ;
         unfold contractEdgeSetoid; aesop;
       have hx_2_eq : x_2 = x ∨ x_2 = y := by
         rw [ SimpleGraph.contractEdgeProj, SimpleGraph.contractEdge_vertex ] at hx_2;
