@@ -371,8 +371,7 @@ lemma SimpleGraph.lift_walk_avoiding_contraction [Fintype V] (G : SimpleGraph V)
       induction' p with u v p ih;
       · obtain ⟨ u', rfl ⟩ := Quotient.exists_rep u;
         by_cases hu : u' = x ∨ u' = y;
-        · cases hu <;> simp_all +decide [ Quotient.eq, contractEdge_vertex ];
-          sorry
+        · cases hu <;> simp_all +decide [ Quotient.eq, contractEdge_vertex, contractEdgeSetoid ];
         · refine' ⟨ u', u', SimpleGraph.Walk.nil, _, _, _, _ ⟩ <;> simp_all +decide [ SimpleGraph.contractEdgeProj ];
           tauto;
       · rename_i h₁ h₂;
