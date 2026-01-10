@@ -49,7 +49,7 @@ structure ABPath (G : SimpleGraph V) (A B : Set V) where
   u : A
   v : B
   walk : G.Walk u v
-  is_path : walk.IsPath
+  isPath : walk.IsPath
 
 /-
 A set of A-B paths is disjoint if any two distinct paths in the set are vertex-disjoint.
@@ -92,7 +92,7 @@ instance SimpleGraph.ABPath.instFinite {V : Type*} [Fintype V] [DecidableEq V] (
       exact Set.Finite.subset ( Set.Finite.image ( fun q : G.Walk p.1 p.2 => ⟨ p.1, p.2, q ⟩ ) ( h_finite_paths p.1 p.2 ) ) fun q hq => by aesop;
     exact h_finite_paths.subset fun p hp => by aesop;
   convert h_finite_paths.of_injective _ _;
-  exact fun p => ⟨ ⟨ p.u, p.v, p.walk ⟩, p.u.2, p.v.2, p.is_path ⟩;
+  exact fun p => ⟨ ⟨ p.u, p.v, p.walk ⟩, p.u.2, p.v.2, p.isPath ⟩;
   intro p q h; cases p; cases q; aesop;
 
 noncomputable instance SimpleGraph.ABPath.instFintype {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (A B : Set V) : Fintype (G.ABPath A B) := Fintype.ofFinite _
@@ -693,7 +693,7 @@ lemma SimpleGraph.ABPath_prefix_avoids_X {V : Type*} [Fintype V] [DecidableEq V]
         exact Walk.support_takeUntil_subset p.walk hz;
       exact h_support_subset ha;
     have := hp_X a; simp_all +decide ;
-    have := p.is_path;
+    have := p.isPath;
     have := SimpleGraph.Walk.endpoint_notMem_support_takeUntil this hz; simp_all +decide ;
 
 /-
@@ -731,7 +731,7 @@ lemma SimpleGraph.ABPath_suffix_avoids_X {V : Type*} [Fintype V] [DecidableEq V]
     intro x hx
     have hx_suff : x ≠ q.u := by
       intro hx_eq_q_u;
-      have := q.walk.start_notMem_support_dropUntil q.is_path hz; simp_all +decide ;
+      have := q.walk.start_notMem_support_dropUntil q.isPath hz; simp_all +decide ;
     simp_all +decide [ Finset.ext_iff ];
     have := hq_X x; simp_all
     exact this ( q.walk.support_dropUntil_subset hz hx.1 )
