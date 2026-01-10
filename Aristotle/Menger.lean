@@ -270,9 +270,8 @@ A vertex projects to the contracted vertex if and only if it is one of the endpo
 lemma SimpleGraph.contractEdgeProj_eq_vertex_iff {V : Type*} [DecidableEq V] (x y u : V) :
   SimpleGraph.contractEdgeProj x y u = SimpleGraph.contractEdgeProj x y x ↔ u = x ∨ u = y := by
     -- By definition of the projection, we have that the projection of u is equal to the projection of x if and only if u is equivalent to x under the setoid.
-    simp [SimpleGraph.contractEdgeProj];
-    simp [contractEdgeSetoid];
-    sorry
+    simp [SimpleGraph.contractEdgeProj, contractEdgeSetoid, Quotient.eq]
+    grind
 
 /-
 The projection map is injective on vertices that do not map to the contracted vertex.
@@ -325,8 +324,7 @@ lemma SimpleGraph.card_preimage_contractEdge {V : Type*} [Fintype V] [DecidableE
         rw [ Finset.card_eq_two ];
         refine' ⟨ x, y, h, _ ⟩;
         ext v; simp [contractEdgeProj, contractEdge_vertex];
-        -- exact ⟨ fun h => by cases h <;> tauto, fun h => by cases h <;> tauto ⟩;
-        sorry
+        simp [Quotient.eq, contractEdgeSetoid]; grind
       · obtain ⟨ v, rfl ⟩ := Quotient.exists_rep z;
         simp +decide [ SimpleGraph.contractEdgeProj, SimpleGraph.contractEdge_vertex ];
         split_ifs with h;
