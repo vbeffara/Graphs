@@ -29,13 +29,19 @@ set_option synthInstance.maxSize 128
 set_option relaxedAutoImplicit false
 set_option autoImplicit false
 
+variable {V : Type*}
+
 noncomputable section
+
+namespace SimpleGraph
 
 /-
 A set of vertices S separates A from B in G if every A-B path in G contains a vertex from S.
 -/
-def SimpleGraph.Separates {V : Type*} (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
-  ∀ u ∈ A, ∀ v ∈ B, ∀ p : G.Walk u v, p.IsPath → ∃ x ∈ p.support, x ∈ S
+def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
+  ∀ u ∈ A, ∀ v ∈ B, ∀ p : G.Walk u v, ∃ x ∈ p.support, x ∈ S
+
+end SimpleGraph
 
 /-
 An A-B path is a path in G starting in A and ending in B.
@@ -102,7 +108,7 @@ lemma SimpleGraph.separators_nonempty {V : Type*} [Fintype V] [DecidableEq V] (G
     refine' ⟨ Finset.univ, _ ⟩;
     -- Since the universal set contains all vertices, any path between A and B must pass through some vertex in the universal set.
     simp [SimpleGraph.separators];
-    exact fun u hu v hv p hp => ⟨ u, p.start_mem_support, Finset.mem_univ _ ⟩
+    exact fun u hu v hv p => ⟨ u, p.start_mem_support, Finset.mem_univ _ ⟩
 
 /-
 The set of disjoint path sets is nonempty (the empty set is a valid set of disjoint paths).
@@ -133,13 +139,13 @@ theorem SimpleGraph.Menger_weak {V : Type*} [Fintype V] [DecidableEq V] (G : Sim
       unfold SimpleGraph.disjoint_path_sets at h_contra; aesop;
     -- Let $S$ be an A-B separator of size $k$.
     obtain ⟨S, hS⟩ : ∃ S : Finset V, G.Separates A B S ∧ S.card = G.min_separator_size A B := by
-      have := Finset.min'_mem ( ( G.separators A B ).image Finset.card ) ⟨ _, Finset.mem_image_of_mem _ ( Finset.mem_filter.mpr ⟨ Finset.mem_powerset.mpr ( Finset.subset_univ ( Finset.univ : Finset V ) ), ( Finset.mem_filter.mp ( Finset.mem_filter.mpr ⟨ Finset.mem_powerset.mpr ( Finset.subset_univ ( Finset.univ : Finset V ) ), ( fun u hu v hv p hp ↦ by
+      have := Finset.min'_mem ( ( G.separators A B ).image Finset.card ) ⟨ _, Finset.mem_image_of_mem _ ( Finset.mem_filter.mpr ⟨ Finset.mem_powerset.mpr ( Finset.subset_univ ( Finset.univ : Finset V ) ), ( Finset.mem_filter.mp ( Finset.mem_filter.mpr ⟨ Finset.mem_powerset.mpr ( Finset.subset_univ ( Finset.univ : Finset V ) ), ( fun u hu v hv p ↦ by
         cases p <;> aesop ) ⟩ ) |>.2 ) ⟩ ) ⟩
       generalize_proofs at *;
       rw [ Finset.mem_image ] at this; obtain ⟨ S, hS₁, hS₂ ⟩ := this; exact ⟨ S, Finset.mem_filter.mp hS₁ |>.2, hS₂ ⟩ ;
     -- Since $S$ is an A-B separator, every path in $\mathcal{P}$ must contain at least one vertex from $S$.
     have h_path_inter_S : ∀ p ∈ P, ∃ x ∈ p.walk.support, x ∈ S := by
-      exact fun p hp => hS.1 p.u p.start_in_A p.v p.end_in_B p.walk p.is_path;
+      exact fun p hp => hS.1 p.u p.start_in_A p.v p.end_in_B p.walk
     have h_path_inter_S : Finset.card (Finset.biUnion P (fun p => p.walk.support.toFinset ∩ S)) ≥ P.card := by
       rw [ Finset.card_biUnion ];
       · exact Finset.card_eq_sum_ones P ▸ Finset.sum_le_sum fun p hp => Finset.card_pos.mpr ⟨ Classical.choose ( h_path_inter_S p hp ), Finset.mem_inter.mpr ⟨ by simpa using Classical.choose_spec ( h_path_inter_S p hp ) |>.1, by simpa using Classical.choose_spec ( h_path_inter_S p hp ) |>.2 ⟩ ⟩;
@@ -159,9 +165,10 @@ lemma SimpleGraph.Menger_strong_base {V : Type*} [Fintype V] [DecidableEq V] (G 
     refine' ⟨ Finset.filter ( fun p => p.u = p.v ∧ p.u ∈ A ∩ B ) ( Finset.univ : Finset ( G.ABPath A B ) ), _, Finset.image ( fun p => p.u ) ( Finset.filter ( fun p => p.u = p.v ∧ p.u ∈ A ∩ B ) ( Finset.univ : Finset ( G.ABPath A B ) ) ), _, _ ⟩;
     · intro p hp q hq hpq;
       cases p ; cases q ; aesop;
-    · intro u hu v hv p hp;
+    · intro u hu v hv p
       obtain rfl := h_empty u v p;
-      exact ⟨ u, by simp, Finset.mem_image.mpr ⟨ ⟨ u, u, p, hp, hu, hv ⟩, by aesop ⟩ ⟩;
+      refine ⟨u, by simp, Finset.mem_image.mpr ⟨⟨u, u, p.bypass, p.bypass_isPath, hu, hv⟩, ?_⟩⟩
+      simp [hu, hv]
     · exact Finset.card_image_le
 
 /-
@@ -240,14 +247,14 @@ lemma SimpleGraph.contractEdge_preimage_separates {V : Type*} [Fintype V] [Decid
   (Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)))
   (hY : (G.contractEdge' x y).Separates (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) Y) :
   G.Separates A B (SimpleGraph.contractEdge_preimage x y Y) := by
-    intro u hu v hv p hp;
+    intro u hu v hv p
     obtain ⟨ w, hw ⟩ := SimpleGraph.exists_walk_of_path_contraction G x y p;
     -- Since $w$ is a path in the contracted graph from $\pi(u)$ to $\pi(v)$, and $Y$ separates $\pi(A)$ and $\pi(B)$ in the contracted graph, $w$ must intersect $Y$.
     obtain ⟨ z, hzY, hzw ⟩ : ∃ z ∈ Y, z ∈ w.support := by
       specialize hY (contractEdgeProj x y u) (by
       exact Set.mem_image_of_mem _ hu) (contractEdgeProj x y v) (by
       exact Set.mem_image_of_mem _ hv) w.toPath;
-      exact hY ( SimpleGraph.Walk.bypass_isPath _ ) |> fun ⟨ z, hz₁, hz₂ ⟩ => ⟨ z, hz₂, by simpa using SimpleGraph.Walk.support_bypass_subset _ hz₁ ⟩;
+      exact hY |> fun ⟨ z, hz₁, hz₂ ⟩ => ⟨ z, hz₂, by simpa using SimpleGraph.Walk.support_bypass_subset _ hz₁ ⟩;
     have := hw ( by simpa using hzw );
     simp +zetaDelta at *;
     exact ⟨ this.choose, this.choose_spec.1, Finset.mem_filter.mpr ⟨ Finset.mem_univ _, this.choose_spec.2.symm ▸ hzY ⟩ ⟩
@@ -571,9 +578,18 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge {V : Type*} [Fint
   (hS : (G.deleteEdge x y).Separates A X S) :
   G.Separates A B S := by
     -- Let P be an A-B path in G.
-    intro u hu v hv p hp
+    classical
+    intro u hu v hv p
     obtain ⟨w, q, hwX, hqpath, hq_support, hq_avoid⟩ : ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
-      apply_rules [ SimpleGraph.Walk.exists_path_prefix_avoiding_set ];
+      have := hX u hu v hv p.bypass
+      obtain ⟨w, q, h1, h2, h3, h4⟩ := SimpleGraph.Walk.exists_path_prefix_avoiding_set p.bypass p.bypass_isPath X this
+      refine ⟨w, q, h1, h2, h3.trans ?_, h4⟩
+      have := p.support_bypass_subset
+      intro x hx
+      simp at hx
+      specialize this hx
+      simpa
+
     -- Since x, y ∈ X, q avoids {x, y} internally.
     have hq_avoid_xy : Sym2.mk (x, y) ∉ q.edges := by
       apply SimpleGraph.Walk.edges_no_xy_of_support_inter_subset_one q x y hxy;
@@ -593,7 +609,7 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge {V : Type*} [Fint
           · intro a ha; specialize hq'_support ( List.mem_toFinset.mpr ha ) ; aesop;
       exact hq_path_G_minus_xy q hqpath hq_avoid_xy;
     obtain ⟨ q', hq'_path, hq'_support ⟩ := hq_path_G_minus_xy;
-    have := hS u hu w hwX q' hq'_path; simp_all +decide [ SimpleGraph.Walk.isPath_def ] ;
+    have := hS u hu w hwX q';  simp_all +decide [ SimpleGraph.Walk.isPath_def ] ;
     obtain ⟨ z, hz₁, hz₂ ⟩ := this; exact ⟨ z, by simpa using hq'_support ( by simpa using hz₁ ) |> fun h => hq_support h, hz₂ ⟩ ;
 
 
@@ -738,9 +754,8 @@ lemma SimpleGraph.path_intersection_of_separator {V : Type*} [Fintype V] [Decida
       contrapose! hX_sep;
       obtain ⟨ w, hw ⟩ := hw;
       simp_all +decide [ SimpleGraph.Separates ];
-      refine' ⟨ p.u, p.start_in_A, q.v, q.end_in_B, w.toPath, _, _ ⟩ <;> simp_all +decide [ Finset.ext_iff ];
-      intro a ha; specialize hw a; simp_all +decide [ SimpleGraph.Walk.toPath ] ;
-      exact hw ( by simpa using SimpleGraph.Walk.support_bypass_subset _ ha )
+      refine' ⟨ p.u, p.start_in_A, q.v, q.end_in_B, w, _ ⟩
+      simp_all +decide [ Finset.ext_iff ];
 
 /-
 If P is a set of disjoint paths from X to B with size equal to X, then every vertex in X is the start of exactly one path in P, and that path intersects X only at its start.
