@@ -30,7 +30,7 @@ set_option synthInstance.maxSize 128
 set_option relaxedAutoImplicit false
 set_option autoImplicit false
 
-variable {V : Type*} {G : SimpleGraph V} {A B X : Set V}
+variable {V : Type*} {G : SimpleGraph V} {u v : V} {A B X : Set V}
 
 noncomputable section
 
@@ -59,6 +59,18 @@ def DisjointPaths (P : Finset (G.ABPath A B)) : Prop :=
 
 end SimpleGraph
 
+theorem SimpleGraph.finiteWalks_of_length [Fintype V] (n : ℕ) :
+    {p : G.Walk u v | p.length = n}.Finite := by
+  induction n generalizing u v with
+  | zero =>
+    by_cases h : u = v
+    · subst h; simp
+    · simp [SimpleGraph.set_walk_length_zero_eq_of_ne, h]
+  | succ n ih =>
+    rw [SimpleGraph.set_walk_length_succ_eq]
+    refine Set.finite_iUnion (fun u => ?_)
+    exact Set.finite_iUnion (fun h => ih.image _)
+
 /-
 The set of A-B paths is finite.
 -/
@@ -67,19 +79,7 @@ instance SimpleGraph.ABPath.instFinite [Fintype V] (G : SimpleGraph V) (A B : Se
   have h_finite_paths : ∀ u v : V, Set.Finite {p : G.Walk u v | p.IsPath} := by
     intro u v
     have h_finite_walks : Set.Finite {p : G.Walk u v | p.length ≤ Fintype.card V} := by
-      have h_finite_walks : ∀ n : ℕ, Set.Finite {p : G.Walk u v | p.length = n} := by
-        intro n
-        induction n generalizing u v with
-        | zero =>
-          by_cases h : u = v
-          · subst h; simp
-          · simp [SimpleGraph.set_walk_length_zero_eq_of_ne, h]
-        | succ n ih =>
-          rw [SimpleGraph.set_walk_length_succ_eq]
-          refine Set.finite_iUnion (fun u => ?_)
-          refine Set.finite_iUnion (fun h => ?_)
-          refine Set.Finite.image _ (ih _ _)
-      exact Set.Finite.subset ( Set.Finite.biUnion ( Set.finite_Iic ( Fintype.card V ) ) fun n hn => h_finite_walks n ) fun p hp => by aesop;
+      exact Set.Finite.subset ( Set.Finite.biUnion ( Set.finite_Iic ( Fintype.card V ) ) fun n hn => SimpleGraph.finiteWalks_of_length n ) fun p hp => by aesop;
     refine' h_finite_walks.subset fun p hp => _;
     have := hp.length_lt;
     exact le_of_lt this;
