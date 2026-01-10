@@ -29,7 +29,7 @@ set_option synthInstance.maxSize 128
 set_option relaxedAutoImplicit false
 set_option autoImplicit false
 
-variable {V : Type*}
+variable {V : Type*} {G : SimpleGraph V} {A B X : Set V}
 
 noncomputable section
 
@@ -50,13 +50,13 @@ structure ABPath (G : SimpleGraph V) (A B : Set V) where
   walk : G.Walk u v
   is_path : walk.IsPath
 
-end SimpleGraph
-
 /-
 A set of A-B paths is disjoint if any two distinct paths in the set are vertex-disjoint.
 -/
-def SimpleGraph.DisjointPaths {V : Type*} [DecidableEq V] (G : SimpleGraph V) (A B : Set V) (P : Finset (G.ABPath A B)) : Prop :=
+def DisjointPaths (P : Finset (G.ABPath A B)) : Prop :=
   ∀ p ∈ P, ∀ q ∈ P, p ≠ q → Disjoint p.walk.support.toFinset q.walk.support.toFinset
+
+end SimpleGraph
 
 /-
 The set of A-B paths is finite.
@@ -96,7 +96,7 @@ def SimpleGraph.separators {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGr
 The set of all sets of disjoint A-B paths.
 -/
 noncomputable def SimpleGraph.disjoint_path_sets {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (A B : Set V) : Finset (Finset (G.ABPath A B)) :=
-  (Finset.powerset Finset.univ).filter (fun P => G.DisjointPaths A B P)
+  (Finset.powerset Finset.univ).filter (fun P => DisjointPaths P)
 
 /-
 The set of separators is nonempty (e.g., the set of all vertices is a separator).
@@ -132,7 +132,7 @@ theorem SimpleGraph.Menger_weak {V : Type*} [Fintype V] [DecidableEq V] (G : Sim
   G.max_disjoint_paths_size A B ≤ G.min_separator_size A B := by
     by_contra h_contra;
     -- Let $\mathcal{P}$ be a set of $m$ disjoint A-B paths.
-    obtain ⟨P, hP⟩ : ∃ P : Finset (G.ABPath A B), G.DisjointPaths A B P ∧ P.card > G.min_separator_size A B := by
+    obtain ⟨P, hP⟩ : ∃ P : Finset (G.ABPath A B), DisjointPaths P ∧ P.card > G.min_separator_size A B := by
       simp_all +decide [ SimpleGraph.max_disjoint_paths_size ];
       unfold SimpleGraph.disjoint_path_sets at h_contra; aesop;
     -- Let $S$ be an A-B separator of size $k$.
@@ -632,7 +632,7 @@ theorem SimpleGraph.contractEdge_separator_contains_vertex {V : Type*} [Fintype 
 If P is a set of disjoint paths from A to X with size equal to X, then every vertex in X is the endpoint of exactly one path in P, and that path intersects X only at its endpoint.
 -/
 lemma SimpleGraph.disjoint_paths_prop {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (A X : Set V) (P : Finset (G.ABPath A X))
-  (hP_disj : G.DisjointPaths A X P)
+  (hP_disj : DisjointPaths P)
   (hP_card : P.card = X.toFinset.card) :
   ∀ x ∈ X, ∃! p ∈ P, p.v = x ∧ p.walk.support.toFinset ∩ X.toFinset = {x} := by
     -- Since $P$ consists of disjoint paths, the endpoints in $X$ must be distinct. Thus, the map $p \mapsto p.v$ is injective from $P$ to $X$.
@@ -759,7 +759,7 @@ lemma SimpleGraph.path_intersection_of_separator {V : Type*} [Fintype V] [Decida
 If P is a set of disjoint paths from X to B with size equal to X, then every vertex in X is the start of exactly one path in P, and that path intersects X only at its start.
 -/
 lemma SimpleGraph.disjoint_paths_prop_start {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (X B : Set V) (P : Finset (G.ABPath X B))
-  (hP_disj : G.DisjointPaths X B P)
+  (hP_disj : DisjointPaths P)
   (hP_card : P.card = X.toFinset.card) :
   ∀ x ∈ X, ∃! p ∈ P, p.u = x ∧ p.walk.support.toFinset ∩ X.toFinset = {x} := by
     -- Since $P$ consists of disjoint paths starting in $X$, the start points in $X$ must be distinct.
@@ -845,12 +845,12 @@ theorem SimpleGraph.disjoint_paths_join {V : Type*} [Fintype V] [DecidableEq V] 
   (k : ℕ)
   (hX_card : X.card = k)
   (P_A : Finset (G.ABPath A X))
-  (hP_A_disj : G.DisjointPaths A X P_A)
+  (hP_A_disj : DisjointPaths P_A)
   (hP_A_card : P_A.card = k)
   (P_B : Finset (G.ABPath X B))
-  (hP_B_disj : G.DisjointPaths X B P_B)
+  (hP_B_disj : DisjointPaths P_B)
   (hP_B_card : P_B.card = k) :
-  ∃ P : Finset (G.ABPath A B), G.DisjointPaths A B P ∧ P.card = k := by
+  ∃ P : Finset (G.ABPath A B), DisjointPaths P ∧ P.card = k := by
     have h_unique_paths : ∀ x ∈ X, ∃! p ∈ P_A, p.v = x ∧ p.walk.support.toFinset ∩ X = {x} := by
       have := SimpleGraph.disjoint_paths_prop G A ( ↑X ) P_A hP_A_disj; aesop;
     have h_unique_paths_start : ∀ x ∈ X, ∃! q ∈ P_B, q.u = x ∧ q.walk.support.toFinset ∩ X = {x} := by
