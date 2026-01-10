@@ -42,7 +42,7 @@ set_option synthInstance.maxSize 128
 set_option relaxedAutoImplicit false
 set_option autoImplicit false
 
-variable {V : Type*} {G : SimpleGraph V} {A B X : Set V}
+variable {V : Type*} {G : SimpleGraph V} {u v : V} {A B X : Set V} {n : ℕ}
 
 noncomputable section
 
@@ -69,6 +69,19 @@ A set of A-B paths is disjoint if any two distinct paths in the set are vertex-d
 def DisjointPaths (P : Finset (G.ABPath A B)) : Prop :=
   ∀ p ∈ P, ∀ q ∈ P, p ≠ q → Disjoint p.walk.support.toFinset q.walk.support.toFinset
 
+theorem set_walk_length_succ_eq' : {p : G.Walk u v | p.length = n + 1} =
+    ⋃ x : G.neighborSet u, SimpleGraph.Walk.cons x.2 '' { q : G.Walk x v | q.length = n } := by
+  simp [SimpleGraph.set_walk_length_succ_eq]
+
+theorem finiteWalks_of_length [LocallyFinite G] (n : ℕ) :
+    {p : G.Walk u v | p.length = n}.Finite := by
+  induction n generalizing u v with
+  | zero =>
+    by_cases h : u = v
+    · subst h; simp
+    · simp [set_walk_length_zero_eq_of_ne, h]
+  | succ n ih => simpa only [set_walk_length_succ_eq'] using Set.finite_iUnion (fun u => ih.image _)
+
 end SimpleGraph
 
 /-
@@ -79,19 +92,7 @@ instance SimpleGraph.ABPath.instFinite [Fintype V] (G : SimpleGraph V) (A B : Se
   have h_finite_paths : ∀ u v : V, Set.Finite {p : G.Walk u v | p.IsPath} := by
     intro u v
     have h_finite_walks : Set.Finite {p : G.Walk u v | p.length ≤ Fintype.card V} := by
-      have h_finite_walks : ∀ n : ℕ, Set.Finite {p : G.Walk u v | p.length = n} := by
-        intro n
-        induction n generalizing u v with
-        | zero =>
-          by_cases h : u = v
-          · subst h; simp
-          · simp [SimpleGraph.set_walk_length_zero_eq_of_ne, h]
-        | succ n ih =>
-          rw [SimpleGraph.set_walk_length_succ_eq]
-          refine Set.finite_iUnion (fun u => ?_)
-          refine Set.finite_iUnion (fun h => ?_)
-          refine Set.Finite.image _ (ih _ _)
-      exact Set.Finite.subset ( Set.Finite.biUnion ( Set.finite_Iic ( Fintype.card V ) ) fun n hn => h_finite_walks n ) fun p hp => by aesop;
+      exact Set.Finite.subset ( Set.Finite.biUnion ( Set.finite_Iic ( Fintype.card V ) ) fun n hn => SimpleGraph.finiteWalks_of_length n ) fun p hp => by aesop;
     refine' h_finite_walks.subset fun p hp => _;
     have := hp.length_lt;
     exact le_of_lt this;
@@ -383,8 +384,7 @@ lemma SimpleGraph.lift_walk_avoiding_contraction [Fintype V] (G : SimpleGraph V)
       induction' p with u v p ih;
       · obtain ⟨ u', rfl ⟩ := Quotient.exists_rep u;
         by_cases hu : u' = x ∨ u' = y;
-        · cases hu <;> simp_all +decide [ Quotient.eq, contractEdge_vertex ];
-          sorry
+        · cases hu <;> simp_all +decide [ Quotient.eq, contractEdge_vertex, contractEdgeSetoid ];
         · refine' ⟨ u', u', SimpleGraph.Walk.nil, _, _, _, _ ⟩ <;> simp_all +decide [ SimpleGraph.contractEdgeProj ];
           tauto;
       · rename_i h₁ h₂;
@@ -531,9 +531,9 @@ lemma SimpleGraph.contractEdge_adj_lift_vertex (G : SimpleGraph V) (x y : V) (u 
     · simp_all +decide [ Quotient.eq, contractEdgeProj, contractEdge_vertex ];
       unfold contractEdgeSetoid at *; aesop;
     · rw [ eq_comm ] at ha' hb';
-      cases eq_or_ne a' x <;> cases eq_or_ne a' y <;> cases eq_or_ne b' x <;> cases eq_or_ne b' y <;> simp_all +decide [ SimpleGraph.contractEdge_vertex, SimpleGraph.contractEdgeProj ];
-      all_goals unfold contractEdgeSetoid at *; simp_all +decide [ SimpleGraph.adj_comm ] ;
-      all_goals sorry
+      cases eq_or_ne a' x <;> cases eq_or_ne a' y <;> cases eq_or_ne b' x <;> cases eq_or_ne b' y
+      all_goals simp_all +decide [ SimpleGraph.contractEdge_vertex, SimpleGraph.contractEdgeProj,
+        Quotient.eq, contractEdgeSetoid, SimpleGraph.adj_comm ];
 
 /-
 The number of edges in the contracted graph is strictly less than in the original graph.
@@ -545,8 +545,8 @@ lemma SimpleGraph.contractEdge_edge_card_lt [Fintype V] (G : SimpleGraph V) [Dec
         intro e he; simp_all +decide [ SimpleGraph.contractEdge' ] ;
         rcases e with ⟨ a, b ⟩ ; simp_all +decide [ fromRel ] ;
         rcases he.2 with ( ⟨ a', rfl, b', rfl, hab ⟩ | ⟨ a', rfl, b', rfl, hab ⟩ ) <;> use Sym2.mk ( a', b' ) <;> simp_all +decide [ Sym2.eq_swap ];
-        · sorry
-        · sorry
+        · simp_all [Quotient.eq, contractEdgeSetoid] ; aesop
+        · simp_all [Quotient.eq, contractEdgeSetoid] ; aesop
       exact le_trans ( Finset.card_le_card h_inter ) ( Finset.card_image_le );
     exact lt_of_le_of_lt h_inter ( Finset.card_lt_card ( Finset.ssubset_iff_subset_ne.mpr ⟨ Finset.sdiff_subset, by aesop ⟩ ) )
 
