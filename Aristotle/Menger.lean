@@ -30,7 +30,7 @@ set_option synthInstance.maxSize 128
 set_option relaxedAutoImplicit false
 set_option autoImplicit false
 
-variable {V : Type*} {G : SimpleGraph V} {u v : V} {A B X : Set V}
+variable {V : Type*} {G : SimpleGraph V} {u v : V} {A B X : Set V} {n : ℕ}
 
 noncomputable section
 
@@ -57,19 +57,20 @@ A set of A-B paths is disjoint if any two distinct paths in the set are vertex-d
 def DisjointPaths (P : Finset (G.ABPath A B)) : Prop :=
   ∀ p ∈ P, ∀ q ∈ P, p ≠ q → Disjoint p.walk.support.toFinset q.walk.support.toFinset
 
-end SimpleGraph
+theorem set_walk_length_succ_eq' : {p : G.Walk u v | p.length = n + 1} =
+    ⋃ x : G.neighborSet u, SimpleGraph.Walk.cons x.2 '' { q : G.Walk x v | q.length = n } := by
+  simp [SimpleGraph.set_walk_length_succ_eq]
 
-theorem SimpleGraph.finiteWalks_of_length [Fintype V] (n : ℕ) :
+theorem finiteWalks_of_length [LocallyFinite G] (n : ℕ) :
     {p : G.Walk u v | p.length = n}.Finite := by
   induction n generalizing u v with
   | zero =>
     by_cases h : u = v
     · subst h; simp
-    · simp [SimpleGraph.set_walk_length_zero_eq_of_ne, h]
-  | succ n ih =>
-    rw [SimpleGraph.set_walk_length_succ_eq]
-    refine Set.finite_iUnion (fun u => ?_)
-    exact Set.finite_iUnion (fun h => ih.image _)
+    · simp [set_walk_length_zero_eq_of_ne, h]
+  | succ n ih => simpa only [set_walk_length_succ_eq'] using Set.finite_iUnion (fun u => ih.image _)
+
+end SimpleGraph
 
 /-
 The set of A-B paths is finite.
