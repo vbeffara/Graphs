@@ -518,9 +518,9 @@ lemma SimpleGraph.contractEdge_adj_lift_vertex (G : SimpleGraph V) (x y : V) (u 
     · simp_all +decide [ Quotient.eq, contractEdgeProj, contractEdge_vertex ];
       unfold contractEdgeSetoid at *; aesop;
     · rw [ eq_comm ] at ha' hb';
-      cases eq_or_ne a' x <;> cases eq_or_ne a' y <;> cases eq_or_ne b' x <;> cases eq_or_ne b' y <;> simp_all +decide [ SimpleGraph.contractEdge_vertex, SimpleGraph.contractEdgeProj ];
-      all_goals unfold contractEdgeSetoid at *; simp_all +decide [ SimpleGraph.adj_comm ] ;
-      all_goals sorry
+      cases eq_or_ne a' x <;> cases eq_or_ne a' y <;> cases eq_or_ne b' x <;> cases eq_or_ne b' y
+      all_goals simp_all +decide [ SimpleGraph.contractEdge_vertex, SimpleGraph.contractEdgeProj,
+        Quotient.eq, contractEdgeSetoid, SimpleGraph.adj_comm ];
 
 /-
 The number of edges in the contracted graph is strictly less than in the original graph.
