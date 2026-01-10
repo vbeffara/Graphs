@@ -1063,11 +1063,10 @@ lemma SimpleGraph.lift_path_to_contraction_end {V : Type*} [Fintype V] [Decidabl
 /-
 A path in the contracted graph starting at the contracted vertex can be lifted to a path in the original graph starting at one of the contracted edge's endpoints.
 -/
-lemma SimpleGraph.lift_path_from_contraction_start {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (B : Set V) (x y : V) (hxy : G.Adj x y)
+lemma SimpleGraph.lift_path_from_contraction_start {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (B : Set V) (x y : V)
   (v' : Quotient (SimpleGraph.contractEdgeSetoid x y))
   (p' : (G.contractEdge' x y).Walk (SimpleGraph.contractEdge_vertex x y) v')
   (hp'_path : p'.IsPath)
-  (hp'_start : p'.support.toFinset ∩ {SimpleGraph.contractEdge_vertex x y} = {SimpleGraph.contractEdge_vertex x y})
   (hv' : v' ∈ SimpleGraph.contractEdge_liftSet x y B)
   (h_ne : v' ≠ SimpleGraph.contractEdge_vertex x y) :
   ∃ (u v : V) (p : G.Walk u v),
@@ -1082,7 +1081,7 @@ lemma SimpleGraph.lift_path_from_contraction_start {V : Type*} [Fintype V] [Deci
         p.support.toFinset ⊆ (contractEdge_preimage x y (p'.reverse.support.toFinset)) ∧
         p.support.toFinset ∩ {x, y} = {v} := by
           apply_rules [ SimpleGraph.lift_path_to_contraction_end ];
-          · exact?;
+          · exact (Walk.isPath_reverse_iff p').mpr hp'_path;
       obtain ⟨ u, v, p, hu, hv, hp, hp', hp'' ⟩ := h_lift_reversed; use v, u, p.reverse; aesop;
 
 /-
@@ -1099,7 +1098,7 @@ lemma SimpleGraph.join_paths_through_edge {V : Type*} [DecidableEq V] (G : Simpl
   (h_disjoint : Disjoint (p1.support.toFinset \ {x, y}) (p2.support.toFinset \ {x, y})) :
   ∃ (q : G.Walk u_start v_end), q.IsPath ∧ q.support.toFinset ⊆ p1.support.toFinset ∪ p2.support.toFinset := by
     by_cases h_cases : u_end = v_start;
-    · refine' ⟨ p1.append ( h_cases ▸ p2 ), _, _ ⟩ <;> simp_all +decide [ SimpleGraph.Walk.IsPath ];
+    · refine' ⟨ p1.append ( h_cases ▸ p2 ), _, _ ⟩ <;> simp_all +decide
       · -- Since p1 and p2 are disjoint except at v_start, and they are both paths, their concatenation is also a path.
         have h_concat_path : (p1.append (h_cases ▸ p2)).IsPath := by
           have h_disjoint : Disjoint (p1.support.toFinset \ {v_start}) (p2.support.toFinset \ {v_start}) := by
@@ -1119,16 +1118,10 @@ lemma SimpleGraph.join_paths_through_edge {V : Type*} [DecidableEq V] (G : Simpl
       -- We can form the walk $p_1 ++ (u_{end}, v_{start}) ++ p_2$.
       use p1.append (SimpleGraph.Walk.cons h_edge p2);
       simp_all +decide [ Finset.subset_iff, SimpleGraph.Walk.isPath_def ];
-      simp_all +decide [ Finset.disjoint_left, List.nodup_append ];
+      simp_all +decide [ Finset.disjoint_left ];
       simp_all +decide [ Finset.ext_iff, SimpleGraph.Walk.support_append ];
       grind
 
-
-/-
-Checking for existence of takeUntil and dropUntil
--/
-#check SimpleGraph.Walk.takeUntil
-#check SimpleGraph.Walk.dropUntil
 
 /-
 A path can be split at any vertex in its support into two paths that intersect only at that vertex.
@@ -1160,15 +1153,15 @@ lemma SimpleGraph.Walk.IsPath.support_inter_singleton_eq_of_end {V : Type*} [Dec
 /-
 If a walk is a path, its support intersects the singleton set of its start point exactly at that point.
 -/
-lemma SimpleGraph.Walk.IsPath.support_inter_singleton_eq_of_start {V : Type*} [DecidableEq V] {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (hp : p.IsPath) :
+lemma SimpleGraph.Walk.IsPath.support_inter_singleton_eq_of_start {V : Type*} [DecidableEq V] {G : SimpleGraph V} {u v : V} (p : G.Walk u v) :
   p.support.toFinset ∩ {u} = {u} := by
     -- Since `p` is a path, it contains no repeated vertices. `u` is in the support of `p`. Thus `u` appears exactly once in the support. So the intersection with `{u}` is `{u}`.
-    ext; simp [hp]
+    ext; simp
 
 /-
 If two sets in the contracted graph are disjoint away from the contracted vertex, their preimages in the original graph are disjoint away from the endpoints of the contracted edge.
 -/
-lemma SimpleGraph.contractEdge_preimage_disjoint_away_from_endpoints {V : Type*} [Fintype V] [DecidableEq V] (x y : V) (hxy : x ≠ y)
+lemma SimpleGraph.contractEdge_preimage_disjoint_away_from_endpoints {V : Type*} [Fintype V] [DecidableEq V] (x y : V)
   (s t : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)))
   (h_disj : Disjoint (s \ {SimpleGraph.contractEdge_vertex x y}) (t \ {SimpleGraph.contractEdge_vertex x y})) :
   Disjoint (SimpleGraph.contractEdge_preimage x y s \ {x, y}) (SimpleGraph.contractEdge_preimage x y t \ {x, y}) := by
@@ -1176,7 +1169,7 @@ lemma SimpleGraph.contractEdge_preimage_disjoint_away_from_endpoints {V : Type*}
     simp_all +decide [ Finset.disjoint_left ];
     intro a ha hx hy; specialize h_disj ha; simp_all +decide [ SimpleGraph.contractEdgeProj, SimpleGraph.contractEdge_vertex ] ;
     apply h_disj
-    sorry
+    simp [Quotient.eq, contractEdgeSetoid, hx, hy]
 
 /-
 If two paths in the contracted graph intersect only at the contracted vertex, their lifted paths in the original graph are disjoint away from the endpoints of the contracted edge.
@@ -1192,7 +1185,7 @@ lemma SimpleGraph.lifted_paths_disjoint {V : Type*} [Fintype V] [DecidableEq V] 
   Disjoint (p1.support.toFinset \ {x, y}) (p2.support.toFinset \ {x, y}) := by
     -- Apply the lemma that states the preimages of disjoint sets are disjoint away from the endpoints of the contracted edge.
     have h_disjoint : Disjoint (SimpleGraph.contractEdge_preimage x y p1'.support.toFinset \ {x, y}) (SimpleGraph.contractEdge_preimage x y p2'.support.toFinset \ {x, y}) := by
-      apply SimpleGraph.contractEdge_preimage_disjoint_away_from_endpoints x y hxy;
+      apply SimpleGraph.contractEdge_preimage_disjoint_away_from_endpoints x y
       exact Finset.disjoint_left.mpr fun z hz1 hz2 => by rw [ Finset.ext_iff ] at h_inter; specialize h_inter z; aesop;
     exact h_disjoint.mono ( fun z => by aesop ) ( fun z => by aesop )
 
@@ -1235,20 +1228,15 @@ lemma SimpleGraph.lift_split_paths {V : Type*} [Fintype V] [DecidableEq V] (G : 
         p2.IsPath ∧
         p2.support.toFinset ⊆ SimpleGraph.contractEdge_preimage x y p2'.support.toFinset ∧
         p2.support.toFinset ∩ {x, y} = {v_start} := by
-          have := SimpleGraph.lift_path_from_contraction_start G B x y hxy v' p2' hp2'_path ( by
-            simp_all +decide [ Finset.eq_singleton_iff_unique_mem ] ) hv' h_v_ne;
+          have := SimpleGraph.lift_path_from_contraction_start G B x y v' p2' hp2'_path ( by
+            simp_all +decide [ Finset.eq_singleton_iff_unique_mem ] ) h_v_ne;
           tauto;
       refine' ⟨ u_start, u_end, p1, v_start, v_end, p2, hp1.1, hp2.2.1, hp1.2.1, hp2.1, hp1.2.2.1, hp2.2.2.1, hp1.2.2.2.1, hp2.2.2.2.1, hp1.2.2.2.2, hp2.2.2.2.2, _ ⟩;
       have h_lifted_paths_disjoint : Disjoint (SimpleGraph.contractEdge_preimage x y p1'.support.toFinset \ {x, y}) (SimpleGraph.contractEdge_preimage x y p2'.support.toFinset \ {x, y}) := by
-        apply SimpleGraph.contractEdge_preimage_disjoint_away_from_endpoints x y hxy.ne p1'.support.toFinset p2'.support.toFinset;
+        apply SimpleGraph.contractEdge_preimage_disjoint_away_from_endpoints x y p1'.support.toFinset p2'.support.toFinset;
         simp_all +decide [ Finset.disjoint_left, Finset.ext_iff ];
         exact fun a ha₁ ha₂ ha₃ => ha₂ <| h_inter a |>.1 ⟨ ha₁, ha₃ ⟩;
       exact h_lifted_paths_disjoint.mono ( Finset.sdiff_subset_sdiff hp1.2.2.2.1 ( Finset.Subset.refl _ ) ) ( Finset.sdiff_subset_sdiff hp2.2.2.2.1 ( Finset.Subset.refl _ ) )
-
-/-
-Checking if SimpleGraph.lift_split_paths exists
--/
-#check SimpleGraph.lift_split_paths
 
 /-
 A path in the contracted graph passing through the contracted vertex can be lifted to a path in the original graph.
@@ -1282,7 +1270,9 @@ lemma SimpleGraph.lift_path_through_contraction_internal {V : Type*} [Fintype V]
         p1.support.toFinset ∩ {x, y} = {u_end} ∧
         p2.support.toFinset ∩ {x, y} = {v_start} ∧
         Disjoint (p1.support.toFinset \ {x, y}) (p2.support.toFinset \ {x, y}) := by
-          exact?;
+          exact
+            lift_split_paths G A B x y hxy u' v' p1' p2' hp1'_path hp2'_path h_inter h_u_ne h_v_ne
+              hu' hv';
       obtain ⟨q, hq⟩ : ∃ q : G.Walk u_start v_end, q.IsPath ∧ q.support.toFinset ⊆ p1.support.toFinset ∪ p2.support.toFinset := by
         apply SimpleGraph.join_paths_through_edge G x y hxy p1 p2 h_disjoint.2.2.1 h_disjoint.2.2.2.1 h_disjoint.1 h_disjoint.2.1 h_disjoint.2.2.2.2.2.2.1 h_disjoint.2.2.2.2.2.2.2.1 h_disjoint.2.2.2.2.2.2.2.2;
       have h_union_subset : contractEdge_preimage x y p1'.support.toFinset ∪ contractEdge_preimage x y p2'.support.toFinset ⊆ contractEdge_preimage x y (p1'.support.toFinset ∪ p2'.support.toFinset) := by
