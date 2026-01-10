@@ -862,7 +862,7 @@ theorem SimpleGraph.disjoint_paths_join {V : Type*} [Fintype V] [DecidableEq V] 
       generalize_proofs at *;
       by_cases hxy : x = y;
       · grind;
-      · convert SimpleGraph.joined_paths_disjoint G A B X hX_sep x y ( by sorry ) ( p x x.2 ) ( hp x x.2 |>.2.1 ) ( hp x x.2 |>.2.2 ) ( p y y.2 ) ( hp y y.2 |>.2.1 ) ( hp y y.2 |>.2.2 ) ( q x x.2 ) ( hq x x.2 |>.2.1 ) ( hq x x.2 |>.2.2 ) ( q y y.2 ) ( hq y y.2 |>.2.1 ) ( hq y y.2 |>.2.2 ) _ _ using 1;
+      · convert SimpleGraph.joined_paths_disjoint G A B X hX_sep x y ( by simpa ) ( p x x.2 ) ( hp x x.2 |>.2.1 ) ( hp x x.2 |>.2.2 ) ( p y y.2 ) ( hp y y.2 |>.2.1 ) ( hp y y.2 |>.2.2 ) ( q x x.2 ) ( hq x x.2 |>.2.1 ) ( hq x x.2 |>.2.2 ) ( q y y.2 ) ( hq y y.2 |>.2.1 ) ( hq y y.2 |>.2.2 ) _ _ using 1;
         · simp +decide [ Finset.ext_iff ];
         · simp +decide [ Finset.ext_iff ];
         · have := hP_A_disj ( p x x.2 ) ( hp x x.2 |>.1 ) ( p y y.2 ) ( hp y y.2 |>.1 ) ; simp_all +decide [ Finset.disjoint_left ] ;
@@ -1174,7 +1174,7 @@ lemma SimpleGraph.contractEdge_preimage_disjoint_away_from_endpoints {V : Type*}
 /-
 If two paths in the contracted graph intersect only at the contracted vertex, their lifted paths in the original graph are disjoint away from the endpoints of the contracted edge.
 -/
-lemma SimpleGraph.lifted_paths_disjoint {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (x y : V) (hxy : x ≠ y)
+lemma SimpleGraph.lifted_paths_disjoint {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (x y : V)
   (p1' : (G.contractEdge' x y).Walk (SimpleGraph.contractEdgeProj x y x) (SimpleGraph.contractEdge_vertex x y)) -- start doesn't matter much
   (p2' : (G.contractEdge' x y).Walk (SimpleGraph.contractEdge_vertex x y) (SimpleGraph.contractEdgeProj x y x)) -- end doesn't matter much
   (h_inter : p1'.support.toFinset ∩ p2'.support.toFinset = {SimpleGraph.contractEdge_vertex x y})
@@ -1192,7 +1192,7 @@ lemma SimpleGraph.lifted_paths_disjoint {V : Type*} [Fintype V] [DecidableEq V] 
 /-
 If two paths in the contracted graph meet only at the contracted vertex, they can be lifted to paths in the original graph that are disjoint away from the contracted edge's endpoints.
 -/
-lemma SimpleGraph.lift_split_paths {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : G.Adj x y)
+lemma SimpleGraph.lift_split_paths {V : Type*} [Fintype V] [DecidableEq V] (G : SimpleGraph V) (A B : Set V) (x y : V)
   (u' v' : Quotient (SimpleGraph.contractEdgeSetoid x y))
   (p1' : (G.contractEdge' x y).Walk u' (SimpleGraph.contractEdge_vertex x y))
   (p2' : (G.contractEdge' x y).Walk (SimpleGraph.contractEdge_vertex x y) v')
@@ -1271,7 +1271,7 @@ lemma SimpleGraph.lift_path_through_contraction_internal {V : Type*} [Fintype V]
         p2.support.toFinset ∩ {x, y} = {v_start} ∧
         Disjoint (p1.support.toFinset \ {x, y}) (p2.support.toFinset \ {x, y}) := by
           exact
-            lift_split_paths G A B x y hxy u' v' p1' p2' hp1'_path hp2'_path h_inter h_u_ne h_v_ne
+            lift_split_paths G A B x y u' v' p1' p2' hp1'_path hp2'_path h_inter h_u_ne h_v_ne
               hu' hv';
       obtain ⟨q, hq⟩ : ∃ q : G.Walk u_start v_end, q.IsPath ∧ q.support.toFinset ⊆ p1.support.toFinset ∪ p2.support.toFinset := by
         apply SimpleGraph.join_paths_through_edge G x y hxy p1 p2 h_disjoint.2.2.1 h_disjoint.2.2.2.1 h_disjoint.1 h_disjoint.2.1 h_disjoint.2.2.2.2.2.2.1 h_disjoint.2.2.2.2.2.2.2.1 h_disjoint.2.2.2.2.2.2.2.2;
