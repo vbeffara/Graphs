@@ -1377,7 +1377,8 @@ lemma SimpleGraph.adjust_path_start_to_A {V : Type*} [Fintype V] [DecidableEq V]
             · replace hp_support := Finset.ext_iff.mp hp_support y; aesop;
             · simp +decide [ SimpleGraph.Walk.support_cons ];
               simp +decide [ Finset.eq_singleton_iff_unique_mem, contractEdgeProj ] at hp_support ⊢;
-              exact ⟨ ⟨ x, hp_support.1, by sorry ⟩, fun a ha => ⟨ a, ha, by tauto ⟩ ⟩;
+              exact ⟨ ⟨ x, hp_support.1, by simp_all [Quotient.eq, SimpleGraph.contractEdgeSetoid ] ⟩,
+              fun a ha => ⟨ a, ha, by tauto ⟩ ⟩;
           · grind;
         · simp_all +decide [ contractEdge_liftSet ];
           obtain ⟨ u', hu', hu'' ⟩ := h_liftA;
@@ -1427,7 +1428,7 @@ lemma SimpleGraph.adjust_path_end_to_B {V : Type*} [Fintype V] [DecidableEq V] (
             rintro a ( ha | rfl | rfl ) <;> simp_all +decide [ SimpleGraph.contractEdgeProj ];
             · exact ⟨ a, ha, by rfl ⟩;
             · exact ⟨ a, by cases p <;> aesop ⟩;
-            · exact ⟨ v, by simp, by sorry ⟩
+            · exact ⟨ v, by simp, by simp [Quotient.eq, SimpleGraph.contractEdgeSetoid]⟩
 
 /-
 Helper lemma: A path starting at the contracted vertex can be lifted to an A-B path if the contracted vertex is in the lifted set of A.
@@ -1506,7 +1507,7 @@ lemma SimpleGraph.lift_path_nil_eq_vertex {V : Type*} [Fintype V] [DecidableEq V
         exact ⟨ x, hx_1_A ⟩;
         exact ⟨ x, hx_2_B ⟩;
         exact SimpleGraph.Walk.nil;
-        all_goals simp +decide [ *, SimpleGraph.Walk.IsPath ];
+        all_goals simp +decide [*];
       · refine' ⟨ ⟨ _, _, _, _ ⟩, _ ⟩ <;> norm_num;
         exact ⟨ x, hx_1_A ⟩;
         exact ⟨ y, hx_2_B ⟩;
@@ -1519,8 +1520,8 @@ lemma SimpleGraph.lift_path_nil_eq_vertex {V : Type*} [Fintype V] [DecidableEq V
         exact ⟨ y, hx_1_A ⟩;
         exact ⟨ x, hx_2_B ⟩;
         exact SimpleGraph.Walk.cons hxy.symm SimpleGraph.Walk.nil;
-        simp +decide [ Finset.image, hx_1, hx_2 ];
-        · by_cases h : y = x <;> simp_all +decide [ Finset.ext_iff ];
+        simp +decide [Finset.image];
+        · by_cases h : y = x <;> simp_all +decide
         · simp +decide [ SimpleGraph.Walk.isPath_def ];
           exact hxy.ne.symm;
       · refine' ⟨ _, _ ⟩;
@@ -1529,7 +1530,7 @@ lemma SimpleGraph.lift_path_nil_eq_vertex {V : Type*} [Fintype V] [DecidableEq V
         exact ⟨ y, hx_1_A ⟩;
         exact ⟨ y, hx_2_B ⟩;
         exact SimpleGraph.Walk.nil;
-        all_goals simp_all +decide [ SimpleGraph.Walk.isPath_def ]
+        all_goals simp_all +decide
 
 /-
 A path in the contracted graph that passes through the contracted vertex can be lifted to a path in the original graph.
