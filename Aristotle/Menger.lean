@@ -67,7 +67,17 @@ instance SimpleGraph.ABPath.instFinite {V : Type*} [Fintype V] [DecidableEq V] (
     intro u v
     have h_finite_walks : Set.Finite {p : G.Walk u v | p.length ≤ Fintype.card V} := by
       have h_finite_walks : ∀ n : ℕ, Set.Finite {p : G.Walk u v | p.length = n} := by
-        sorry
+        intro n
+        induction n generalizing u v with
+        | zero =>
+          by_cases h : u = v
+          · subst h; simp
+          · simp [SimpleGraph.set_walk_length_zero_eq_of_ne, h]
+        | succ n ih =>
+          rw [SimpleGraph.set_walk_length_succ_eq]
+          refine Set.finite_iUnion (fun u => ?_)
+          refine Set.finite_iUnion (fun h => ?_)
+          refine Set.Finite.image _ (ih _ _)
       exact Set.Finite.subset ( Set.Finite.biUnion ( Set.finite_Iic ( Fintype.card V ) ) fun n hn => h_finite_walks n ) fun p hp => by aesop;
     refine' h_finite_walks.subset fun p hp => _;
     have := hp.length_lt;
