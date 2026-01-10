@@ -65,10 +65,7 @@ structure ABPath (G : SimpleGraph V) (A B : Set V) where
 
 namespace ABPath
 
-/-
-The set of A-B paths is finite.
--/
-instance SimpleGraph.ABPath.instFinite [Fintype V] : Finite (G.ABPath A B) := by
+instance [Fintype V] : Finite (G.ABPath A B) := by
   -- Since the vertex set is finite, the set of all possible paths between any two vertices is also finite. We can use the fact that the set of all paths between any two vertices is finite.
   have h_finite_paths : ∀ u v : V, Set.Finite {p : G.Walk u v | p.IsPath} := by
     intro u v
@@ -89,7 +86,8 @@ instance SimpleGraph.ABPath.instFinite [Fintype V] : Finite (G.ABPath A B) := by
   exact fun p => ⟨ ⟨ p.u, p.v, p.walk ⟩, p.u.2, p.v.2, p.isPath ⟩;
   intro p q h; cases p; cases q; aesop;
 
-noncomputable instance SimpleGraph.ABPath.instFintype [Fintype V] (G : SimpleGraph V) (A B : Set V) : Fintype (G.ABPath A B) := Fintype.ofFinite _
+noncomputable instance [Fintype V] : Fintype (G.ABPath A B) :=
+  Fintype.ofFinite _
 
 end ABPath
 
@@ -102,7 +100,7 @@ namespace ABPathSet
 /-
 A set of A-B paths is disjoint if any two distinct paths in the set are vertex-disjoint.
 -/
-def DisjointPaths (P : G.ABPathSet A B) : Prop :=
+def disjoint (P : G.ABPathSet A B) : Prop :=
   ∀ p ∈ P, ∀ q ∈ P, p ≠ q → Disjoint p.walk.support.toFinset q.walk.support.toFinset
 
 end ABPathSet
@@ -117,6 +115,8 @@ def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
 
 end SimpleGraph
 
+/------------------------- REVIEW BAR ------------------------/
+
 /-
 The set of all vertex sets that separate A from B.
 -/
@@ -128,7 +128,7 @@ noncomputable def SimpleGraph.separators [Fintype V] (G : SimpleGraph V) (A B : 
 The set of all sets of disjoint A-B paths.
 -/
 noncomputable def SimpleGraph.disjoint_path_sets [Fintype V] (G : SimpleGraph V) (A B : Set V) : Finset (G.ABPathSet A B) :=
-  (Finset.powerset Finset.univ).filter (fun P => P.DisjointPaths)
+  (Finset.powerset Finset.univ).filter (fun P => P.disjoint)
 
 /-
 The set of separators is nonempty (e.g., the set of all vertices is a separator).
@@ -146,7 +146,7 @@ The set of disjoint path sets is nonempty (the empty set is a valid set of disjo
 lemma SimpleGraph.disjoint_path_sets_nonempty [Fintype V] (G : SimpleGraph V) (A B : Set V) :
   (G.disjoint_path_sets A B).Nonempty := by
   use ∅
-  simp [disjoint_path_sets, ABPathSet.DisjointPaths]
+  simp [disjoint_path_sets, ABPathSet.disjoint]
 
 /-
 The minimum size of a separator and the maximum number of disjoint paths.
@@ -164,7 +164,7 @@ theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Set V) :
   G.max_disjoint_paths_size A B ≤ G.min_separator_size A B := by
     by_contra h_contra;
     -- Let $\mathcal{P}$ be a set of $m$ disjoint A-B paths.
-    obtain ⟨P, hP⟩ : ∃ P : G.ABPathSet A B, P.DisjointPaths ∧ P.card > G.min_separator_size A B := by
+    obtain ⟨P, hP⟩ : ∃ P : G.ABPathSet A B, P.disjoint ∧ P.card > G.min_separator_size A B := by
       simp_all +decide [ SimpleGraph.max_disjoint_paths_size ];
       unfold SimpleGraph.disjoint_path_sets at h_contra; aesop;
     -- Let $S$ be an A-B separator of size $k$.
@@ -666,7 +666,7 @@ theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : Simp
 If P is a set of disjoint paths from A to X with size equal to X, then every vertex in X is the endpoint of exactly one path in P, and that path intersects X only at its endpoint.
 -/
 lemma SimpleGraph.disjoint_paths_prop [Fintype V] (G : SimpleGraph V) (A X : Set V)
-    (P : G.ABPathSet A X) (hP_disj : P.DisjointPaths)
+    (P : G.ABPathSet A X) (hP_disj : P.disjoint)
     (hP_card : P.card = X.toFinset.card) :
   ∀ x ∈ X, ∃! p ∈ P, p.v = x ∧ p.walk.support.toFinset ∩ X.toFinset = {x} := by
     -- Since $P$ consists of disjoint paths, the endpoints in $X$ must be distinct. Thus, the map $p \mapsto p.v$ is injective from $P$ to $X$.
@@ -793,7 +793,7 @@ lemma SimpleGraph.path_intersection_of_separator (G : SimpleGraph V) (A B : Set 
 If P is a set of disjoint paths from X to B with size equal to X, then every vertex in X is the start of exactly one path in P, and that path intersects X only at its start.
 -/
 lemma SimpleGraph.disjoint_paths_prop_start [Fintype V] (G : SimpleGraph V) (X B : Set V)
-    (P : G.ABPathSet X B) (hP_disj : P.DisjointPaths) (hP_card : P.card = X.toFinset.card) :
+    (P : G.ABPathSet X B) (hP_disj : P.disjoint) (hP_card : P.card = X.toFinset.card) :
   ∀ x ∈ X, ∃! p ∈ P, p.u = x ∧ p.walk.support.toFinset ∩ X.toFinset = {x} := by
     -- Since $P$ consists of disjoint paths starting in $X$, the start points in $X$ must be distinct.
     have h_distinct_start : ∀ p q : G.ABPath X B, p ∈ P → q ∈ P → p ≠ q → p.u.1 ≠ q.u.1 := by
@@ -878,12 +878,12 @@ theorem SimpleGraph.disjoint_paths_join [Fintype V] (G : SimpleGraph V) (A B : S
   (k : ℕ)
   (hX_card : X.card = k)
   (P_A : G.ABPathSet A X)
-  (hP_A_disj : P_A.DisjointPaths)
+  (hP_A_disj : P_A.disjoint)
   (hP_A_card : P_A.card = k)
   (P_B : G.ABPathSet X B)
-  (hP_B_disj : P_B.DisjointPaths)
+  (hP_B_disj : P_B.disjoint)
   (hP_B_card : P_B.card = k) :
-  ∃ P : G.ABPathSet A B, P.DisjointPaths ∧ P.card = k := by
+  ∃ P : G.ABPathSet A B, P.disjoint ∧ P.card = k := by
     have h_unique_paths : ∀ x ∈ X, ∃! p ∈ P_A, p.v = x ∧ p.walk.support.toFinset ∩ X = {x} := by
       have := SimpleGraph.disjoint_paths_prop G A ( ↑X ) P_A hP_A_disj; aesop;
     have h_unique_paths_start : ∀ x ∈ X, ∃! q ∈ P_B, q.u = x ∧ q.walk.support.toFinset ∩ X = {x} := by
@@ -1336,7 +1336,7 @@ In a set of disjoint paths, at most one path can pass through any given vertex.
 -/
 lemma SimpleGraph.at_most_one_path_through_vertex (G : SimpleGraph V) (A B : Set V)
     (P : G.ABPathSet A B) (v : V)
-  (hP_disj : P.DisjointPaths) :
+  (hP_disj : P.disjoint) :
   ({p ∈ P | v ∈ p.walk.support} : Finset (G.ABPath A B)).card ≤ 1 := by
     -- By contradiction, assume there are two distinct paths $p$ and $q$ in $P$ that both contain $v$.
     by_contra h_contra;
@@ -1601,8 +1601,8 @@ Given a set of disjoint paths in the contracted graph, there exists a set of dis
 lemma SimpleGraph.exists_disjoint_paths_lift [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V)
     (hxy : G.Adj x y)
     (P' : ((G.contractEdge' x y).ABPathSet (contractEdge_liftSet x y A) (contractEdge_liftSet x y B)))
-  (hP'_disj : P'.DisjointPaths) :
-  ∃ P : G.ABPathSet A B, P.DisjointPaths ∧ P.card = P'.card := by
+  (hP'_disj : P'.disjoint) :
+  ∃ P : G.ABPathSet A B, P.disjoint ∧ P.card = P'.card := by
     have h_lift : ∀ (p' : (G.contractEdge' x y).ABPath (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B)), ∃ p : G.ABPath A B, p.walk.support.toFinset.image (SimpleGraph.contractEdgeProj x y) ⊆ p'.walk.support.toFinset := by
       intro p'
       by_cases hp'_avoid : SimpleGraph.contractEdge_vertex x y ∉ p'.walk.support;
@@ -1727,12 +1727,12 @@ lemma SimpleGraph.min_sep_delete_ge_k_right [Fintype V] (G : SimpleGraph V) (A B
 If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to a set of disjoint paths in G with the same size.
 -/
 lemma SimpleGraph.lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (A B : Set V)
-  (P : G'.ABPathSet A B) (hP_disj : P.DisjointPaths) :
-  ∃ Q : G.ABPathSet A B, Q.DisjointPaths ∧ Q.card = P.card := by
+  (P : G'.ABPathSet A B) (hP_disj : P.disjoint) :
+  ∃ Q : G.ABPathSet A B, Q.disjoint ∧ Q.card = P.card := by
     refine' ⟨ P.image _, _, _ ⟩;
     refine' fun p => ⟨ p.u, p.v, _, _ ⟩;
     exact p.walk.map ( SimpleGraph.Hom.ofLE h );
-    all_goals simp_all +decide [ Finset.disjoint_left, ABPathSet.DisjointPaths ];
+    all_goals simp_all +decide [ Finset.disjoint_left, ABPathSet.disjoint ];
     exact p.isPath;
     · bound;
     · apply Finset.card_image_of_injOn;
@@ -1763,31 +1763,31 @@ lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : 
       exact ⟨ le_trans h_ind.1 ( IH_delete _ _ ), le_trans h_ind.2 ( IH_delete _ _ ) ⟩;
     -- By the induction hypothesis, there exist sets of disjoint A-X paths and X-B paths in G-xy with size at least k.
     obtain ⟨P_A', hP_A'_disj, hP_A'_card⟩ :
-        ∃ P_A' : (G.deleteEdge x y).ABPathSet A X, P_A'.DisjointPaths ∧ P_A'.card ≥ k := by
-      obtain ⟨P_A', hP_A'_disj, hP_A'_card⟩ : ∃ P_A' : (G.deleteEdge x y).ABPathSet A X, P_A'.DisjointPaths ∧ P_A'.card = (G.deleteEdge x y).max_disjoint_paths_size A X := by
+        ∃ P_A' : (G.deleteEdge x y).ABPathSet A X, P_A'.disjoint ∧ P_A'.card ≥ k := by
+      obtain ⟨P_A', hP_A'_disj, hP_A'_card⟩ : ∃ P_A' : (G.deleteEdge x y).ABPathSet A X, P_A'.disjoint ∧ P_A'.card = (G.deleteEdge x y).max_disjoint_paths_size A X := by
         have := Finset.max'_mem ( Finset.image Finset.card ( ( G.deleteEdge x y ).disjoint_path_sets A X ) ) ?_;
         obtain ⟨ P_A', hP_A' ⟩ := Finset.mem_image.mp this;
         exact ⟨ P_A', Finset.mem_filter.mp hP_A'.1 |>.2, hP_A'.2 ⟩;
-        exact ⟨ _, Finset.mem_image_of_mem _ ( Finset.mem_filter.mpr ⟨ Finset.mem_univ ∅, by simp +decide [ ABPathSet.DisjointPaths ] ⟩ ) ⟩;
+        exact ⟨ _, Finset.mem_image_of_mem _ ( Finset.mem_filter.mpr ⟨ Finset.mem_univ ∅, by simp +decide [ ABPathSet.disjoint ] ⟩ ) ⟩;
       exact ⟨ P_A', hP_A'_disj, hP_A'_card.symm ▸ h_ind.1 ⟩
-    obtain ⟨P_B', hP_B'_disj, hP_B'_card⟩ : ∃ P_B' : (G.deleteEdge x y).ABPathSet X B, P_B'.DisjointPaths ∧ P_B'.card ≥ k := by
+    obtain ⟨P_B', hP_B'_disj, hP_B'_card⟩ : ∃ P_B' : (G.deleteEdge x y).ABPathSet X B, P_B'.disjoint ∧ P_B'.card ≥ k := by
       contrapose! h_ind;
       unfold SimpleGraph.max_disjoint_paths_size;
       simp_all +decide [ SimpleGraph.disjoint_path_sets ];
     -- By the properties of the contraction, we can lift these paths to G.
-    obtain ⟨P_A, hP_A_disj, hP_A_card⟩ : ∃ P_A : G.ABPathSet A X, P_A.DisjointPaths ∧ P_A.card = k := by
+    obtain ⟨P_A, hP_A_disj, hP_A_card⟩ : ∃ P_A : G.ABPathSet A X, P_A.disjoint ∧ P_A.card = k := by
       have := Finset.exists_subset_card_eq hP_A'_card;
       obtain ⟨ t, ht₁, ht₂ ⟩ := this;
-      have h_lift_A : ∃ P_A : G.ABPathSet A X, P_A.DisjointPaths ∧ P_A.card = t.card := by
+      have h_lift_A : ∃ P_A : G.ABPathSet A X, P_A.disjoint ∧ P_A.card = t.card := by
         apply_rules [ SimpleGraph.lift_disjoint_paths_le ];
         · intro u v; by_cases hu : u = x <;> by_cases hv : v = y <;> simp +decide [ *, SimpleGraph.deleteEdge ] <;> tauto
         · exact fun p hp q hq hpq => hP_A'_disj p ( ht₁ hp ) q ( ht₁ hq ) hpq;
       aesop
-    obtain ⟨P_B, hP_B_disj, hP_B_card⟩ : ∃ P_B : G.ABPathSet X B, P_B.DisjointPaths ∧ P_B.card = k := by
-      obtain ⟨P_B'', hP_B''_disj, hP_B''_card⟩ : ∃ P_B'' : (G.deleteEdge x y).ABPathSet X B, P_B''.DisjointPaths ∧ P_B''.card = k := by
+    obtain ⟨P_B, hP_B_disj, hP_B_card⟩ : ∃ P_B : G.ABPathSet X B, P_B.disjoint ∧ P_B.card = k := by
+      obtain ⟨P_B'', hP_B''_disj, hP_B''_card⟩ : ∃ P_B'' : (G.deleteEdge x y).ABPathSet X B, P_B''.disjoint ∧ P_B''.card = k := by
         obtain ⟨ P_B'', hP_B''_disj, hP_B''_card ⟩ := Finset.exists_subset_card_eq hP_B'_card;
         exact ⟨ P_B'', fun p hp q hq hpq => hP_B'_disj p ( hP_B''_disj hp ) q ( hP_B''_disj hq ) hpq, hP_B''_card ⟩;
-      have h_lift : ∃ P_B : G.ABPathSet X B, P_B.DisjointPaths ∧ P_B.card = k := by
+      have h_lift : ∃ P_B : G.ABPathSet X B, P_B.disjoint ∧ P_B.card = k := by
         have h_subgraph : (G.deleteEdge x y) ≤ G := by
           intro u v; simp +decide [ SimpleGraph.deleteEdge ] ;
           tauto
@@ -1795,7 +1795,7 @@ lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : 
         rw [ hP_B''_card ];
       exact h_lift;
     -- By the properties of the contraction, we can combine these paths to get a set of k disjoint A-B paths in G.
-    obtain ⟨P, hP_disj, hP_card⟩ : ∃ P : G.ABPathSet A B, P.DisjointPaths ∧ P.card = k := by
+    obtain ⟨P, hP_disj, hP_card⟩ : ∃ P : G.ABPathSet A B, P.disjoint ∧ P.card = k := by
       apply_rules [ SimpleGraph.disjoint_paths_join ];
     refine' le_trans _ ( Finset.le_max' _ _ _ );
     rotate_left;
@@ -1817,13 +1817,13 @@ lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : S
         exact hxy.ne;
       have := SimpleGraph.Menger_case2_imp_paths G A B x y hxy ( G.min_separator_size A B ) rfl X hX_sep hX_card hx hy IH_delete; aesop;
     · -- By the induction hypothesis on the contracted graph, there exists a set P' of disjoint paths in G/e with |P'| ≥ k.
-      obtain ⟨P', hP'_card, hP'_disj⟩ : ∃ P' : (G.contractEdge' x y).ABPathSet (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.card ≥ G.min_separator_size A B ∧ P'.DisjointPaths := by
+      obtain ⟨P', hP'_card, hP'_disj⟩ : ∃ P' : (G.contractEdge' x y).ABPathSet (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.card ≥ G.min_separator_size A B ∧ P'.disjoint := by
         have := IH_contract.trans' ( le_of_not_gt h );
         contrapose! this;
         rw [ SimpleGraph.max_disjoint_paths_size ];
         simp_all +decide [ SimpleGraph.disjoint_path_sets ];
         exact fun P hP => lt_of_not_ge fun hP' => this P hP' hP;
-      have h_exists_P : ∃ P : G.ABPathSet A B, P.card = P'.card ∧ P.DisjointPaths := by
+      have h_exists_P : ∃ P : G.ABPathSet A B, P.card = P'.card ∧ P.disjoint := by
         have := SimpleGraph.exists_disjoint_paths_lift G A B x y hxy P' hP'_disj;
         exact ⟨ this.choose, this.choose_spec.2, this.choose_spec.1 ⟩;
       obtain ⟨ P, hP₁, hP₂ ⟩ := h_exists_P;
