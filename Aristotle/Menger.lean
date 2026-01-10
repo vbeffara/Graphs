@@ -532,8 +532,8 @@ lemma SimpleGraph.contractEdge_edge_card_lt [Fintype V] (G : SimpleGraph V) [Dec
         intro e he; simp_all +decide [ SimpleGraph.contractEdge' ] ;
         rcases e with ⟨ a, b ⟩ ; simp_all +decide [ fromRel ] ;
         rcases he.2 with ( ⟨ a', rfl, b', rfl, hab ⟩ | ⟨ a', rfl, b', rfl, hab ⟩ ) <;> use Sym2.mk ( a', b' ) <;> simp_all +decide [ Sym2.eq_swap ];
-        · sorry
-        · sorry
+        · simp_all [Quotient.eq, contractEdgeSetoid] ; aesop
+        · simp_all [Quotient.eq, contractEdgeSetoid] ; aesop
       exact le_trans ( Finset.card_le_card h_inter ) ( Finset.card_image_le );
     exact lt_of_le_of_lt h_inter ( Finset.card_lt_card ( Finset.ssubset_iff_subset_ne.mpr ⟨ Finset.sdiff_subset, by aesop ⟩ ) )
 
