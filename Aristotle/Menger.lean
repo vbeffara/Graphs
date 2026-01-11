@@ -87,8 +87,7 @@ instance [Fintype V] : Finite (G.ABPath A B) := by
   exact fun p => ⟨ ⟨ p.u, p.v, p.walk ⟩, p.u.2, p.v.2, p.isPath ⟩;
   intro p q h; cases p; cases q; aesop;
 
-noncomputable instance [Fintype V] : Fintype (G.ABPath A B) :=
-  Fintype.ofFinite _
+noncomputable instance [Fintype V] : Fintype (G.ABPath A B) := Fintype.ofFinite _
 
 end ABPath
 
@@ -97,6 +96,8 @@ end ABPath
 @[reducible] def ABPathSet (G : SimpleGraph V) (A B : Set V) := Finset (G.ABPath A B)
 
 namespace ABPathSet
+
+noncomputable instance [Fintype V] : Fintype (G.ABPathSet A B) := inferInstance
 
 /-
 A set of A-B paths is disjoint if any two distinct paths in the set are vertex-disjoint.
@@ -117,17 +118,17 @@ def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
 /-
 The set of all vertex sets that separate A from B.
 -/
-noncomputable def Separators (G : SimpleGraph V) (A B : Set V) :=
+noncomputable def Separator (G : SimpleGraph V) (A B : Set V) :=
   {S : Finset V // G.Separates A B S}
 
-noncomputable instance [Fintype V] : Fintype (G.Separators A B) := by
-  simp [Separators] ; infer_instance
+noncomputable instance [Fintype V] : Fintype (G.Separator A B) := by
+  simp [Separator] ; infer_instance
 
 /-
 The set of separators is nonempty (e.g., the set of all vertices is a separator).
 -/
 instance separators_nonempty [Fintype V] (G : SimpleGraph V) (A B : Set V) :
-  Nonempty (G.Separators A B) := by
+  Nonempty (G.Separator A B) := by
     refine' ⟨ Finset.univ, _ ⟩;
     exact fun u hu v hv p => ⟨ u, p.start_mem_support, Finset.mem_univ _ ⟩
 
@@ -153,7 +154,7 @@ lemma SimpleGraph.disjoint_path_sets_nonempty [Fintype V] (G : SimpleGraph V) (A
 The minimum size of a separator and the maximum number of disjoint paths.
 -/
 noncomputable def SimpleGraph.min_separator_size [Fintype V] (G : SimpleGraph V) (A B : Set V) : ℕ := by
-  let S' := Set.range (fun S : G.Separators A B => S.1.card)
+  let S' := Set.range (fun S : G.Separator A B => S.1.card)
   exact Nat.find (p := fun n => n ∈ S') (by apply Set.range_nonempty)
 
 noncomputable def SimpleGraph.max_disjoint_paths_size [Fintype V] (G : SimpleGraph V) (A B : Set V) : ℕ :=
@@ -171,7 +172,7 @@ theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Set V) :
       unfold SimpleGraph.disjoint_path_sets at h_contra; aesop;
     -- Let $S$ be an A-B separator of size $k$.
     obtain ⟨S, hS⟩ : ∃ S : Finset V, G.Separates A B S ∧ S.card = G.min_separator_size A B := by
-      let S' := Set.range (fun S : G.Separators A B => S.1.card)
+      let S' := Set.range (fun S : G.Separator A B => S.1.card)
       have := Nat.find_spec (p := fun n => n ∈ S') (by apply Set.range_nonempty)
       obtain ⟨S, hS⟩ := this
       refine ⟨S.1, S.2, hS⟩
