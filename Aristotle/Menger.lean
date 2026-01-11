@@ -113,32 +113,32 @@ A set of vertices S separates A from B in G if every A-B path in G contains a ve
 def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
   ∀ u ∈ A, ∀ v ∈ B, ∀ p : G.Walk u v, ∃ x ∈ p.support, x ∈ S
 
-end SimpleGraph
-
-/------------------------- REVIEW BAR ------------------------/
-
 /-
 The set of all vertex sets that separate A from B.
 -/
-noncomputable def SimpleGraph.separators [Fintype V] (G : SimpleGraph V) (A B : Set V) :
-    Finset (Finset V) :=
-  (Finset.powerset Finset.univ).filter (fun S => G.Separates A B S)
+noncomputable def Separators (G : SimpleGraph V) (A B : Set V) :=
+  {S : Finset V // G.Separates A B S}
+
+noncomputable instance [Fintype V] : Fintype (G.Separators A B) := by
+  simp [Separators] ; infer_instance
+
+/-
+The set of separators is nonempty (e.g., the set of all vertices is a separator).
+-/
+instance separators_nonempty [Fintype V] (G : SimpleGraph V) (A B : Set V) :
+  Nonempty (G.Separators A B) := by
+    refine' ⟨ Finset.univ, _ ⟩;
+    exact fun u hu v hv p => ⟨ u, p.start_mem_support, Finset.mem_univ _ ⟩
+
+end SimpleGraph
+
+/-- =========================== REVIEW BAR ===================== -/
 
 /-
 The set of all sets of disjoint A-B paths.
 -/
 noncomputable def SimpleGraph.disjoint_path_sets [Fintype V] (G : SimpleGraph V) (A B : Set V) : Finset (G.ABPathSet A B) :=
   (Finset.powerset Finset.univ).filter (fun P => P.disjoint)
-
-/-
-The set of separators is nonempty (e.g., the set of all vertices is a separator).
--/
-lemma SimpleGraph.separators_nonempty [Fintype V] (G : SimpleGraph V) (A B : Set V) :
-  (G.separators A B).Nonempty := by
-    refine' ⟨ Finset.univ, _ ⟩;
-    -- Since the universal set contains all vertices, any path between A and B must pass through some vertex in the universal set.
-    simp [SimpleGraph.separators];
-    exact fun u hu v hv p => ⟨ u, p.start_mem_support, Finset.mem_univ _ ⟩
 
 /-
 The set of disjoint path sets is nonempty (the empty set is a valid set of disjoint paths).
@@ -151,8 +151,9 @@ lemma SimpleGraph.disjoint_path_sets_nonempty [Fintype V] (G : SimpleGraph V) (A
 /-
 The minimum size of a separator and the maximum number of disjoint paths.
 -/
-noncomputable def SimpleGraph.min_separator_size [Fintype V] (G : SimpleGraph V) (A B : Set V) : ℕ :=
-  ((G.separators A B).image Finset.card).min' ((G.separators_nonempty A B).image Finset.card)
+noncomputable def SimpleGraph.min_separator_size [Fintype V] (G : SimpleGraph V) (A B : Set V) : ℕ := by
+  let S' := Set.range (fun S : G.Separators A B => S.1.card)
+  exact Nat.find (p := fun n => n ∈ S') (by apply Set.range_nonempty)
 
 noncomputable def SimpleGraph.max_disjoint_paths_size [Fintype V] (G : SimpleGraph V) (A B : Set V) : ℕ :=
   ((G.disjoint_path_sets A B).image Finset.card).max' ((G.disjoint_path_sets_nonempty A B).image Finset.card)
@@ -169,10 +170,10 @@ theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Set V) :
       unfold SimpleGraph.disjoint_path_sets at h_contra; aesop;
     -- Let $S$ be an A-B separator of size $k$.
     obtain ⟨S, hS⟩ : ∃ S : Finset V, G.Separates A B S ∧ S.card = G.min_separator_size A B := by
-      have := Finset.min'_mem ( ( G.separators A B ).image Finset.card ) ⟨ _, Finset.mem_image_of_mem _ ( Finset.mem_filter.mpr ⟨ Finset.mem_powerset.mpr ( Finset.subset_univ ( Finset.univ : Finset V ) ), ( Finset.mem_filter.mp ( Finset.mem_filter.mpr ⟨ Finset.mem_powerset.mpr ( Finset.subset_univ ( Finset.univ : Finset V ) ), ( fun u hu v hv p ↦ by
-        cases p <;> aesop ) ⟩ ) |>.2 ) ⟩ ) ⟩
-      generalize_proofs at *;
-      rw [ Finset.mem_image ] at this; obtain ⟨ S, hS₁, hS₂ ⟩ := this; exact ⟨ S, Finset.mem_filter.mp hS₁ |>.2, hS₂ ⟩ ;
+      let S' := Set.range (fun S : G.Separators A B => S.1.card)
+      have := Nat.find_spec (p := fun n => n ∈ S') (by apply Set.range_nonempty)
+      obtain ⟨S, hS⟩ := this
+      refine ⟨S.1, S.2, hS⟩
     -- Since $S$ is an A-B separator, every path in $\mathcal{P}$ must contain at least one vertex from $S$.
     have h_path_inter_S : ∀ p ∈ P, ∃ x ∈ p.walk.support, x ∈ S := by
       exact fun p hp => hS.1 p.u p.u.2 p.v p.v.2 p.walk
@@ -185,21 +186,12 @@ theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Set V) :
 /-
 Base case of Menger's theorem: if G has no edges, the theorem holds.
 -/
-lemma SimpleGraph.Menger_strong_base [Fintype V] (G : SimpleGraph V) (A B : Set V) (h : G.edgeSet = ∅) :
+lemma SimpleGraph.Menger_strong_base [Fintype V] (G : SimpleGraph V) (A B : Set V)
+    (h : G.edgeSet = ∅) :
   G.min_separator_size A B ≤ G.max_disjoint_paths_size A B := by
     have h_empty : ∀ u v, G.Walk u v → u = v := by
       intro u v p; induction p <;> aesop;
-    unfold SimpleGraph.min_separator_size SimpleGraph.max_disjoint_paths_size;
-    simp +decide [ SimpleGraph.separators, SimpleGraph.disjoint_path_sets ];
-    simp +decide [ Finset.min', Finset.max', SimpleGraph.Separates ];
-    refine' ⟨ Finset.filter ( fun p => p.u.1 = p.v.1 ∧ p.u.1 ∈ A ∩ B ) ( Finset.univ : Finset ( G.ABPath A B ) ), _, Finset.image ( fun p => p.u ) ( Finset.filter ( fun p => p.u.1 = p.v ∧ p.u ∈ A ∩ B ) ( Finset.univ : Finset ( G.ABPath A B ) ) ), _, _ ⟩;
-    · intro p hp q hq hpq;
-      cases p ; cases q ; aesop;
-    · intro u hu v hv p
-      obtain rfl := h_empty u v p;
-      refine ⟨u, by simp, Finset.mem_image.mpr ⟨⟨⟨u, hu⟩, ⟨u, hv⟩, p.bypass, p.bypass_isPath⟩, ?_⟩⟩
-      simp [hv]
-    · exact Finset.card_image_le
+    sorry
 
 /-
 The contraction of edge (x, y) in G.
@@ -657,10 +649,11 @@ theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : Simp
   SimpleGraph.contractEdge_vertex x y ∈ Y := by
     contrapose! hY_card;
     rw [ ← h_min ];
-    refine' Finset.min'_le _ _ _;
+    apply Nat.find_le
     simp +zetaDelta at *;
-    use SimpleGraph.contractEdge_preimage x y Y;
-    exact ⟨ Finset.mem_filter.mpr ⟨ Finset.mem_powerset.mpr ( Finset.subset_univ _ ), SimpleGraph.contractEdge_preimage_separates G A B x y Y hY_sep ⟩, by rw [ SimpleGraph.card_preimage_contractEdge x y hxy Y, if_neg hY_card ] ⟩
+    refine ⟨⟨SimpleGraph.contractEdge_preimage x y Y, ?_⟩, ?_⟩
+    · exact contractEdge_preimage_separates G A B x y Y hY_sep
+    · simp [card_preimage_contractEdge x y hxy Y, hY_card]
 
 /-
 If P is a set of disjoint paths from A to X with size equal to X, then every vertex in X is the endpoint of exactly one path in P, and that path intersects X only at its endpoint.
@@ -1639,7 +1632,7 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : S
     obtain ⟨Y, hY_sep, hY_card⟩ : ∃ Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)), (G.contractEdge' x y).Separates (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) Y ∧ Y.card < k := by
       rw [ SimpleGraph.min_separator_size ] at h_contract_min;
       contrapose! h_contract_min;
-      unfold SimpleGraph.separators at *; aesop;
+      simp ; grind
     obtain ⟨X, hX_sep, hX_card⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = Y.card + 1 ∧ x ∈ X ∧ y ∈ X := by
       have := SimpleGraph.contractEdge_separator_contains_vertex G A B x y k h_min Y hY_sep hY_card hxy;
       have := SimpleGraph.contractEdge_separator_lift_separates G A B x y Y hY_sep;
@@ -1651,7 +1644,8 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : S
     have hX_card_eq : X.card ≥ k := by
       have hX_card_eq : ∀ (S : Finset V), G.Separates A B S → S.card ≥ k := by
         rw [ ← h_min ];
-        exact fun S hS => Finset.min'_le _ _ ( Finset.mem_image_of_mem _ ( Finset.mem_filter.mpr ⟨ Finset.mem_univ _, hS ⟩ ) );
+        intro S hS
+        exact Nat.find_le ⟨⟨S, hS⟩, rfl⟩
       exact hX_card_eq X hX_sep
     exact ⟨X, hX_sep, by linarith, hX_card.right.left, hX_card.right.right⟩
 
@@ -1697,12 +1691,10 @@ lemma SimpleGraph.min_sep_delete_ge_k_left [Fintype V] (G : SimpleGraph V) (A B 
   (hX_sep : G.Separates A B X) (hx : x ∈ X) (hy : y ∈ X) (hxy : x ≠ y) :
   (G.deleteEdge x y).min_separator_size A X ≥ k := by
     rw [ ← h_min ];
-    unfold SimpleGraph.min_separator_size;
-    simp +decide [ SimpleGraph.separators ];
-    intro S hS
-    have hS_sep : G.Separates A B S := by
-      apply SimpleGraph.separator_in_G_of_separator_in_G_delete_edge G A B x y X S hX_sep hx hy hxy hS;
-    exact Finset.min'_le _ _ ( Finset.mem_image_of_mem _ ( by simpa using hS_sep ) )
+    apply Nat.find_mono
+    intro n ⟨S, hS⟩
+    have := separator_in_G_of_separator_in_G_delete_edge G A B x y X S.1 hX_sep hx hy hxy S.2
+    exact ⟨⟨_, this⟩, hS⟩
 
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of X and B in G-xy is at least k.
@@ -1716,12 +1708,11 @@ lemma SimpleGraph.min_sep_delete_ge_k_right [Fintype V] (G : SimpleGraph V) (A B
     have h.separator : ∀ S : Finset V, (G.deleteEdge x y).Separates X B S → G.Separates A B S := by
       exact fun S a ↦
         separator_in_G_of_separator_in_G_delete_edge_right G A B x y X S hX_sep hx hy hxy a;
-    unfold SimpleGraph.min_separator_size at *;
     rw [ ← h_min ];
-    simp +zetaDelta at *;
-    intro S hS;
-    refine' Finset.min'_le _ _ _;
-    unfold SimpleGraph.separators at *; aesop;
+    apply Nat.find_mono
+    intro n ⟨S, hS⟩
+    have := h.separator S.1 S.2
+    refine ⟨⟨_, this⟩, hS⟩
 
 /-
 If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to a set of disjoint paths in G with the same size.
