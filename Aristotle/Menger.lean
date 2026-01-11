@@ -107,6 +107,27 @@ def disjoint (P : G.ABPathSet A B) : Prop :=
 
 end ABPathSet
 
+def Joiner (G : SimpleGraph V) (A B : Finset V) := { P : G.ABPathSet A B // P.disjoint }
+
+namespace Joiner
+
+variable {P : G.Joiner A B}
+
+def start (P : G.Joiner A B) (p : P.1) : A := p.1.u
+
+theorem injective_start (P : G.Joiner A B) : (start P).Injective := by
+  intro p q hpq
+  by_contra hxy
+  have := P.2 p p.2 q q.2 (by simpa only [ne_eq, SetLike.coe_eq_coe])
+  simp only [List.disjoint_toFinset_iff_disjoint] at this
+  dsimp [start] at hpq
+  exact this (hpq ▸ p.1.walk.start_mem_support) q.1.walk.start_mem_support
+
+theorem card_le (P : G.Joiner A B) : P.1.card ≤ A.card :=
+  Finset.card_le_card_of_injective (injective_start P)
+
+end Joiner
+
 /-- Separation -/
 
 /-
@@ -118,13 +139,12 @@ def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
 /-
 The set of all vertex sets that separate A from B.
 -/
-noncomputable def Separator (G : SimpleGraph V) (A B : Finset V) :=
-  {S : Finset V // G.Separates A B S}
+def Separator (G : SimpleGraph V) (A B : Finset V) := {S : Finset V // G.Separates A B S}
 
 /-
 The set of separators is nonempty (e.g., the set of all vertices is a separator).
 -/
-instance (G : SimpleGraph V) (A B : Finset V) : Nonempty (G.Separator A B) :=
+instance Separator.nonempty (G : SimpleGraph V) (A B : Finset V) : Nonempty (G.Separator A B) :=
   ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
 
 end SimpleGraph
@@ -148,12 +168,15 @@ lemma SimpleGraph.disjoint_path_sets_nonempty [Fintype V] (G : SimpleGraph V) (A
 /-
 The minimum size of a separator and the maximum number of disjoint paths.
 -/
-noncomputable def SimpleGraph.min_separator_size (G : SimpleGraph V) (A B : Finset V) : ℕ := by
-  let S' := Set.range (fun S : G.Separator A B => S.1.card)
-  exact Nat.find (p := fun n => n ∈ S') (by apply Set.range_nonempty)
+noncomputable def SimpleGraph.min_separator_size (G : SimpleGraph V) (A B : Finset V) : ℕ :=
+  Nat.find (p := fun n => ∃ S : G.Separator A B, S.1.card = n)
+    ⟨(Classical.choice (Separator.nonempty G A B)).1.card, by simp⟩
 
 noncomputable def SimpleGraph.max_disjoint_paths_size [Fintype V] (G : SimpleGraph V) (A B : Finset V) : ℕ :=
   ((G.disjoint_path_sets A B).image Finset.card).max' ((G.disjoint_path_sets_nonempty A B).image Finset.card)
+
+noncomputable def SimpleGraph.maxflow (G : SimpleGraph V) (A B : Finset V) : ℕ :=
+  Nat.findGreatest (fun n => ∃ P : G.Joiner A B, P.1.card = n) A.card
 
 /-
 The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
