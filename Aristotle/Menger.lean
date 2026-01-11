@@ -118,19 +118,14 @@ def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
 /-
 The set of all vertex sets that separate A from B.
 -/
-noncomputable def Separator (G : SimpleGraph V) (A B : Set V) :=
+noncomputable def Separator (G : SimpleGraph V) (A B : Finset V) :=
   {S : Finset V // G.Separates A B S}
-
-noncomputable instance [Fintype V] : Fintype (G.Separator A B) := by
-  simp [Separator] ; infer_instance
 
 /-
 The set of separators is nonempty (e.g., the set of all vertices is a separator).
 -/
-instance separators_nonempty [Fintype V] (G : SimpleGraph V) (A B : Set V) :
-  Nonempty (G.Separator A B) := by
-    refine' ⟨ Finset.univ, _ ⟩;
-    exact fun u hu v hv p => ⟨ u, p.start_mem_support, Finset.mem_univ _ ⟩
+instance (G : SimpleGraph V) (A B : Finset V) : Nonempty (G.Separator A B) :=
+  ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
 
 end SimpleGraph
 
@@ -153,7 +148,7 @@ lemma SimpleGraph.disjoint_path_sets_nonempty [Fintype V] (G : SimpleGraph V) (A
 /-
 The minimum size of a separator and the maximum number of disjoint paths.
 -/
-noncomputable def SimpleGraph.min_separator_size [Fintype V] (G : SimpleGraph V) (A B : Finset V) : ℕ := by
+noncomputable def SimpleGraph.min_separator_size (G : SimpleGraph V) (A B : Finset V) : ℕ := by
   let S' := Set.range (fun S : G.Separator A B => S.1.card)
   exact Nat.find (p := fun n => n ∈ S') (by apply Set.range_nonempty)
 
@@ -686,7 +681,7 @@ theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : Simp
 /-
 If P is a set of disjoint paths from A to X with size equal to X, then every vertex in X is the endpoint of exactly one path in P, and that path intersects X only at its endpoint.
 -/
-lemma SimpleGraph.disjoint_paths_prop [Fintype V] (G : SimpleGraph V) (A X : Finset V)
+lemma SimpleGraph.disjoint_paths_prop (G : SimpleGraph V) (A X : Finset V)
     (P : G.ABPathSet A X) (hP_disj : P.disjoint)
     (hP_card : P.card = X.card) :
   ∀ x ∈ X, ∃! p ∈ P, p.v = x ∧ p.walk.support.toFinset ∩ X = {x} := by
@@ -813,7 +808,7 @@ lemma SimpleGraph.path_intersection_of_separator (G : SimpleGraph V) (A B : Fins
 /-
 If P is a set of disjoint paths from X to B with size equal to X, then every vertex in X is the start of exactly one path in P, and that path intersects X only at its start.
 -/
-lemma SimpleGraph.disjoint_paths_prop_start [Fintype V] (G : SimpleGraph V) (X B : Finset V)
+lemma SimpleGraph.disjoint_paths_prop_start (G : SimpleGraph V) (X B : Finset V)
     (P : G.ABPathSet X B) (hP_disj : P.disjoint) (hP_card : P.card = X.card) :
   ∀ x ∈ X, ∃! p ∈ P, p.u = x ∧ p.walk.support.toFinset ∩ X = {x} := by
     -- Since $P$ consists of disjoint paths starting in $X$, the start points in $X$ must be distinct.
@@ -894,7 +889,7 @@ lemma SimpleGraph.joined_paths_disjoint (G : SimpleGraph V) (A B : Finset V) (X 
 /-
 If X separates A and B, and we have k disjoint paths from A to X and k disjoint paths from X to B, then we can combine them to form k disjoint paths from A to B.
 -/
-theorem SimpleGraph.disjoint_paths_join [Fintype V] (G : SimpleGraph V) (A B : Finset V) (X : Finset V)
+theorem SimpleGraph.disjoint_paths_join (G : SimpleGraph V) (A B : Finset V) (X : Finset V)
   (hX_sep : G.Separates A B X)
   (k : ℕ)
   (hX_card : X.card = k)
@@ -1715,7 +1710,7 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge_right (G : Simple
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of A and X in G-xy is at least k.
 -/
-lemma SimpleGraph.min_sep_delete_ge_k_left [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V) (X : Finset V)
+lemma SimpleGraph.min_sep_delete_ge_k_left (G : SimpleGraph V) (A B : Finset V) (x y : V) (X : Finset V)
   (k : ℕ)
   (h_min : G.min_separator_size A B = k)
   (hX_sep : G.Separates A B X) (hx : x ∈ X) (hy : y ∈ X) (hxy : x ≠ y) :
@@ -1729,7 +1724,7 @@ lemma SimpleGraph.min_sep_delete_ge_k_left [Fintype V] (G : SimpleGraph V) (A B 
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of X and B in G-xy is at least k.
 -/
-lemma SimpleGraph.min_sep_delete_ge_k_right [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V) (X : Finset V)
+lemma SimpleGraph.min_sep_delete_ge_k_right (G : SimpleGraph V) (A B : Finset V) (x y : V) (X : Finset V)
   (k : ℕ)
   (h_min : G.min_separator_size A B = k)
   (hX_sep : G.Separates A B X) (hx : x ∈ X) (hy : y ∈ X) (hxy : x ≠ y) :
@@ -1895,3 +1890,4 @@ theorem SimpleGraph.Menger [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] 
     exact le_antisymm ( SimpleGraph.Menger_strong G A B ) ( SimpleGraph.Menger_weak G A B )
 
 #print axioms SimpleGraph.Menger
+#lint
