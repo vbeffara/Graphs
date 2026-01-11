@@ -25,6 +25,7 @@ This project request had uuid: bbff98c4-ad47-4088-90fc-809d72144e14
 This project request had uuid: 0b0e8333-edd1-4867-bb54-fb3dde7a2a0d
 This project request had uuid: 501d12f0-c864-4306-8f63-f99f0e80f8fa
 This project request had uuid: 2c55add2-c06e-41e4-aaeb-0a9fe8d399a9
+This project request had uuid: af8cdac2-86a8-4c71-b303-ccb6ba9df119
 -/
 
 import Mathlib
@@ -183,15 +184,37 @@ theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Set V) :
       · intro p hp q hq hpq; specialize hP; have := hP.1 p hp q hq hpq; simp_all +decide [ Finset.disjoint_left ] ;
     exact h_path_inter_S.not_gt ( lt_of_le_of_lt ( Finset.card_le_card ( Finset.biUnion_subset.mpr fun p hp => Finset.inter_subset_right ) ) ( by linarith ) )
 
+/- Aristotle failed to find a proof. -/
 /-
 Base case of Menger's theorem: if G has no edges, the theorem holds.
 -/
 lemma SimpleGraph.Menger_strong_base [Fintype V] (G : SimpleGraph V) (A B : Set V)
     (h : G.edgeSet = ∅) :
   G.min_separator_size A B ≤ G.max_disjoint_paths_size A B := by
-    have h_empty : ∀ u v, G.Walk u v → u = v := by
+    simp at h ; subst G
+    have h_empty : ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v := by
       intro u v p; induction p <;> aesop;
-    sorry
+    trans (A ∩ B).toFinset.card
+    · apply Nat.find_le
+      refine ⟨⟨(A ∩ B).toFinset, ?_⟩, rfl⟩
+      intro a ha b hb p
+      refine ⟨a, p.start_mem_support, ?_⟩
+      simp [← h_empty a b p] at hb
+      simp [ha, hb]
+    · apply Finset.le_max'
+      let γ (a : (A ∩ B).toFinset) : (⊥ : SimpleGraph V).ABPath A B :=
+        ⟨⟨a, by grind⟩, ⟨a, by grind⟩ , Walk.nil, Walk.IsPath.nil⟩
+      let ps : ABPathSet _ A B := Set.range γ |>.toFinset
+      simp ; refine ⟨ps, ?_, ?_⟩
+      · simp [disjoint_path_sets]
+        intro ⟨⟨a, ha⟩, ⟨b, hb⟩, p1, hp1⟩ hp2 ⟨⟨a', ha'⟩, ⟨b', hb'⟩, p'1, hp'1⟩ hp'2 h
+        cases p1 ; swap ; contradiction
+        cases p'1 ; swap ; contradiction
+        simp_all ; grind
+      · simp [ps]
+        rw [Finset.card_image_of_injective]
+        · simp
+        · intro a b ; simp [γ] ; tauto
 
 /-
 The contraction of edge (x, y) in G.
@@ -636,7 +659,6 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph 
     have := hS u hu w hwX q';  simp_all +decide [ SimpleGraph.Walk.isPath_def ] ;
     obtain ⟨ z, hz₁, hz₂ ⟩ := this; exact ⟨ z, by simpa using hq'_support ( by simpa using hz₁ ) |> fun h => hq_support h, hz₂ ⟩ ;
 
-
 /-
 If a separator in the contracted graph has size strictly less than the minimum separator size of the original graph, then it must contain the contracted vertex.
 -/
@@ -983,7 +1005,6 @@ lemma SimpleGraph.Walk.exists_prefix_path_of_path_ne {G : SimpleGraph V}
           · exact fun h => hp.2 ( by simpa using hq₃ ( by simpa using h ) );
           · grind
 
-
 /-
 The preimages of disjoint sets in the contracted graph are disjoint in the original graph.
 -/
@@ -991,7 +1012,6 @@ lemma SimpleGraph.contractEdge_preimage_disjoint [Fintype V] (x y : V) (s t : Fi
   Disjoint (SimpleGraph.contractEdge_preimage x y s) (SimpleGraph.contractEdge_preimage x y t) := by
     rw [ Finset.disjoint_left ] at *;
     unfold contractEdge_preimage; aesop;
-
 
 /-
 If two vertices are adjacent to the endpoints of an edge, there is a path between them using only the endpoints of the edge and themselves.
@@ -1163,7 +1183,6 @@ lemma SimpleGraph.join_paths_through_edge (G : SimpleGraph V) (x y : V) (hxy : G
       simp_all +decide [ Finset.disjoint_left ];
       simp_all +decide [ Finset.ext_iff, SimpleGraph.Walk.support_append ];
       grind
-
 
 /-
 A path can be split at any vertex in its support into two paths that intersect only at that vertex.
@@ -1620,7 +1639,6 @@ lemma SimpleGraph.exists_disjoint_paths_lift [Fintype V] (G : SimpleGraph V) (A 
       intro h; simp_all +decide [ Finset.disjoint_left ] ;
       exact h_support_disjoint_lift ( h.symm ▸ ( f q' ).walk.start_mem_support ) ( ( f q' ).walk.start_mem_support )
 
-
 /-
 If min_sep(G/e) < k, then there exists a separator X in G such that |X|=k, x in X, and y in X.
 -/
@@ -1865,4 +1883,3 @@ theorem SimpleGraph.Menger [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] 
     exact le_antisymm ( SimpleGraph.Menger_strong G A B ) ( SimpleGraph.Menger_weak G A B )
 
 #print axioms SimpleGraph.Menger
-#lint
