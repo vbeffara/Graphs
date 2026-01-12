@@ -157,6 +157,12 @@ The set of all sets of disjoint A-B paths.
 noncomputable def SimpleGraph.disjoint_path_sets [Fintype V] (G : SimpleGraph V) (A B : Finset V) : Finset (G.ABPathSet A B) :=
   (Finset.powerset Finset.univ).filter (fun P => P.disjoint)
 
+def SimpleGraph.joiner_equiv_disjoint_path_sets [Fintype V] : G.Joiner A B ≃ G.disjoint_path_sets A B where
+  toFun P := ⟨P.1, by simpa [SimpleGraph.disjoint_path_sets] using P.2⟩
+  invFun P := by
+    obtain ⟨P, hP⟩ := P
+    refine ⟨P, by simpa [SimpleGraph.disjoint_path_sets] using hP⟩
+
 /-
 The set of disjoint path sets is nonempty (the empty set is a valid set of disjoint paths).
 -/
