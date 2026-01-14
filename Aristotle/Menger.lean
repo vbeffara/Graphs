@@ -188,11 +188,11 @@ lemma SimpleGraph.disjoint_path_sets_nonempty [Fintype V] (G : SimpleGraph V) (A
 /-
 The minimum size of a separator and the maximum number of disjoint paths.
 -/
-noncomputable def SimpleGraph.min_separator_size (G : SimpleGraph V) (A B : Finset V) : ℕ :=
+noncomputable def SimpleGraph.mincut (G : SimpleGraph V) (A B : Finset V) : ℕ :=
   Nat.find (p := fun n => ∃ S : G.Separator A B, S.1.card = n)
     ⟨_, Classical.choice (Separator.nonempty G A B), rfl⟩
 
-theorem SimpleGraph.exists_mincut : ∃ S : G.Separator A B, S.1.card = G.min_separator_size A B :=
+theorem SimpleGraph.exists_mincut : ∃ S : G.Separator A B, S.1.card = G.mincut A B :=
   Nat.find_spec (p := fun n => ∃ S : G.Separator A B, S.1.card = n)
     ⟨_, Classical.choice (Separator.nonempty G A B), rfl⟩
 
@@ -222,7 +222,7 @@ theorem maxflow_eq_max [Fintype V] : G.maxflow A B = G.max_disjoint_paths_size A
 The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
 -/
 theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Finset V) :
-    G.max_disjoint_paths_size A B ≤ G.min_separator_size A B := by
+    G.max_disjoint_paths_size A B ≤ G.mincut A B := by
   obtain ⟨S, hS⟩ := @exists_mincut _ G A B
   obtain ⟨P, hP⟩ := @exists_maxflow _ G A B
   simpa [← hS, ← maxflow_eq_max, ← hP] using join_le_sep _ _
@@ -232,12 +232,12 @@ Base case of Menger's theorem: if G has no edges, the theorem holds.
 -/
 lemma SimpleGraph.Menger_strong_base [Fintype V] (G : SimpleGraph V) (A B : Finset V)
     (h : G.edgeSet = ∅) :
-  G.min_separator_size A B ≤ G.max_disjoint_paths_size A B := by
+  G.mincut A B ≤ G.max_disjoint_paths_size A B := by
     simp at h ; subst G
     have h_empty : ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v := by
       intro u v p; induction p <;> aesop;
     trans (A ∩ B).card
-    · simp [min_separator_size]
+    · simp [SimpleGraph.mincut]
       refine ⟨⟨(A ∩ B), ?_⟩, le_of_eq rfl⟩
       intro a ha b hb p
       refine ⟨a, p.start_mem_support, ?_⟩
@@ -710,7 +710,7 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph 
 If a separator in the contracted graph has size strictly less than the minimum separator size of the original graph, then it must contain the contracted vertex.
 -/
 theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V) (k : ℕ)
-  (h_min : G.min_separator_size A B = k)
+  (h_min : G.mincut A B = k)
   (Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)))
   (hY_sep : (G.contractEdge' x y).Separates (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) Y)
   (hY_card : Y.card < k)
@@ -718,7 +718,7 @@ theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : Simp
   SimpleGraph.contractEdge_vertex x y ∈ Y := by
     contrapose! hY_card;
     rw [ ← h_min ];
-    simp [min_separator_size]
+    simp [SimpleGraph.mincut]
     refine ⟨⟨SimpleGraph.contractEdge_preimage x y Y, ?_⟩, ?_⟩
     · exact contractEdge_preimage_separates G A B x y Y hY_sep
     · simp [card_preimage_contractEdge x y hxy Y, hY_card]
@@ -1695,11 +1695,11 @@ If min_sep(G/e) < k, then there exists a separator X in G such that |X|=k, x in 
 -/
 lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V) (hxy : x ≠ y)
   (k : ℕ)
-  (h_min : G.min_separator_size A B = k)
-  (h_contract_min : (G.contractEdge' x y).min_separator_size (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) < k) :
+  (h_min : G.mincut A B = k)
+  (h_contract_min : (G.contractEdge' x y).mincut (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) < k) :
   ∃ X : Finset V, G.Separates A B X ∧ X.card = k ∧ x ∈ X ∧ y ∈ X := by
     obtain ⟨Y, hY_sep, hY_card⟩ : ∃ Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)), (G.contractEdge' x y).Separates (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) Y ∧ Y.card < k := by
-      rw [ SimpleGraph.min_separator_size ] at h_contract_min;
+      rw [ SimpleGraph.mincut ] at h_contract_min;
       contrapose! h_contract_min;
       simp ; grind
     obtain ⟨X, hX_sep, hX_card⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = Y.card + 1 ∧ x ∈ X ∧ y ∈ X := by
@@ -1714,7 +1714,7 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : F
       have hX_card_eq : ∀ (S : Finset V), G.Separates A B S → S.card ≥ k := by
         rw [ ← h_min ];
         intro S hS
-        simp [min_separator_size]
+        simp [SimpleGraph.mincut]
         exact ⟨⟨S, hS⟩, le_of_eq rfl⟩
       exact hX_card_eq X hX_sep
     exact ⟨X, hX_sep, by linarith, hX_card.right.left, hX_card.right.right⟩
@@ -1757,9 +1757,9 @@ If X separates A and B in G and contains x and y, then the minimum separator siz
 -/
 lemma SimpleGraph.min_sep_delete_ge_k_left (G : SimpleGraph V) (A B : Finset V) (x y : V) (X : Finset V)
   (k : ℕ)
-  (h_min : G.min_separator_size A B = k)
+  (h_min : G.mincut A B = k)
   (hX_sep : G.Separates A B X) (hx : x ∈ X) (hy : y ∈ X) (hxy : x ≠ y) :
-  (G.deleteEdge x y).min_separator_size A X ≥ k := by
+  (G.deleteEdge x y).mincut A X ≥ k := by
     rw [ ← h_min ];
     apply Nat.find_mono
     intro n ⟨S, hS⟩
@@ -1771,9 +1771,9 @@ If X separates A and B in G and contains x and y, then the minimum separator siz
 -/
 lemma SimpleGraph.min_sep_delete_ge_k_right (G : SimpleGraph V) (A B : Finset V) (x y : V) (X : Finset V)
   (k : ℕ)
-  (h_min : G.min_separator_size A B = k)
+  (h_min : G.mincut A B = k)
   (hX_sep : G.Separates A B X) (hx : x ∈ X) (hy : y ∈ X) (hxy : x ≠ y) :
-  (G.deleteEdge x y).min_separator_size X B ≥ k := by
+  (G.deleteEdge x y).mincut X B ≥ k := by
     -- Let $S$ be a separator of $X$ and $B$ in $G - xy$.
     have h.separator : ∀ S : Finset V, (G.deleteEdge x y).Separates X B S → G.Separates A B S := by
       exact fun S a ↦
@@ -1809,17 +1809,17 @@ If there exists a separator X of size k containing x and y, then G has k disjoin
 -/
 lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V) (hxy : G.Adj x y)
   (k : ℕ)
-  (h_min : G.min_separator_size A B = k)
+  (h_min : G.mincut A B = k)
   (X : Finset V)
   (hX_sep : G.Separates A B X)
   (hX_card : X.card = k)
   (hx : x ∈ X)
   (hy : y ∈ X)
-  (IH_delete : ∀ A' B', (G.deleteEdge x y).min_separator_size A' B' ≤ (G.deleteEdge x y).max_disjoint_paths_size A' B') :
+  (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).max_disjoint_paths_size A' B') :
   k ≤ G.max_disjoint_paths_size A B := by
     -- Apply the induction hypothesis to the subgraph G-xy.
     have h_ind : (G.deleteEdge x y).max_disjoint_paths_size A X ≥ k ∧ (G.deleteEdge x y).max_disjoint_paths_size X B ≥ k := by
-      have h_ind : (G.deleteEdge x y).min_separator_size A X ≥ k ∧ (G.deleteEdge x y).min_separator_size X B ≥ k := by
+      have h_ind : (G.deleteEdge x y).mincut A X ≥ k ∧ (G.deleteEdge x y).mincut X B ≥ k := by
         exact ⟨ by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_left G A B x y X k h_min hX_sep hx hy hxy.ne, by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_right G A B x y X k h_min hX_sep hx hy hxy.ne ⟩;
       exact ⟨ le_trans h_ind.1 ( IH_delete _ _ ), le_trans h_ind.2 ( IH_delete _ _ ) ⟩;
     -- By the induction hypothesis, there exist sets of disjoint A-X paths and X-B paths in G-xy with size at least k.
@@ -1869,16 +1869,16 @@ Inductive step for Menger's theorem.
 -/
 lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V)
     (hxy : G.Adj x y)
-  (IH_contract : (G.contractEdge' x y).min_separator_size (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) ≤ (G.contractEdge' x y).max_disjoint_paths_size (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
-  (IH_delete : ∀ A' B', (G.deleteEdge x y).min_separator_size A' B' ≤ (G.deleteEdge x y).max_disjoint_paths_size A' B')
-  : G.min_separator_size A B ≤ G.max_disjoint_paths_size A B := by
-    by_cases h : ( G.contractEdge' x y ).min_separator_size (contractEdge_liftSet x y A) (contractEdge_liftSet x y B) < G.min_separator_size A B;
-    · obtain ⟨X, hX_sep, hX_card, hx, hy⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = G.min_separator_size A B ∧ x ∈ X ∧ y ∈ X := by
+  (IH_contract : (G.contractEdge' x y).mincut (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) ≤ (G.contractEdge' x y).max_disjoint_paths_size (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
+  (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).max_disjoint_paths_size A' B')
+  : G.mincut A B ≤ G.max_disjoint_paths_size A B := by
+    by_cases h : ( G.contractEdge' x y ).mincut (contractEdge_liftSet x y A) (contractEdge_liftSet x y B) < G.mincut A B;
+    · obtain ⟨X, hX_sep, hX_card, hx, hy⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = G.mincut A B ∧ x ∈ X ∧ y ∈ X := by
         apply_rules [ SimpleGraph.Menger_case2_exists_X ];
         exact hxy.ne;
-      have := SimpleGraph.Menger_case2_imp_paths G A B x y hxy ( G.min_separator_size A B ) rfl X hX_sep hX_card hx hy IH_delete; aesop;
+      have := SimpleGraph.Menger_case2_imp_paths G A B x y hxy ( G.mincut A B ) rfl X hX_sep hX_card hx hy IH_delete; aesop;
     · -- By the induction hypothesis on the contracted graph, there exists a set P' of disjoint paths in G/e with |P'| ≥ k.
-      obtain ⟨P', hP'_card, hP'_disj⟩ : ∃ P' : (G.contractEdge' x y).ABPathSet (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.card ≥ G.min_separator_size A B ∧ P'.disjoint := by
+      obtain ⟨P', hP'_card, hP'_disj⟩ : ∃ P' : (G.contractEdge' x y).ABPathSet (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.card ≥ G.mincut A B ∧ P'.disjoint := by
         have := IH_contract.trans' ( le_of_not_gt h );
         contrapose! this;
         rw [ SimpleGraph.max_disjoint_paths_size ];
@@ -1898,7 +1898,7 @@ Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edg
 -/
 theorem SimpleGraph.Menger_strong_aux (n : ℕ) :
   ∀ (V : Type u) [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V),
-  G.edgeFinset.card = n → G.min_separator_size A B ≤ G.max_disjoint_paths_size A B := by
+  G.edgeFinset.card = n → G.mincut A B ≤ G.max_disjoint_paths_size A B := by
     induction' n using Nat.strong_induction_on with n ih;
     intros V _ _ G _ A B h_card
     by_cases h_empty : G.edgeFinset = ∅;
@@ -1924,14 +1924,14 @@ theorem SimpleGraph.Menger_strong_aux (n : ℕ) :
 Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G. (This is the strong direction: min separator <= max paths)
 -/
 theorem SimpleGraph.Menger_strong [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V) :
-  G.min_separator_size A B ≤ G.max_disjoint_paths_size A B := by
+  G.mincut A B ≤ G.max_disjoint_paths_size A B := by
     convert SimpleGraph.Menger_strong_aux ( G.edgeFinset.card ) V G A B rfl
 
 /-
 Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G.
 -/
 theorem SimpleGraph.Menger [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V) :
-  G.min_separator_size A B = G.max_disjoint_paths_size A B := by
+  G.mincut A B = G.max_disjoint_paths_size A B := by
     exact le_antisymm ( SimpleGraph.Menger_strong G A B ) ( SimpleGraph.Menger_weak G A B )
 
 /-
