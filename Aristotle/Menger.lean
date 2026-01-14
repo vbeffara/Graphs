@@ -113,6 +113,8 @@ namespace Joiner
 
 variable {P : G.Joiner A B}
 
+instance : Nonempty (G.Joiner A B) := ⟨∅, by tauto⟩
+
 def start (P : G.Joiner A B) (p : P.1) : A := p.1.u
 
 theorem injective_start (P : G.Joiner A B) : (start P).Injective := by
@@ -147,6 +149,18 @@ The set of separators is nonempty (e.g., the set of all vertices is a separator)
 instance Separator.nonempty (G : SimpleGraph V) (A B : Finset V) : Nonempty (G.Separator A B) :=
   ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
 
+theorem join_le_sep (P : G.Joiner A B) (S : G.Separator A B) : P.1.card ≤ S.1.card := by
+  have key (p : P.1) : ∃ x : S.1, x.1 ∈ p.1.walk.support := by
+    obtain ⟨x, h1, h2⟩ := S.2 p.1.u p.1.u.2 p.1.v p.1.v.2 p.1.walk
+    refine ⟨⟨x, h2⟩, h1⟩
+  choose f hf1 using key
+  suffices f.Injective by exact Finset.card_le_card_of_injective this
+  intro p q hpq
+  by_contra h
+  have h1 := P.2 p p.2 q q.2 (by simpa)
+  simp at h1
+  exact h1 (hf1 p) (hpq ▸ hf1 q)
+
 end SimpleGraph
 
 /-- =========================== REVIEW BAR ===================== -/
@@ -176,7 +190,11 @@ The minimum size of a separator and the maximum number of disjoint paths.
 -/
 noncomputable def SimpleGraph.min_separator_size (G : SimpleGraph V) (A B : Finset V) : ℕ :=
   Nat.find (p := fun n => ∃ S : G.Separator A B, S.1.card = n)
-    ⟨(Classical.choice (Separator.nonempty G A B)).1.card, by simp⟩
+    ⟨_, Classical.choice (Separator.nonempty G A B), rfl⟩
+
+theorem SimpleGraph.exists_mincut : ∃ S : G.Separator A B, S.1.card = G.min_separator_size A B :=
+  Nat.find_spec (p := fun n => ∃ S : G.Separator A B, S.1.card = n)
+    ⟨_, Classical.choice (Separator.nonempty G A B), rfl⟩
 
 noncomputable def SimpleGraph.max_disjoint_paths_size [Fintype V] (G : SimpleGraph V) (A B : Finset V) : ℕ :=
   ((G.disjoint_path_sets A B).image Finset.card).max' ((G.disjoint_path_sets_nonempty A B).image Finset.card)
@@ -184,33 +202,31 @@ noncomputable def SimpleGraph.max_disjoint_paths_size [Fintype V] (G : SimpleGra
 noncomputable def SimpleGraph.maxflow (G : SimpleGraph V) (A B : Finset V) : ℕ :=
   Nat.findGreatest (fun n => ∃ P : G.Joiner A B, P.1.card = n) A.card
 
+theorem SimpleGraph.exists_maxflow : ∃ P : G.Joiner A B, P.1.card = G.maxflow A B :=
+  Nat.findGreatest_spec (P := fun n => ∃ P : G.Joiner A B, P.1.card = n) (zero_le _) ⟨⟨∅, by tauto⟩, rfl⟩
+
+theorem maxflow_eq_max [Fintype V] : G.maxflow A B = G.max_disjoint_paths_size A B := by
+  simp [SimpleGraph.maxflow, SimpleGraph.max_disjoint_paths_size, Nat.findGreatest_eq_iff]
+  refine ⟨fun a ha => ?_, fun h => ?_, fun n h1 h2 P => ?_⟩
+  · simp [SimpleGraph.disjoint_path_sets] at ha
+    exact SimpleGraph.Joiner.card_le ⟨a, ha⟩
+  · have := Finset.max'_mem ((G.disjoint_path_sets A B).image Finset.card)
+      ((G.disjoint_path_sets_nonempty A B).image Finset.card)
+    simp at this
+    obtain ⟨P, hP1, hP2⟩ := this
+    simp [SimpleGraph.disjoint_path_sets] at hP1
+    exact ⟨⟨P, hP1⟩, hP2⟩
+  · exact ne_of_lt $ h1 P.1 $ by simpa [SimpleGraph.disjoint_path_sets] using P.2
+
 /-
 The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
 -/
 theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Finset V) :
-  G.max_disjoint_paths_size A B ≤ G.min_separator_size A B := by
-    by_contra h_contra;
-    -- Let $\mathcal{P}$ be a set of $m$ disjoint A-B paths.
-    obtain ⟨P, hP⟩ : ∃ P : G.ABPathSet A B, P.disjoint ∧ P.card > G.min_separator_size A B := by
-      simp_all +decide [ SimpleGraph.max_disjoint_paths_size ];
-      unfold SimpleGraph.disjoint_path_sets at h_contra; aesop;
-    -- Let $S$ be an A-B separator of size $k$.
-    obtain ⟨S, hS⟩ : ∃ S : Finset V, G.Separates A B S ∧ S.card = G.min_separator_size A B := by
-      let S' := Set.range (fun S : G.Separator A B => S.1.card)
-      have := Nat.find_spec (p := fun n => n ∈ S') (by apply Set.range_nonempty)
-      obtain ⟨S, hS⟩ := this
-      refine ⟨S.1, S.2, ?_⟩
-      simpa [min_separator_size]
-    -- Since $S$ is an A-B separator, every path in $\mathcal{P}$ must contain at least one vertex from $S$.
-    have h_path_inter_S : ∀ p ∈ P, ∃ x ∈ p.walk.support, x ∈ S := by
-      exact fun p hp => hS.1 p.u p.u.2 p.v p.v.2 p.walk
-    have h_path_inter_S : Finset.card (Finset.biUnion P (fun p => p.walk.support.toFinset ∩ S)) ≥ P.card := by
-      rw [ Finset.card_biUnion ];
-      · exact Finset.card_eq_sum_ones P ▸ Finset.sum_le_sum fun p hp => Finset.card_pos.mpr ⟨ Classical.choose ( h_path_inter_S p hp ), Finset.mem_inter.mpr ⟨ by simpa using Classical.choose_spec ( h_path_inter_S p hp ) |>.1, by simpa using Classical.choose_spec ( h_path_inter_S p hp ) |>.2 ⟩ ⟩;
-      · intro p hp q hq hpq; specialize hP; have := hP.1 p hp q hq hpq; simp_all +decide [ Finset.disjoint_left ] ;
-    exact h_path_inter_S.not_gt ( lt_of_le_of_lt ( Finset.card_le_card ( Finset.biUnion_subset.mpr fun p hp => Finset.inter_subset_right ) ) ( by linarith ) )
+    G.max_disjoint_paths_size A B ≤ G.min_separator_size A B := by
+  obtain ⟨S, hS⟩ := @exists_mincut _ G A B
+  obtain ⟨P, hP⟩ := @exists_maxflow _ G A B
+  simpa [← hS, ← maxflow_eq_max, ← hP] using join_le_sep _ _
 
-/- Aristotle failed to find a proof. -/
 /-
 Base case of Menger's theorem: if G has no edges, the theorem holds.
 -/
@@ -1917,6 +1933,30 @@ Menger's theorem: The minimum number of vertices separating A from B in G is equ
 theorem SimpleGraph.Menger [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V) :
   G.min_separator_size A B = G.max_disjoint_paths_size A B := by
     exact le_antisymm ( SimpleGraph.Menger_strong G A B ) ( SimpleGraph.Menger_weak G A B )
+
+/-
+Menger's theorem: there exist a separator set `S` between `A` and `B` and a set
+`P`of disjoint A-B paths such that `S` is formed of exactly one vertez vrom each
+path in `P`.
+
+This version would actually be true without the `[Fintype S]` assumption.
+-/
+theorem SimpleGraph.Menger' [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B, ∃ φ : P.1 ≃ S.1,
+    ∀ p : P.1, (φ p).1 ∈ p.1.walk.support := by
+  obtain ⟨P, hP⟩ := @exists_maxflow _ G A B ; use P
+  obtain ⟨S, hS⟩ := @exists_mincut _ G A B ; use S
+  have key (p : P.1) : ∃ x : S.1, x.1 ∈ p.1.walk.support := by
+    obtain ⟨x, h1, h2⟩ := S.2 p.1.u p.1.u.2 p.1.v p.1.v.2 p.1.walk
+    refine ⟨⟨x, h2⟩, h1⟩
+  choose f hf1 using key
+  have hf : f.Injective := by
+    intro p q hpq
+    by_contra h
+    have h1 := P.2 p p.2 q q.2 (by simpa)
+    simp at h1
+    exact h1 (hf1 p) (hpq ▸ hf1 q)
+  refine ⟨.ofBijective f (Fintype.bijective_iff_injective_and_card _ |>.mpr ⟨hf, ?_⟩), hf1⟩
+  simp [hP, hS, Menger, maxflow_eq_max]
 
 #print axioms SimpleGraph.Menger
 #lint
