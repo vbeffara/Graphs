@@ -1555,14 +1555,14 @@ Given a set of disjoint paths in the contracted graph, there exists a set of dis
 lemma SimpleGraph.exists_disjoint_paths_lift [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V)
     (hxy : G.Adj x y)
     (P' : ((G.contractEdge' x y).Joiner (contractEdge_liftSet x y A) (contractEdge_liftSet x y B))) :
-  ∃ P : G.ABPathSet A B, ABPathSet.disjoint P ∧ P.card = P'.1.card := by
+  ∃ P : G.Joiner A B, P.1.card = P'.1.card := by
     have h_lift : ∀ (p' : (G.contractEdge' x y).ABPath (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B)), ∃ p : G.ABPath A B, p.walk.support.toFinset.image (SimpleGraph.contractEdgeProj x y) ⊆ p'.walk.support.toFinset := by
       intro p'
       by_cases hp'_avoid : SimpleGraph.contractEdge_vertex x y ∉ p'.walk.support;
       · exact ⟨ Classical.choose ( SimpleGraph.exists_lifted_ABPath_avoiding G A B x y p' hp'_avoid ), Classical.choose_spec ( SimpleGraph.exists_lifted_ABPath_avoiding G A B x y p' hp'_avoid ) |>.2.2.1 ⟩;
       · exact ⟨ Classical.choose ( SimpleGraph.exists_lifted_ABPath_through G A B x y hxy p' ( by aesop ) ), Classical.choose_spec ( SimpleGraph.exists_lifted_ABPath_through G A B x y hxy p' ( by aesop ) ) ⟩;
     choose f hf using h_lift;
-    refine' ⟨ Finset.image f P'.1, _, _ ⟩;
+    refine' ⟨⟨Finset.image f P'.1, _⟩, _ ⟩;
     · intro p hp p' hp' hpp';
       obtain ⟨ q, hq, rfl ⟩ := Finset.mem_image.mp hp; obtain ⟨ q', hq', rfl ⟩ := Finset.mem_image.mp hp';
       have := P'.2; simp_all +decide [ Finset.disjoint_left ] ;
@@ -1769,8 +1769,8 @@ lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : F
         obtain ⟨P, hP⟩ := SimpleGraph.exists_maxflow (G := G.contractEdge' x y) (A := contractEdge_liftSet x y A) (B := contractEdge_liftSet x y B)
         grind
       have h_exists_P : ∃ P : G.ABPathSet A B, P.card = P'.card ∧ ABPathSet.disjoint P := by
-        have := SimpleGraph.exists_disjoint_paths_lift G A B x y hxy ⟨P', hP'_disj⟩;
-        exact ⟨ this.choose, this.choose_spec.2, this.choose_spec.1 ⟩;
+        obtain ⟨P, hP⟩ := SimpleGraph.exists_disjoint_paths_lift G A B x y hxy ⟨P', hP'_disj⟩;
+        exact ⟨P.1, hP, P.2⟩;
       obtain ⟨ P, hP₁, hP₂ ⟩ := h_exists_P;
       refine' le_trans hP'_card _;
       apply Nat.le_findGreatest $ (Joiner.card_le ⟨P', hP'_disj⟩).trans Finset.card_image_le
