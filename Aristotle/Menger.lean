@@ -38,7 +38,22 @@ variable {V : Type*} {G : SimpleGraph V} {u v : V} {A B X : Finset V} {n : ℕ}
 
 namespace SimpleGraph
 
-/-- A-B Paths -/
+/-
+A set of vertices S separates A from B in G if every A-B path in G contains a vertex from S.
+-/
+def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
+  ∀ u ∈ A, ∀ v ∈ B, ∀ p : G.Walk u v, ∃ x ∈ p.support, x ∈ S
+
+/-
+The set of all vertex sets that separate A from B.
+-/
+def Separator (G : SimpleGraph V) (A B : Finset V) := {S : Finset V // G.Separates A B S}
+
+/-
+The set of separators is nonempty (e.g., the set of all vertices is a separator).
+-/
+instance Separator.nonempty (G : SimpleGraph V) (A B : Finset V) : Nonempty (G.Separator A B) :=
+  ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
 
 /-
 An A-B path is a path in G starting in A and ending in B.
@@ -49,15 +64,13 @@ structure ABPath (G : SimpleGraph V) (A B : Finset V) where
   walk : G.Walk u v
   isPath : walk.IsPath
 
-/-- Path sets -/
-
 /-
 A set of A-B paths is disjoint if any two distinct paths in the set are vertex-disjoint.
 -/
-def ABPathSet.disjoint (P : Finset (G.ABPath A B)) : Prop :=
+def disjointPaths (P : Finset (G.ABPath A B)) : Prop :=
   ∀ p ∈ P, ∀ q ∈ P, p ≠ q → Disjoint p.walk.support.toFinset q.walk.support.toFinset
 
-def Joiner (G : SimpleGraph V) (A B : Finset V) := { P : Finset (G.ABPath A B) // ABPathSet.disjoint P }
+def Joiner (G : SimpleGraph V) (A B : Finset V) := { P : Finset (G.ABPath A B) // disjointPaths P }
 
 namespace Joiner
 
@@ -81,23 +94,6 @@ theorem card_le (P : G.Joiner A B) : P.1.card ≤ A.card :=
 end Joiner
 
 /-- Separation -/
-
-/-
-A set of vertices S separates A from B in G if every A-B path in G contains a vertex from S.
--/
-def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
-  ∀ u ∈ A, ∀ v ∈ B, ∀ p : G.Walk u v, ∃ x ∈ p.support, x ∈ S
-
-/-
-The set of all vertex sets that separate A from B.
--/
-def Separator (G : SimpleGraph V) (A B : Finset V) := {S : Finset V // G.Separates A B S}
-
-/-
-The set of separators is nonempty (e.g., the set of all vertices is a separator).
--/
-instance Separator.nonempty (G : SimpleGraph V) (A B : Finset V) : Nonempty (G.Separator A B) :=
-  ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
 
 theorem join_le_sep (P : G.Joiner A B) (S : G.Separator A B) : P.1.card ≤ S.1.card := by
   have key (p : P.1) : ∃ x : S.1, x.1 ∈ p.1.walk.support := by
@@ -1679,7 +1675,7 @@ lemma SimpleGraph.lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (
     refine' ⟨⟨P.image _, _⟩, _ ⟩;
     refine' fun p => ⟨ p.u, p.v, _, _ ⟩;
     exact p.walk.map ( SimpleGraph.Hom.ofLE h );
-    all_goals simp_all +decide [ Finset.disjoint_left, ABPathSet.disjoint ];
+    all_goals simp_all +decide [ Finset.disjoint_left, disjointPaths ];
     exact p.isPath;
     · bound;
     · apply Finset.card_image_of_injOn;
