@@ -558,13 +558,16 @@ lemma SimpleGraph.Walk.exists_walk_prefix_avoiding_set {G : SimpleGraph V} {u v 
 /-
 If a path intersects X, there is a prefix path ending in X that avoids X internally.
 -/
-lemma SimpleGraph.Walk.exists_path_prefix_avoiding_set {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (_ : p.IsPath) (X : Set V) (h : ∃ w ∈ p.support, w ∈ X) :
-  ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
+lemma SimpleGraph.Walk.exists_path_prefix_avoiding_set {G : SimpleGraph V} {u v : V} (p : G.Walk u v)
+    (X : Set V) (h : ∃ w ∈ p.support, w ∈ X) :
+    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
     obtain ⟨ w, hw₁, hw₂ ⟩ := h;
     obtain ⟨ q, hq₁, hq₂ ⟩ := p.exists_walk_prefix_avoiding_set X ⟨ w, hw₁, hw₂ ⟩;
-    refine' ⟨ q, hq₁.toPath, hq₂.1, _, _, _ ⟩ <;> simp_all +decide [ SimpleGraph.Walk.isPath_def ];
-    · simp_all +decide [ Finset.subset_iff ];
-      exact fun x hx => hq₂.2.1 ( SimpleGraph.Walk.support_bypass_subset hq₁ hx );
+    refine' ⟨ q, hq₁.toPath, hq₂.1, _, _, _ ⟩
+    · simp
+    · refine subset_trans ?_ hq₂.2.1
+      simp [toPath, Finset.subset_iff]
+      exact fun x hx => SimpleGraph.Walk.support_bypass_subset hq₁ hx
     · intro z hz hzX; specialize hq₂; have := hq₂.2.2 z; simp_all
       exact hq₂.2.2 z ( by simpa using hq₁.support_bypass_subset hz ) hzX
 
@@ -580,7 +583,7 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph 
     intro u hu v hv p
     obtain ⟨w, q, hwX, hqpath, hq_support, hq_avoid⟩ : ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
       have := hX u hu v hv p.bypass
-      obtain ⟨w, q, h1, h2, h3, h4⟩ := SimpleGraph.Walk.exists_path_prefix_avoiding_set p.bypass p.bypass_isPath X this
+      obtain ⟨w, q, h1, h2, h3, h4⟩ := SimpleGraph.Walk.exists_path_prefix_avoiding_set p.bypass X this
       refine ⟨w, q, h1, h2, h3.trans ?_, h4⟩
       have := p.support_bypass_subset
       intro x hx
@@ -1626,10 +1629,11 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : F
 /-
 If a path intersects X, there is a suffix starting in X that avoids X internally.
 -/
-lemma SimpleGraph.Walk.exists_suffix_path_avoiding_set {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (hp : p.IsPath) (X : Set V) (h : ∃ w ∈ p.support, w ∈ X) :
-  ∃ (w : V) (q : G.Walk w v), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
+lemma SimpleGraph.Walk.exists_suffix_path_avoiding_set {G : SimpleGraph V} {u v : V} (p : G.Walk u v)
+    (X : Set V) (h : ∃ w ∈ p.support, w ∈ X) :
+    ∃ (w : V) (q : G.Walk w v), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
     obtain ⟨w'', hw''⟩ : ∃ w'' : V, ∃ q : G.Walk v w'', w'' ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.reverse.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w'') := by
-      have := SimpleGraph.Walk.exists_path_prefix_avoiding_set ( p.reverse ) ?_ X ?_ <;> aesop;
+      have := SimpleGraph.Walk.exists_path_prefix_avoiding_set p.reverse X ?_ <;> aesop;
     obtain ⟨ q, hw'', hq_path, hq_support, hq_inter ⟩ := hw''; use w'', q.reverse; aesop;
 
 /-
