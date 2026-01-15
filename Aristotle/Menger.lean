@@ -1715,8 +1715,8 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
         exact ⟨ by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_left G A B x y X k h_min hX_sep hx hy hxy.ne, by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_right G A B x y X k h_min hX_sep hx hy hxy.ne ⟩;
       exact ⟨ le_trans h_ind.1 ( IH_delete _ _ ), le_trans h_ind.2 ( IH_delete _ _ ) ⟩;
     -- By the induction hypothesis, there exist sets of disjoint A-X paths and X-B paths in G-xy with size at least k.
-    obtain ⟨P_A', hP_A'_disj, hP_A'_card⟩ :
-        ∃ P_A' : (G.deleteEdge x y).ABPathSet A X, ABPathSet.disjoint P_A' ∧ P_A'.card ≥ k := by
+    obtain ⟨⟨P_A', hP_A'_disj⟩, hP_A'_card⟩ :
+        ∃ P_A' : (G.deleteEdge x y).Joiner A X, P_A'.1.card ≥ k := by
       grind [exists_maxflow (G.deleteEdge x y) A X]
     obtain ⟨P_B', hP_B'_disj, hP_B'_card⟩ : ∃ P_B' : (G.deleteEdge x y).ABPathSet X B, ABPathSet.disjoint P_B' ∧ P_B'.card ≥ k := by
       grind [exists_maxflow (G.deleteEdge x y) X B]
@@ -1749,6 +1749,8 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
     · rw [← hP_card]
       exact Joiner.card_le P
     · refine ⟨P, hP_card⟩
+
+#exit
 
 /-
 Inductive step for Menger's theorem.
