@@ -168,9 +168,11 @@ end SimpleGraph
 /-
 The set of all sets of disjoint A-B paths.
 -/
+@[deprecated]
 noncomputable def SimpleGraph.disjoint_path_sets [Fintype V] (G : SimpleGraph V) (A B : Finset V) : Finset (G.ABPathSet A B) :=
   (Finset.powerset Finset.univ).filter (fun P => P.disjoint)
 
+@[deprecated]
 def SimpleGraph.joiner_equiv_disjoint_path_sets [Fintype V] : G.Joiner A B ≃ G.disjoint_path_sets A B where
   toFun P := ⟨P.1, by simpa [SimpleGraph.disjoint_path_sets] using P.2⟩
   invFun P := by
@@ -196,15 +198,17 @@ theorem SimpleGraph.exists_mincut : ∃ S : G.Separator A B, S.1.card = G.mincut
   Nat.find_spec (p := fun n => ∃ S : G.Separator A B, S.1.card = n)
     ⟨_, Classical.choice (Separator.nonempty G A B), rfl⟩
 
-noncomputable def SimpleGraph.max_disjoint_paths_size [Fintype V] (G : SimpleGraph V) (A B : Finset V) : ℕ :=
-  ((G.disjoint_path_sets A B).image Finset.card).max' ((G.disjoint_path_sets_nonempty A B).image Finset.card)
-
 noncomputable def SimpleGraph.maxflow (G : SimpleGraph V) (A B : Finset V) : ℕ :=
   Nat.findGreatest (fun n => ∃ P : G.Joiner A B, P.1.card = n) A.card
+
+@[deprecated "Use maxflow instead"]
+noncomputable def SimpleGraph.max_disjoint_paths_size [Fintype V] (G : SimpleGraph V) (A B : Finset V) : ℕ :=
+  ((G.disjoint_path_sets A B).image Finset.card).max' ((G.disjoint_path_sets_nonempty A B).image Finset.card)
 
 theorem SimpleGraph.exists_maxflow : ∃ P : G.Joiner A B, P.1.card = G.maxflow A B :=
   Nat.findGreatest_spec (P := fun n => ∃ P : G.Joiner A B, P.1.card = n) (zero_le _) ⟨⟨∅, by tauto⟩, rfl⟩
 
+@[deprecated "Use maxflow directly"]
 theorem maxflow_eq_max [Fintype V] : G.maxflow A B = G.max_disjoint_paths_size A B := by
   simp [SimpleGraph.maxflow, SimpleGraph.max_disjoint_paths_size, Nat.findGreatest_eq_iff]
   refine ⟨fun a ha => ?_, fun h => ?_, fun n h1 h2 P => ?_⟩
@@ -222,17 +226,17 @@ theorem maxflow_eq_max [Fintype V] : G.maxflow A B = G.max_disjoint_paths_size A
 The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
 -/
 theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Finset V) :
-    G.max_disjoint_paths_size A B ≤ G.mincut A B := by
+    G.maxflow A B ≤ G.mincut A B := by
   obtain ⟨S, hS⟩ := @exists_mincut _ G A B
   obtain ⟨P, hP⟩ := @exists_maxflow _ G A B
-  simpa [← hS, ← maxflow_eq_max, ← hP] using join_le_sep _ _
+  simpa [← hS, ← hP] using join_le_sep _ _
 
 /-
 Base case of Menger's theorem: if G has no edges, the theorem holds.
 -/
 lemma SimpleGraph.Menger_strong_base [Fintype V] (G : SimpleGraph V) (A B : Finset V)
     (h : G.edgeSet = ∅) :
-  G.mincut A B ≤ G.max_disjoint_paths_size A B := by
+  G.mincut A B ≤ G.maxflow A B := by
     simp at h ; subst G
     have h_empty : ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v := by
       intro u v p; induction p <;> aesop;
@@ -243,12 +247,12 @@ lemma SimpleGraph.Menger_strong_base [Fintype V] (G : SimpleGraph V) (A B : Fins
       refine ⟨a, p.start_mem_support, ?_⟩
       simp [← h_empty a b p] at hb
       simpa [ha, hb]
-    · apply Finset.le_max'
+    · refine Nat.le_findGreatest (Finset.card_mono Finset.inter_subset_left) ?_
       let γ (a : ((A ∩ B) : Finset _)) : (⊥ : SimpleGraph V).ABPath A B :=
         ⟨⟨a, by grind⟩, ⟨a, by grind⟩ , Walk.nil, Walk.IsPath.nil⟩
       let ps : ABPathSet _ A B := Set.range γ |>.toFinset
-      simp ; refine ⟨ps, ?_, ?_⟩
-      · simp [disjoint_path_sets]
+      refine ⟨⟨ps, ?_⟩, ?_⟩
+      · simp [ABPathSet.disjoint]
         intro ⟨⟨a, ha⟩, ⟨b, hb⟩, p1, hp1⟩ hp2 ⟨⟨a', ha'⟩, ⟨b', hb'⟩, p'1, hp'1⟩ hp'2 h
         cases p1 ; swap ; contradiction
         cases p'1 ; swap ; contradiction
@@ -1924,14 +1928,15 @@ theorem SimpleGraph.Menger_strong_aux (n : ℕ) :
 Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G. (This is the strong direction: min separator <= max paths)
 -/
 theorem SimpleGraph.Menger_strong [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V) :
-  G.mincut A B ≤ G.max_disjoint_paths_size A B := by
+  G.mincut A B ≤ G.maxflow A B := by
+    rw [maxflow_eq_max]
     convert SimpleGraph.Menger_strong_aux ( G.edgeFinset.card ) V G A B rfl
 
 /-
 Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G.
 -/
 theorem SimpleGraph.Menger [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V) :
-  G.mincut A B = G.max_disjoint_paths_size A B := by
+  G.mincut A B = G.maxflow A B := by
     exact le_antisymm ( SimpleGraph.Menger_strong G A B ) ( SimpleGraph.Menger_weak G A B )
 
 /-
