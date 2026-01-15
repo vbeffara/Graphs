@@ -206,19 +206,19 @@ noncomputable def contractEdge_preimage [Fintype V] (x y : V)
 /-
 If a set of vertices separates A and B in the contracted graph G/e, then its preimage separates A and B in G.
 -/
-lemma contractEdge_preimage_separates [Fintype V] {Y : Finset (Quotient (contractEdgeSetoid x y))}
-    (hY : (G.contractEdge' x y).Separates (contractEdge_liftSet x y A) (contractEdge_liftSet x y B) Y) :
-  G.Separates A B (contractEdge_preimage x y Y) := by
+lemma contractEdge_preimage_separates [Fintype V]
+    (Y : (G.contractEdge' x y).Separator (contractEdge_liftSet x y A) (contractEdge_liftSet x y B)) :
+  G.Separates A B (contractEdge_preimage x y Y.1) := by
     intro u hu v hv p
     obtain ⟨ w, hw ⟩ := exists_walk_of_path_contraction G x y p;
     -- Since $w$ is a path in the contracted graph from $\pi(u)$ to $\pi(v)$, and $Y$ separates $\pi(A)$ and $\pi(B)$ in the contracted graph, $w$ must intersect $Y$.
-    obtain ⟨ z, hzY, hzw ⟩ : ∃ z ∈ Y, z ∈ w.support := by
-      specialize hY (contractEdgeProj x y u)
+    obtain ⟨ z, hzY, hzw ⟩ : ∃ z ∈ Y.1, z ∈ w.support := by
+      have := Y.2 (contractEdgeProj x y u)
         (by exact Finset.mem_image_of_mem _ hu)
         (contractEdgeProj x y v)
         (by exact Finset.mem_image_of_mem _ hv)
         w.toPath;
-      exact hY |> fun ⟨ z, hz₁, hz₂ ⟩ => ⟨ z, hz₂, by simpa using Walk.support_bypass_subset _ hz₁ ⟩;
+      exact this |> fun ⟨z, hz₁, hz₂ ⟩ => ⟨ z, hz₂, by simpa using Walk.support_bypass_subset _ hz₁ ⟩;
     have := hw ( by simpa using hzw );
     simp +zetaDelta at *;
     exact ⟨ this.choose, this.choose_spec.1, Finset.mem_filter.mpr ⟨ Finset.mem_univ _, this.choose_spec.2.symm ▸ hzY ⟩ ⟩
@@ -519,7 +519,7 @@ theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : Simp
     rw [ ← h_min ];
     simp [SimpleGraph.mincut]
     refine ⟨⟨SimpleGraph.contractEdge_preimage x y Y, ?_⟩, ?_⟩
-    · exact contractEdge_preimage_separates hY_sep
+    · exact contractEdge_preimage_separates ⟨Y, hY_sep⟩
     · simp [card_preimage_contractEdge hxy Y, hY_card]
 
 /-
@@ -789,7 +789,7 @@ lemma SimpleGraph.contractEdge_separator_lift_separates {V : Type u} [Fintype V]
   (Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)))
   (hY : (G.contractEdge' x y).Separates (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) Y) :
   G.Separates A B ((SimpleGraph.contractEdge_preimage x y Y)) := by
-    exact contractEdge_preimage_separates hY
+    exact contractEdge_preimage_separates ⟨Y, hY⟩
 
 /-
 The size of the preimage of a set Y containing the contracted vertex is |Y| + 1.
