@@ -1732,16 +1732,16 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
     obtain ⟨P_B'', hP_B''_disj, hP_B''_card⟩ : ∃ P_B'' : (G.deleteEdge x y).ABPathSet X B, ABPathSet.disjoint P_B'' ∧ P_B''.card = k := by
       obtain ⟨ P_B'', hP_B''_disj, hP_B''_card ⟩ := Finset.exists_subset_card_eq hP_B'_card;
       exact ⟨ P_B'', fun p hp q hq hpq => hP_B'_disj p ( hP_B''_disj hp ) q ( hP_B''_disj hq ) hpq, hP_B''_card ⟩;
-    have h_lift : ∃ P_B : G.ABPathSet X B, ABPathSet.disjoint P_B ∧ P_B.card = k := by
+    have h_lift : ∃ P_B : G.Joiner X B, P_B.1.card = k := by
       have h_subgraph : (G.deleteEdge x y) ≤ G := by
         intro u v; simp +decide [ SimpleGraph.deleteEdge ] ;
         tauto
       obtain ⟨Q, hQ1, hQ2⟩ := SimpleGraph.lift_disjoint_paths_le _ _ h_subgraph _ _ P_B'' hP_B''_disj
-      refine ⟨Q, hQ1, ?_⟩
+      refine ⟨⟨Q, hQ1⟩, ?_⟩
       grind
-    obtain ⟨P_B, hP_B_disj, hP_B_card⟩ := h_lift;
+    obtain ⟨P_B, hP_B_card⟩ := h_lift;
     obtain ⟨P, hP_card⟩ := SimpleGraph.disjoint_paths_join G A B X hX_sep k hX_card ⟨P_A, hP_A_disj⟩ hP_A_card
-        ⟨P_B, hP_B_disj⟩ hP_B_card
+        P_B hP_B_card
     apply Nat.le_findGreatest
     · rw [← hP_card]
       exact Joiner.card_le P
