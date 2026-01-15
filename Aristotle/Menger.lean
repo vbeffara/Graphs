@@ -1765,12 +1765,13 @@ lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : F
       have := SimpleGraph.Menger_case2_imp_paths G A B x y hxy ( G.mincut A B ) rfl X hX_sep hX_card hx hy IH_delete;
       aesop;
     · -- By the induction hypothesis on the contracted graph, there exists a set P' of disjoint paths in G/e with |P'| ≥ k.
-      obtain ⟨P', hP'_card, hP'_disj⟩ : ∃ P' : (G.contractEdge' x y).ABPathSet (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.card ≥ G.mincut A B ∧ ABPathSet.disjoint P' := by
+      obtain ⟨P', hP'_card⟩ : ∃ P' : (G.contractEdge' x y).Joiner (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.1.card ≥ G.mincut A B := by
         obtain ⟨P, hP⟩ := SimpleGraph.exists_maxflow (G := G.contractEdge' x y) (A := contractEdge_liftSet x y A) (B := contractEdge_liftSet x y B)
+        refine ⟨P, ?_⟩
         grind
       refine' le_trans hP'_card _;
-      apply Nat.le_findGreatest $ (Joiner.card_le ⟨P', hP'_disj⟩).trans Finset.card_image_le
-      exact SimpleGraph.exists_disjoint_paths_lift G A B x y hxy ⟨P', hP'_disj⟩;
+      apply Nat.le_findGreatest $ (Joiner.card_le P').trans Finset.card_image_le
+      exact SimpleGraph.exists_disjoint_paths_lift G A B x y hxy P';
 
 /-
 Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edges, proved by strong induction on n.
