@@ -223,8 +223,6 @@ lemma contractEdge_preimage_separates [Fintype V] {Y : Finset (Quotient (contrac
     simp +zetaDelta at *;
     exact ⟨ this.choose, this.choose_spec.1, Finset.mem_filter.mpr ⟨ Finset.mem_univ _, this.choose_spec.2.symm ▸ hzY ⟩ ⟩
 
-/- =========================== REVIEW BAR ===================== -/
-
 /-
 The contracted vertex in the quotient graph.
 -/
@@ -241,167 +239,111 @@ A vertex projects to the contracted vertex if and only if it is one of the endpo
 -/
 lemma contractEdgeProj_eq_vertex_iff (x y u : V) :
     contractEdgeProj x y u = contractEdgeProj x y x ↔ u = x ∨ u = y := by
-  -- By definition of the projection, we have that the projection of u is equal to the projection of x if and only if u is equivalent to x under the setoid.
   simp [contractEdgeProj, contractEdgeSetoid, Quotient.eq]
   grind
-
-end SimpleGraph
 
 /-
 The projection map is injective on vertices that do not map to the contracted vertex.
 -/
-lemma SimpleGraph.contractEdgeProj_inj_on (x y : V) (u v : V)
-  (hu : SimpleGraph.contractEdgeProj x y u ≠ SimpleGraph.contractEdge_vertex x y)
-  (hv : SimpleGraph.contractEdgeProj x y v ≠ SimpleGraph.contractEdge_vertex x y) :
-  SimpleGraph.contractEdgeProj x y u = SimpleGraph.contractEdgeProj x y v → u = v := by
-    -- If the projections are equal, then u and v must be in the same equivalence class.
-    intro h_eq
-    have h_equiv : u = v ∨ (u = x ∧ v = y) ∨ (u = y ∧ v = x) := by
-      erw [ Quotient.eq ] at h_eq ; aesop;
-    tauto
+lemma contractEdgeProj_inj_on (x y : V) (u v : V)
+    (hu : contractEdgeProj x y u ≠ contractEdge_vertex x y)
+    (hv : contractEdgeProj x y v ≠ contractEdge_vertex x y)
+    (h_eq : contractEdgeProj x y u = contractEdgeProj x y v) : u = v := by
+  have h_equiv : u = v ∨ (u = x ∧ v = y) ∨ (u = y ∧ v = x) := by
+    erw [ Quotient.eq ] at h_eq ; aesop;
+  tauto
 
 /-
 If the projections of two vertices are adjacent in the contracted graph and neither projects to the contracted vertex, then the original vertices are adjacent in the original graph.
 -/
-lemma SimpleGraph.contractEdge_adj_lift (G : SimpleGraph V) (x y : V) (u v : V)
-  (hu : SimpleGraph.contractEdgeProj x y u ≠ SimpleGraph.contractEdge_vertex x y)
-  (hv : SimpleGraph.contractEdgeProj x y v ≠ SimpleGraph.contractEdge_vertex x y) :
-  (G.contractEdge' x y).Adj (SimpleGraph.contractEdgeProj x y u) (SimpleGraph.contractEdgeProj x y v) → G.Adj u v := by
+lemma contractEdge_adj_lift (G : SimpleGraph V) (x y : V) (u v : V)
+  (hu : contractEdgeProj x y u ≠ contractEdge_vertex x y)
+  (hv : contractEdgeProj x y v ≠ contractEdge_vertex x y) :
+  (G.contractEdge' x y).Adj (contractEdgeProj x y u) (contractEdgeProj x y v) → G.Adj u v := by
     rintro ⟨ a, b, ha, hb, hab ⟩;
-    · unfold SimpleGraph.contractEdgeProj at *;
+    · unfold contractEdgeProj at *;
       unfold contractEdge_vertex at *; simp_all [ Quotient.eq ] ;
       unfold contractEdgeSetoid at *; aesop;
     · -- Apply the lemma that states if the projections of two vertices are adjacent and neither is the contracted vertex, then the original vertices are adjacent.
       have h_adj : contractEdgeProj x y v ≠ contractEdge_vertex x y → contractEdgeProj x y u ≠ contractEdge_vertex x y → (G.contractEdge' x y).Adj (contractEdgeProj x y v) (contractEdgeProj x y u) → G.Adj v u := by
-        unfold SimpleGraph.contractEdgeProj at *;
-        unfold SimpleGraph.contractEdge_vertex at *; simp_all [ Quotient.eq ] ;
+        unfold contractEdgeProj at *;
+        unfold contractEdge_vertex at *; simp_all [ Quotient.eq ] ;
         unfold contractEdgeSetoid at *; aesop;
-      simp_all [ SimpleGraph.adj_comm ];
-      unfold SimpleGraph.contractEdge' at *; aesop;
+      simp_all [ adj_comm ];
+      unfold contractEdge' at *; aesop;
 
 /-
 The size of the preimage of a set of vertices in the contracted graph.
 -/
-lemma SimpleGraph.card_preimage_contractEdge [Fintype V] (x y : V) (h : x ≠ y)
-  (Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y))) :
-  (SimpleGraph.contractEdge_preimage x y Y).card = if SimpleGraph.contractEdge_vertex x y ∈ Y then Y.card + 1 else Y.card := by
-    unfold contractEdge_preimage;
-    -- Let's count the number of elements in the preimage of Y.
-    have h_card_preimage : (Finset.univ.filter (fun v => SimpleGraph.contractEdgeProj x y v ∈ Y)).card = ∑ z ∈ Y, (Finset.univ.filter (fun v => SimpleGraph.contractEdgeProj x y v = z)).card := by
-      simp only [Finset.card_filter];
-      rw [ Finset.sum_comm, Finset.sum_congr rfl ] ; aesop;
-    -- Let's count the number of elements in each fiber of the projection map.
-    have h_fiber_card : ∀ z ∈ Y, (Finset.univ.filter (fun v => SimpleGraph.contractEdgeProj x y v = z)).card = if z = SimpleGraph.contractEdge_vertex x y then 2 else 1 := by
-      intro z hz
-      by_cases hz_eq : z = SimpleGraph.contractEdge_vertex x y;
-      · simp [hz_eq];
-        rw [ Finset.card_eq_two ];
-        refine' ⟨ x, y, h, _ ⟩;
-        ext v; simp [contractEdgeProj, contractEdge_vertex];
-        simp [Quotient.eq, contractEdgeSetoid]; grind
-      · obtain ⟨ v, rfl ⟩ := Quotient.exists_rep z;
-        simp [ SimpleGraph.contractEdgeProj, SimpleGraph.contractEdge_vertex ];
-        split_ifs with h';
-        · simp [Quotient.eq, contractEdgeSetoid, Finset.card_eq_two] at h' ⊢
-          refine ⟨x, y, h, ?_⟩
-          grind
-        · rw [ Finset.card_eq_one ];
-          use v
-          simp [Quotient.eq, contractEdgeSetoid] at h' ⊢
-          grind
-    split_ifs <;> simp_all [ Finset.sum_ite ];
-    · simp_all [ Finset.filter_eq', Finset.filter_ne' ];
-      linarith [ Nat.sub_add_cancel ( show 1 ≤ Y.card from Finset.card_pos.mpr ⟨ _, ‹_› ⟩ ) ];
-    · simp_all [ Finset.filter_eq', Finset.filter_ne' ]
+lemma card_preimage_contractEdge [Fintype V] (h : x ≠ y) (Y) : (contractEdge_preimage x y Y).card =
+    if contractEdge_vertex x y ∈ Y then Y.card + 1 else Y.card := by
+  -- Let's count the number of elements in the preimage of Y.
+  have h_card_preimage : (Finset.univ.filter (fun v => contractEdgeProj x y v ∈ Y)).card =
+      ∑ z ∈ Y, (Finset.univ.filter (fun v => contractEdgeProj x y v = z)).card := by
+    simp only [Finset.card_filter];
+    rw [Finset.sum_comm, Finset.sum_congr rfl]
+    simp
+  -- Let's count the number of elements in each fiber of the projection map.
+  have h_fiber_card : ∀ z ∈ Y, (Finset.univ.filter (fun v => contractEdgeProj x y v = z)).card =
+      if z = contractEdge_vertex x y then 2 else 1 := by
+    intro z hz
+    by_cases hz_eq : z = contractEdge_vertex x y;
+    · simp [hz_eq];
+      rw [ Finset.card_eq_two ];
+      refine' ⟨ x, y, h, _ ⟩;
+      ext v; simp [contractEdgeProj, contractEdge_vertex];
+      simp [Quotient.eq, contractEdgeSetoid]; grind
+    · obtain ⟨ v, rfl ⟩ := Quotient.exists_rep z;
+      simp [ contractEdgeProj, contractEdge_vertex ];
+      split_ifs with h';
+      · simp [Quotient.eq, contractEdgeSetoid, Finset.card_eq_two] at h' ⊢
+        refine ⟨x, y, h, ?_⟩
+        grind
+      · rw [ Finset.card_eq_one ];
+        use v
+        simp [Quotient.eq, contractEdgeSetoid] at h' ⊢
+        grind
+  split_ifs <;> simp_all [Finset.sum_ite, contractEdge_preimage];
+  · simp_all [ Finset.filter_eq', Finset.filter_ne' ];
+    linarith [ Nat.sub_add_cancel ( show 1 ≤ Y.card from Finset.card_pos.mpr ⟨ _, ‹_› ⟩ ) ];
+  · simp_all [ Finset.filter_eq', Finset.filter_ne' ]
 
 /-
 A walk in the contracted graph that avoids the contracted vertex can be lifted to a walk in the original graph.
 -/
-lemma SimpleGraph.lift_walk_avoiding_contraction (G : SimpleGraph V) (x y : V)
-  {u v : Quotient (SimpleGraph.contractEdgeSetoid x y)} (p : (G.contractEdge' x y).Walk u v)
-  (hp : SimpleGraph.contractEdge_vertex x y ∉ p.support) :
-  ∃ (u' v' : V) (q : G.Walk u' v'),
-    SimpleGraph.contractEdgeProj x y u' = u ∧
-    SimpleGraph.contractEdgeProj x y v' = v ∧
-    (q.support.toFinset.image (SimpleGraph.contractEdgeProj x y)) = p.support.toFinset ∧
+lemma lift_walk_avoiding_contraction {u v : Quotient (contractEdgeSetoid x y)}
+    (p : (G.contractEdge' x y).Walk u v) (hp : contractEdge_vertex x y ∉ p.support) :
+  ∃ (u' v' : V) (q : G.Walk u' v'), contractEdgeProj x y u' = u ∧ contractEdgeProj x y v' = v ∧
+    (q.support.toFinset.image (contractEdgeProj x y)) = p.support.toFinset ∧
     x ∉ q.support ∧ y ∉ q.support := by
-      induction' p with u v p ih;
-      · obtain ⟨ u', rfl ⟩ := Quotient.exists_rep u;
-        by_cases hu : u' = x ∨ u' = y;
-        · cases hu <;> simp_all [ Quotient.eq, contractEdge_vertex, contractEdgeSetoid ];
-        · refine' ⟨ u', u', SimpleGraph.Walk.nil, _, _, _, _ ⟩ <;> simp_all [ SimpleGraph.contractEdgeProj ];
-          tauto;
-      · rename_i h₁ h₂;
-        -- Since v is not the contracted vertex, there exists a unique u' in V such that contractEdgeProj x y u' = v.
-        obtain ⟨u', hu'⟩ : ∃ u' : V, contractEdgeProj x y u' = v ∧ u' ≠ x ∧ u' ≠ y := by
-          rcases Quotient.exists_rep v with ⟨ u', rfl ⟩;
-          refine' ⟨ u', rfl, _, _ ⟩ <;> contrapose! hp <;> simp_all [ contractEdge_vertex ];
-          exact Or.inl ( by simp [Quotient.eq, contractEdgeSetoid] );
-        obtain ⟨ v', hv' ⟩ := h₂ ( by intro h; simp_all [ SimpleGraph.Walk.support_cons ] );
-        obtain ⟨ v'', q, hv'', hv''', hq, hx, hy ⟩ := hv';
-        refine' ⟨ u', v'', SimpleGraph.Walk.cons _ q, hu'.1, hv''', _, _, _ ⟩ <;> simp_all [ SimpleGraph.Walk.support_cons ];
-        · have h_adj : (G.contractEdge' x y).Adj (contractEdgeProj x y u') (contractEdgeProj x y v') := by
-            grind;
-          apply SimpleGraph.contractEdge_adj_lift G x y u' v';
-          · grind;
-          · intro h; simp_all
-          · exact h_adj;
-        · tauto;
-        · grind
+  induction' p with u v p ih;
+  · obtain ⟨ u', rfl ⟩ := Quotient.exists_rep u;
+    by_cases hu : u' = x ∨ u' = y;
+    · cases hu <;> simp_all [ Quotient.eq, contractEdge_vertex, contractEdgeSetoid ];
+    · refine' ⟨ u', u', Walk.nil, _, _, _, _ ⟩ <;> simp_all [ contractEdgeProj ];
+      tauto;
+  · rename_i h₁ h₂;
+    -- Since v is not the contracted vertex, there exists a unique u' in V such that contractEdgeProj x y u' = v.
+    obtain ⟨u', hu'⟩ : ∃ u' : V, contractEdgeProj x y u' = v ∧ u' ≠ x ∧ u' ≠ y := by
+      rcases Quotient.exists_rep v with ⟨ u', rfl ⟩;
+      refine' ⟨ u', rfl, _, _ ⟩ <;> contrapose! hp <;> simp_all [ contractEdge_vertex ];
+      exact Or.inl ( by simp [Quotient.eq, contractEdgeSetoid] );
+    obtain ⟨ v', hv' ⟩ := h₂ ( by intro h; simp_all [ Walk.support_cons ] );
+    obtain ⟨ v'', q, hv'', hv''', hq, hx, hy ⟩ := hv';
+    refine' ⟨ u', v'', Walk.cons _ q, hu'.1, hv''', _, _, _ ⟩ <;> simp_all [ Walk.support_cons ];
+    · have h_adj : (G.contractEdge' x y).Adj (contractEdgeProj x y u') (contractEdgeProj x y v') := by
+        grind;
+      apply contractEdge_adj_lift G x y u' v';
+      · grind;
+      · intro h; simp_all
+      · exact h_adj;
+    · tauto;
+    · grind
 
-/-
-If a vertex is not one of the endpoints of the contracted edge, its projection is not the contracted vertex.
--/
-lemma SimpleGraph.contractEdgeProj_ne_vertex_of_ne (x y v : V) (h : v ≠ x ∧ v ≠ y) :
-  SimpleGraph.contractEdgeProj x y v ≠ SimpleGraph.contractEdge_vertex x y := by
-    exact fun h' => h.1 ( by have := SimpleGraph.contractEdgeProj_eq_vertex_iff x y v; tauto )
+/- =========================== REVIEW BAR ===================== -/
 
-/-
-The map from vertices avoiding x and y to vertices avoiding the contracted vertex.
--/
-def SimpleGraph.contractEdge_avoiding_iso_fun (x y : V) :
-  {v : V // v ≠ x ∧ v ≠ y} → {v : Quotient (SimpleGraph.contractEdgeSetoid x y) // v ≠ SimpleGraph.contractEdge_vertex x y} :=
-  fun ⟨v, hv⟩ => ⟨SimpleGraph.contractEdgeProj x y v, SimpleGraph.contractEdgeProj_ne_vertex_of_ne x y v hv⟩
-
-/-
-The map from vertices avoiding x and y to vertices avoiding the contracted vertex is a bijection.
--/
-lemma SimpleGraph.contractEdge_avoiding_iso_bijective (x y : V) :
-  Function.Bijective (SimpleGraph.contractEdge_avoiding_iso_fun x y) := by
-    refine' ⟨ _, _ ⟩;
-    · intro ⟨ v, hv ⟩ ⟨ w, hw ⟩ h_eq
-      have h_proj : SimpleGraph.contractEdgeProj x y v = SimpleGraph.contractEdgeProj x y w := by
-        injection h_eq
-      have h_ne : v ≠ x ∧ v ≠ y ∧ w ≠ x ∧ w ≠ y := by
-        tauto
-      have h_inj : v = w := by
-        exact SimpleGraph.contractEdgeProj_inj_on x y v w ( by simp [ SimpleGraph.contractEdgeProj_ne_vertex_of_ne, h_ne ] ) ( by simp [ SimpleGraph.contractEdgeProj_ne_vertex_of_ne, h_ne ] ) h_proj
-      exact Subtype.ext h_inj;
-    · intro z
-      obtain ⟨v, hv⟩ : ∃ v : V, SimpleGraph.contractEdgeProj x y v = z := by
-        exact Quotient.exists_rep z.1
-      obtain ⟨hv_ne_x, hv_ne_y⟩ : v ≠ x ∧ v ≠ y := by
-        constructor <;> intro <;> simp_all
-        · exact z.2 ( hv.symm );
-        · exact z.2 ( hv.symm.trans ( Quotient.sound ( by tauto ) ) )
-      use ⟨v, hv_ne_x, hv_ne_y⟩
-      aesop
-
-/-
-If a walk maps to a path via a function that is injective on the walk's support, then the walk is a path.
--/
-lemma SimpleGraph.Walk.isPath_of_map_isPath_injOn {V V' : Type*}
-  {G : SimpleGraph V} {G' : SimpleGraph V'} (f : G →g G')
-  {u v : V} (w : G.Walk u v)
-  (h_inj : Set.InjOn f w.support.toFinset)
-  (h_path : (w.map f).IsPath) : w.IsPath := by
-    cases w <;> simp_all
-    rename_i p hp;
-    contrapose! h_path;
-    intro h_path';
-    have h_support : ∀ {u v : V} {p : G.Walk u v}, (p.map f).IsPath → p.IsPath := by
-      intro u v p hp; induction p <;> aesop;
-    specialize @h_support _ _ hp h_path' ; aesop
+end SimpleGraph
+-- #exit
 
 /-
 Definitions for the subgraphs avoiding the contraction.
@@ -599,7 +541,7 @@ theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : Simp
     simp [SimpleGraph.mincut]
     refine ⟨⟨SimpleGraph.contractEdge_preimage x y Y, ?_⟩, ?_⟩
     · exact contractEdge_preimage_separates hY_sep
-    · simp [card_preimage_contractEdge x y hxy Y, hY_card]
+    · simp [card_preimage_contractEdge hxy Y, hY_card]
 
 /-
 If P is a set of disjoint paths from A to X with size equal to X, then every vertex in X is the endpoint of exactly one path in P, and that path intersects X only at its endpoint.
