@@ -1729,9 +1729,9 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
         · intro u v; by_cases hu : u = x <;> by_cases hv : v = y <;> simp +decide [ *, SimpleGraph.deleteEdge ] <;> tauto
         · exact fun p hp q hq hpq => hP_A'_disj p ( ht₁ hp ) q ( ht₁ hq ) hpq;
       aesop
-    obtain ⟨P_B'', hP_B''_disj, hP_B''_card⟩ : ∃ P_B'' : (G.deleteEdge x y).ABPathSet X B, ABPathSet.disjoint P_B'' ∧ P_B''.card = k := by
+    obtain ⟨⟨P_B'', hP_B''_disj⟩, hP_B''_card⟩ : ∃ P_B'' : (G.deleteEdge x y).Joiner X B, P_B''.1.card = k := by
       obtain ⟨ P_B'', hP_B''_disj, hP_B''_card ⟩ := Finset.exists_subset_card_eq hP_B'_card;
-      exact ⟨ P_B'', fun p hp q hq hpq => hP_B'_disj p ( hP_B''_disj hp ) q ( hP_B''_disj hq ) hpq, hP_B''_card ⟩;
+      exact ⟨⟨P_B'', fun p hp q hq hpq => hP_B'_disj p ( hP_B''_disj hp ) q ( hP_B''_disj hq ) hpq⟩, hP_B''_card ⟩;
     have h_lift : ∃ P_B : G.Joiner X B, P_B.1.card = k := by
       have h_subgraph : (G.deleteEdge x y) ≤ G := by
         intro u v; simp +decide [ SimpleGraph.deleteEdge ] ;
