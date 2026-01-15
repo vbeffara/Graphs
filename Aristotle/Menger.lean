@@ -1811,7 +1811,7 @@ lemma SimpleGraph.lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (
 /-
 If there exists a separator X of size k containing x and y, then G has k disjoint A-B paths.
 -/
-lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V) (hxy : G.Adj x y)
+lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x y : V) (hxy : G.Adj x y)
   (k : ℕ)
   (h_min : G.mincut A B = k)
   (X : Finset V)
@@ -1855,9 +1855,10 @@ lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : 
     -- By the properties of the contraction, we can combine these paths to get a set of k disjoint A-B paths in G.
     obtain ⟨P, hP_disj, hP_card⟩ : ∃ P : G.ABPathSet A B, P.disjoint ∧ P.card = k := by
       apply_rules [ SimpleGraph.disjoint_paths_join ];
-    rw [maxflow_eq_max]
-    apply Finset.le_max'
-    exact Finset.mem_image.mpr ⟨ P, Finset.mem_filter.mpr ⟨ Finset.mem_univ _, hP_disj ⟩, hP_card ⟩;
+    apply Nat.le_findGreatest
+    · rw [← hP_card]
+      exact Joiner.card_le ⟨P, hP_disj⟩
+    · refine ⟨⟨P, hP_disj⟩, hP_card⟩
 
 /-
 Inductive step for Menger's theorem.
