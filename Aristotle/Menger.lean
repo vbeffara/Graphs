@@ -1902,13 +1902,14 @@ Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edg
 -/
 theorem SimpleGraph.Menger_strong_aux (n : ℕ) :
   ∀ (V : Type u) [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V),
-  G.edgeFinset.card = n → G.mincut A B ≤ G.max_disjoint_paths_size A B := by
+  G.edgeFinset.card = n → G.mincut A B ≤ G.maxflow A B := by
     induction' n using Nat.strong_induction_on with n ih;
     intros V _ _ G _ A B h_card
     by_cases h_empty : G.edgeFinset = ∅;
     · convert SimpleGraph.Menger_strong_base G A B _;
       aesop;
     · -- Let $e = xy$ be an edge in $G$.
+      simp only [maxflow_eq_max]
       obtain ⟨x, y, hxy⟩ : ∃ x y : V, G.Adj x y := by
         simp +zetaDelta at *;
         contrapose! h_empty;
@@ -1919,8 +1920,10 @@ theorem SimpleGraph.Menger_strong_aux (n : ℕ) :
       have h_delete : (G.deleteEdge x y).edgeFinset.card < n := by
         apply SimpleGraph.deleteEdge_card_edges_lt G x y hxy |> lt_of_lt_of_le <| by aesop;
       apply SimpleGraph.Menger_inductive_step G A B x y hxy;
-      · convert ih _ h_contract _ _ _ _ rfl;
-      · exact fun A' B' ↦
+      · simp only [← maxflow_eq_max]
+        convert ih _ h_contract _ _ _ _ rfl;
+      · simp only [← maxflow_eq_max]
+        exact fun A' B' ↦
         (fun {i₁ i₂} ↦ String.Pos.Raw.mk_le_mk.mp)
           (ih (G.deleteEdge x y).edgeFinset.card h_delete V (G.deleteEdge x y) A' B' rfl)
 
@@ -1929,7 +1932,6 @@ Menger's theorem: The minimum number of vertices separating A from B in G is equ
 -/
 theorem SimpleGraph.Menger_strong [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V) :
   G.mincut A B ≤ G.maxflow A B := by
-    rw [maxflow_eq_max]
     convert SimpleGraph.Menger_strong_aux ( G.edgeFinset.card ) V G A B rfl
 
 /-
@@ -1961,7 +1963,7 @@ theorem SimpleGraph.Menger' [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separa
     simp at h1
     exact h1 (hf1 p) (hpq ▸ hf1 q)
   refine ⟨.ofBijective f (Fintype.bijective_iff_injective_and_card _ |>.mpr ⟨hf, ?_⟩), hf1⟩
-  simp [hP, hS, Menger, maxflow_eq_max]
+  simp [hP, hS, Menger]
 
 #print axioms SimpleGraph.Menger
 #lint
