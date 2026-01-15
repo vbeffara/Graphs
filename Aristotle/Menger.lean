@@ -205,7 +205,8 @@ noncomputable def SimpleGraph.maxflow (G : SimpleGraph V) (A B : Finset V) : ℕ
 noncomputable def SimpleGraph.max_disjoint_paths_size [Fintype V] (G : SimpleGraph V) (A B : Finset V) : ℕ :=
   ((G.disjoint_path_sets A B).image Finset.card).max' ((G.disjoint_path_sets_nonempty A B).image Finset.card)
 
-theorem SimpleGraph.exists_maxflow : ∃ P : G.Joiner A B, P.1.card = G.maxflow A B :=
+theorem SimpleGraph.exists_maxflow (G : SimpleGraph V) (A B : Finset V) :
+    ∃ P : G.Joiner A B, P.1.card = G.maxflow A B :=
   Nat.findGreatest_spec (P := fun n => ∃ P : G.Joiner A B, P.1.card = n) (zero_le _) ⟨⟨∅, by tauto⟩, rfl⟩
 
 @[deprecated "Use maxflow directly"]
@@ -228,7 +229,7 @@ The maximum number of disjoint A-B paths is at most the minimum size of an A-B s
 theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Finset V) :
     G.maxflow A B ≤ G.mincut A B := by
   obtain ⟨S, hS⟩ := @exists_mincut _ G A B
-  obtain ⟨P, hP⟩ := @exists_maxflow _ G A B
+  obtain ⟨P, hP⟩ := exists_maxflow G A B
   simpa [← hS, ← hP] using join_le_sep _ _
 
 /-
@@ -1823,23 +1824,17 @@ lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : 
   k ≤ G.maxflow A B := by
     simp only [maxflow_eq_max] at IH_delete ⊢
     -- Apply the induction hypothesis to the subgraph G-xy.
-    have h_ind : (G.deleteEdge x y).max_disjoint_paths_size A X ≥ k ∧ (G.deleteEdge x y).max_disjoint_paths_size X B ≥ k := by
+    have h_ind : (G.deleteEdge x y).maxflow A X ≥ k ∧ (G.deleteEdge x y).maxflow X B ≥ k := by
       have h_ind : (G.deleteEdge x y).mincut A X ≥ k ∧ (G.deleteEdge x y).mincut X B ≥ k := by
         exact ⟨ by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_left G A B x y X k h_min hX_sep hx hy hxy.ne, by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_right G A B x y X k h_min hX_sep hx hy hxy.ne ⟩;
+      simp only [maxflow_eq_max]
       exact ⟨ le_trans h_ind.1 ( IH_delete _ _ ), le_trans h_ind.2 ( IH_delete _ _ ) ⟩;
     -- By the induction hypothesis, there exist sets of disjoint A-X paths and X-B paths in G-xy with size at least k.
     obtain ⟨P_A', hP_A'_disj, hP_A'_card⟩ :
         ∃ P_A' : (G.deleteEdge x y).ABPathSet A X, P_A'.disjoint ∧ P_A'.card ≥ k := by
-      obtain ⟨P_A', hP_A'_disj, hP_A'_card⟩ : ∃ P_A' : (G.deleteEdge x y).ABPathSet A X, P_A'.disjoint ∧ P_A'.card = (G.deleteEdge x y).max_disjoint_paths_size A X := by
-        have := Finset.max'_mem ( Finset.image Finset.card ( ( G.deleteEdge x y ).disjoint_path_sets A X ) ) ?_;
-        obtain ⟨ P_A', hP_A' ⟩ := Finset.mem_image.mp this;
-        exact ⟨ P_A', Finset.mem_filter.mp hP_A'.1 |>.2, hP_A'.2 ⟩;
-        exact ⟨ _, Finset.mem_image_of_mem _ ( Finset.mem_filter.mpr ⟨ Finset.mem_univ ∅, by simp +decide [ ABPathSet.disjoint ] ⟩ ) ⟩;
-      exact ⟨ P_A', hP_A'_disj, hP_A'_card.symm ▸ h_ind.1 ⟩
+      grind [exists_maxflow (G.deleteEdge x y) A X]
     obtain ⟨P_B', hP_B'_disj, hP_B'_card⟩ : ∃ P_B' : (G.deleteEdge x y).ABPathSet X B, P_B'.disjoint ∧ P_B'.card ≥ k := by
-      contrapose! h_ind;
-      unfold SimpleGraph.max_disjoint_paths_size;
-      simp_all +decide [ SimpleGraph.disjoint_path_sets ];
+      grind [exists_maxflow (G.deleteEdge x y) X B]
     -- By the properties of the contraction, we can lift these paths to G.
     obtain ⟨P_A, hP_A_disj, hP_A_card⟩ : ∃ P_A : G.ABPathSet A X, P_A.disjoint ∧ P_A.card = k := by
       have := Finset.exists_subset_card_eq hP_A'_card;
