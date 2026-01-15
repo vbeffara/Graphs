@@ -1681,8 +1681,8 @@ If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to 
 -/
 lemma SimpleGraph.lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (A B : Finset V)
   (P : G'.ABPathSet A B) (hP_disj : ABPathSet.disjoint P) :
-  ∃ Q : G.ABPathSet A B, ABPathSet.disjoint Q ∧ Q.card = P.card := by
-    refine' ⟨ P.image _, _, _ ⟩;
+  ∃ Q : G.Joiner A B, Q.1.card = P.card := by
+    refine' ⟨⟨P.image _, _⟩, _ ⟩;
     refine' fun p => ⟨ p.u, p.v, _, _ ⟩;
     exact p.walk.map ( SimpleGraph.Hom.ofLE h );
     all_goals simp_all +decide [ Finset.disjoint_left, ABPathSet.disjoint ];
@@ -1693,8 +1693,10 @@ lemma SimpleGraph.lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (
       -- Since the walks are equal, their supports must be the same. Therefore, p and q must be the same path.
       have h_support_eq : p.walk.support = q.walk.support := by
         replace h_eq := congr_arg ( fun f => f.walk.support ) h_eq ; aesop;
-      contrapose! hP_disj;
-      exact ⟨ p, hp, q, hq, hP_disj, p.u.1, by cases p ; aesop ⟩
+      contrapose hP_disj;
+      intro hh
+      specialize hh p hp q hq hP_disj
+      simp [← h_support_eq] at hh
 
 /-
 If there exists a separator X of size k containing x and y, then G has k disjoint A-B paths.
@@ -1725,7 +1727,7 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
       obtain ⟨ t, ht₁, ht₂ ⟩ := this;
       have h_lift_A : ∃ P_A : G.Joiner A X, P_A.1.card = t.card := by
         have := lift_disjoint_paths_le G (G.deleteEdge x y) ?_ A X t ?_
-        · obtain ⟨Q, hQ1, hQ2⟩ := this
+        · obtain ⟨⟨Q, hQ1⟩, hQ2⟩ := this
           exact ⟨⟨Q, hQ1⟩, hQ2⟩
         · intro u v; by_cases hu : u = x <;> by_cases hv : v = y <;> simp +decide [ *, SimpleGraph.deleteEdge ] <;> tauto
         · exact fun p hp q hq hpq => hP_A'_disj p ( ht₁ hp ) q ( ht₁ hq ) hpq;
@@ -1738,7 +1740,7 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
       have h_subgraph : (G.deleteEdge x y) ≤ G := by
         intro u v; simp +decide [ SimpleGraph.deleteEdge ] ;
         tauto
-      obtain ⟨Q, hQ1, hQ2⟩ := SimpleGraph.lift_disjoint_paths_le _ _ h_subgraph _ _ P_B'' hP_B''_disj
+      obtain ⟨⟨Q, hQ1⟩, hQ2⟩ := SimpleGraph.lift_disjoint_paths_le _ _ h_subgraph _ _ P_B'' hP_B''_disj
       refine ⟨⟨Q, hQ1⟩, ?_⟩
       grind
     obtain ⟨P_B, hP_B_card⟩ := h_lift;
