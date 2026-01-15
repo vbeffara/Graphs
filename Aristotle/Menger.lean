@@ -51,18 +51,11 @@ structure ABPath (G : SimpleGraph V) (A B : Finset V) where
 
 /-- Path sets -/
 
-@[reducible, deprecated]
-def ABPathSet (G : SimpleGraph V) (A B : Finset V) := Finset (G.ABPath A B)
-
-namespace ABPathSet
-
 /-
 A set of A-B paths is disjoint if any two distinct paths in the set are vertex-disjoint.
 -/
-def disjoint (P : Finset (G.ABPath A B)) : Prop :=
+def ABPathSet.disjoint (P : Finset (G.ABPath A B)) : Prop :=
   ∀ p ∈ P, ∀ q ∈ P, p ≠ q → Disjoint p.walk.support.toFinset q.walk.support.toFinset
-
-end ABPathSet
 
 def Joiner (G : SimpleGraph V) (A B : Finset V) := { P : Finset (G.ABPath A B) // ABPathSet.disjoint P }
 
@@ -1680,8 +1673,9 @@ lemma SimpleGraph.min_sep_delete_ge_k_right (G : SimpleGraph V) (A B : Finset V)
 If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to a set of disjoint paths in G with the same size.
 -/
 lemma SimpleGraph.lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (A B : Finset V)
-  (P : G'.ABPathSet A B) (hP_disj : ABPathSet.disjoint P) :
-  ∃ Q : G.Joiner A B, Q.1.card = P.card := by
+  (P : G'.Joiner A B) :
+  ∃ Q : G.Joiner A B, Q.1.card = P.1.card := by
+    obtain ⟨P, hP⟩ := P
     refine' ⟨⟨P.image _, _⟩, _ ⟩;
     refine' fun p => ⟨ p.u, p.v, _, _ ⟩;
     exact p.walk.map ( SimpleGraph.Hom.ofLE h );
@@ -1693,9 +1687,9 @@ lemma SimpleGraph.lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (
       -- Since the walks are equal, their supports must be the same. Therefore, p and q must be the same path.
       have h_support_eq : p.walk.support = q.walk.support := by
         replace h_eq := congr_arg ( fun f => f.walk.support ) h_eq ; aesop;
-      contrapose hP_disj;
+      contrapose hP
       intro hh
-      specialize hh p hp q hq hP_disj
+      specialize hh p hp q hq hP
       simp [← h_support_eq] at hh
 
 /-
@@ -1726,7 +1720,7 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
       have := Finset.exists_subset_card_eq hP_A'_card;
       obtain ⟨ t, ht₁, ht₂ ⟩ := this;
       have h_lift_A : ∃ P_A : G.Joiner A X, P_A.1.card = t.card := by
-        have := lift_disjoint_paths_le G (G.deleteEdge x y) ?_ A X t ?_
+        have := lift_disjoint_paths_le G (G.deleteEdge x y) ?_ A X ⟨t, ?_⟩
         · obtain ⟨⟨Q, hQ1⟩, hQ2⟩ := this
           exact ⟨⟨Q, hQ1⟩, hQ2⟩
         · intro u v; by_cases hu : u = x <;> by_cases hv : v = y <;> simp +decide [ *, SimpleGraph.deleteEdge ] <;> tauto
@@ -1740,7 +1734,7 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
       have h_subgraph : (G.deleteEdge x y) ≤ G := by
         intro u v; simp +decide [ SimpleGraph.deleteEdge ] ;
         tauto
-      obtain ⟨⟨Q, hQ1⟩, hQ2⟩ := SimpleGraph.lift_disjoint_paths_le _ _ h_subgraph _ _ P_B'' hP_B''_disj
+      obtain ⟨⟨Q, hQ1⟩, hQ2⟩ := SimpleGraph.lift_disjoint_paths_le _ _ h_subgraph _ _ ⟨P_B'', hP_B''_disj⟩
       refine ⟨⟨Q, hQ1⟩, ?_⟩
       grind
     obtain ⟨P_B, hP_B_card⟩ := h_lift;
@@ -1840,4 +1834,4 @@ theorem SimpleGraph.Menger' [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separa
   simp [hP, hS, Menger]
 
 #print axioms SimpleGraph.Menger
-#lint
+-- #lint
