@@ -772,17 +772,6 @@ theorem SimpleGraph.disjoint_paths_join (G : SimpleGraph V) (A B : Finset V) (X 
         exact ⟨ by simp, by simp [ hxy.1 ] ⟩)))
 
 /-
-If a set Y separates A and B in the contracted graph, then its preimage separates A and B in the original graph.
--/
-universe u
-
-lemma SimpleGraph.contractEdge_separator_lift_separates {V : Type u} [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V)
-  (Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)))
-  (hY : (G.contractEdge' x y).Separates (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) Y) :
-  G.Separates A B ((SimpleGraph.contractEdge_preimage x y Y)) := by
-    exact contractEdge_preimage_separates ⟨Y, hY⟩
-
-/-
 The size of the preimage of a set Y containing the contracted vertex is |Y| + 1.
 -/
 lemma SimpleGraph.contractEdge_separator_lift_card [Fintype V] (x y : V) (hxy : x ≠ y)
@@ -1476,7 +1465,7 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : F
       simp ; grind
     obtain ⟨X, hX_sep, hX_card⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = Y.card + 1 ∧ x ∈ X ∧ y ∈ X := by
       have := SimpleGraph.contractEdge_separator_contains_vertex G A B x y k h_min ⟨Y, hY_sep⟩ hY_card hxy;
-      have := SimpleGraph.contractEdge_separator_lift_separates G A B x y Y hY_sep;
+      have := SimpleGraph.contractEdge_preimage_separates ⟨Y, hY_sep⟩;
       refine' ⟨ _, this, _, _, _ ⟩ <;> simp_all [ SimpleGraph.contractEdge_preimage ];
       · convert SimpleGraph.contractEdge_separator_lift_card x y hxy Y ‹_› using 1;
       · convert ‹contractEdge_vertex x y ∈ Y› using 1;
@@ -1659,7 +1648,7 @@ lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : F
 Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edges, proved by strong induction on n.
 -/
 theorem SimpleGraph.Menger_strong_aux (n : ℕ) :
-  ∀ (V : Type u) [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V),
+  ∀ (V : Type*) [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V),
   G.edgeFinset.card = n → G.mincut A B ≤ G.maxflow A B := by
     induction' n using Nat.strong_induction_on with n ih;
     intros V _ _ G _ A B h_card
