@@ -226,7 +226,7 @@ theorem maxflow_eq_max [Fintype V] : G.maxflow A B = G.max_disjoint_paths_size A
 /-
 The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
 -/
-theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Finset V) :
+theorem SimpleGraph.Menger_weak (G : SimpleGraph V) (A B : Finset V) :
     G.maxflow A B ≤ G.mincut A B := by
   obtain ⟨S, hS⟩ := @exists_mincut _ G A B
   obtain ⟨P, hP⟩ := exists_maxflow G A B
@@ -235,8 +235,7 @@ theorem SimpleGraph.Menger_weak [Fintype V] (G : SimpleGraph V) (A B : Finset V)
 /-
 Base case of Menger's theorem: if G has no edges, the theorem holds.
 -/
-lemma SimpleGraph.Menger_strong_base [Fintype V] (G : SimpleGraph V) (A B : Finset V)
-    (h : G.edgeSet = ∅) :
+lemma SimpleGraph.Menger_strong_base (G : SimpleGraph V) (A B : Finset V) (h : G.edgeSet = ∅) :
   G.mincut A B ≤ G.maxflow A B := by
     simp at h ; subst G
     have h_empty : ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v := by
@@ -1822,12 +1821,10 @@ lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : 
   (hy : y ∈ X)
   (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
   k ≤ G.maxflow A B := by
-    simp only [maxflow_eq_max] at IH_delete ⊢
     -- Apply the induction hypothesis to the subgraph G-xy.
     have h_ind : (G.deleteEdge x y).maxflow A X ≥ k ∧ (G.deleteEdge x y).maxflow X B ≥ k := by
       have h_ind : (G.deleteEdge x y).mincut A X ≥ k ∧ (G.deleteEdge x y).mincut X B ≥ k := by
         exact ⟨ by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_left G A B x y X k h_min hX_sep hx hy hxy.ne, by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_right G A B x y X k h_min hX_sep hx hy hxy.ne ⟩;
-      simp only [maxflow_eq_max]
       exact ⟨ le_trans h_ind.1 ( IH_delete _ _ ), le_trans h_ind.2 ( IH_delete _ _ ) ⟩;
     -- By the induction hypothesis, there exist sets of disjoint A-X paths and X-B paths in G-xy with size at least k.
     obtain ⟨P_A', hP_A'_disj, hP_A'_card⟩ :
@@ -1858,11 +1855,9 @@ lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : 
     -- By the properties of the contraction, we can combine these paths to get a set of k disjoint A-B paths in G.
     obtain ⟨P, hP_disj, hP_card⟩ : ∃ P : G.ABPathSet A B, P.disjoint ∧ P.card = k := by
       apply_rules [ SimpleGraph.disjoint_paths_join ];
-    refine' le_trans _ ( Finset.le_max' _ _ _ );
-    rotate_left;
-    exact k;
-    · exact Finset.mem_image.mpr ⟨ P, Finset.mem_filter.mpr ⟨ Finset.mem_univ _, hP_disj ⟩, hP_card ⟩;
-    · exact le_rfl
+    rw [maxflow_eq_max]
+    apply Finset.le_max'
+    exact Finset.mem_image.mpr ⟨ P, Finset.mem_filter.mpr ⟨ Finset.mem_univ _, hP_disj ⟩, hP_card ⟩;
 
 /-
 Inductive step for Menger's theorem.
