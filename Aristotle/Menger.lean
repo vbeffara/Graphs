@@ -466,9 +466,9 @@ lemma SimpleGraph.Walk.exists_path_prefix_avoiding_set {G : SimpleGraph V} {u v 
 /-
 If X separates A and B in G and contains x and y, then any separator of A and X in G-xy is also a separator of A and B in G.
 -/
-lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph V) (A B : Finset V) (x y : V)
-    (X : G.Separator A B) (S : Finset V) (hx : x ∈ X.1) (hy : y ∈ X.1) (hxy : x ≠ y)
-    (hS : (G.deleteEdge x y).Separates A X.1 S) : G.Separates A B S := by
+lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph V) (A B : Finset V)
+    (x y : V) (X : G.Separator A B) (S : (G.deleteEdge x y).Separator A X.1) (hx : x ∈ X.1) (hy : y ∈ X.1)
+    (hxy : x ≠ y) : G.Separates A B S.1 := by
     -- Let P be an A-B path in G.
     classical
     intro u hu v hv p
@@ -501,7 +501,7 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph 
           · intro a ha; specialize hq'_support ( List.mem_toFinset.mpr ha ) ; aesop;
       exact hq_path_G_minus_xy q hqpath hq_avoid_xy;
     obtain ⟨ q', hq'_path, hq'_support ⟩ := hq_path_G_minus_xy;
-    have := hS u hu w hwX q';  simp_all [ SimpleGraph.Walk.isPath_def ] ;
+    have := S.2 u hu w hwX q';  simp_all [ SimpleGraph.Walk.isPath_def ] ;
     obtain ⟨ z, hz₁, hz₂ ⟩ := this; exact ⟨ z, by simpa using hq'_support ( by simpa using hz₁ ) |> fun h => hq_support h, hz₂ ⟩ ;
 
 /-
@@ -1519,7 +1519,7 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge_right (G : Simple
     have := @SimpleGraph.separator_in_G_of_separator_in_G_delete_edge;
     specialize this G B A;
     contrapose! this;
-    refine' ⟨ x, y, ⟨X, _⟩, S, hx, hy, hxy, _, _ ⟩;
+    refine' ⟨ x, y, ⟨X, _⟩, ⟨S, _⟩, hx, hy, hxy, _⟩;
     · -- Since separation is symmetric, if X separates A and B, then it also separates B and A.
       have h_symm : G.Separates A B X → G.Separates B A X := by
         exact fun h u hu v hv p => by obtain ⟨ x, hx₁, hx₂ ⟩ := h v hv u hu p.reverse; exact ⟨ x, by simpa using hx₁, hx₂ ⟩ ;
@@ -1543,7 +1543,7 @@ lemma SimpleGraph.min_sep_delete_ge_k_left (G : SimpleGraph V) (A B : Finset V) 
     rw [ ← h_min ];
     apply Nat.find_mono
     intro n ⟨S, hS⟩
-    have := separator_in_G_of_separator_in_G_delete_edge G A B x y ⟨X, hX_sep⟩ S.1 hx hy hxy S.2
+    have := separator_in_G_of_separator_in_G_delete_edge G A B x y ⟨X, hX_sep⟩ S hx hy hxy
     exact ⟨⟨_, this⟩, hS⟩
 
 /-
