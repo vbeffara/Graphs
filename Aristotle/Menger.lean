@@ -509,17 +509,16 @@ If a separator in the contracted graph has size strictly less than the minimum s
 -/
 theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V) (k : ℕ)
   (h_min : G.mincut A B = k)
-  (Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)))
-  (hY_sep : (G.contractEdge' x y).Separates (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) Y)
-  (hY_card : Y.card < k)
+  (Y : (G.contractEdge' x y).Separator (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
+  (hY_card : Y.1.card < k)
   (hxy : x ≠ y) :
-  SimpleGraph.contractEdge_vertex x y ∈ Y := by
+  SimpleGraph.contractEdge_vertex x y ∈ Y.1 := by
     contrapose! hY_card;
     rw [ ← h_min ];
     simp [SimpleGraph.mincut]
-    refine ⟨⟨SimpleGraph.contractEdge_preimage x y Y, ?_⟩, ?_⟩
-    · exact contractEdge_preimage_separates ⟨Y, hY_sep⟩
-    · simp [card_preimage_contractEdge hxy Y, hY_card]
+    refine ⟨⟨SimpleGraph.contractEdge_preimage x y Y.1, ?_⟩, ?_⟩
+    · exact contractEdge_preimage_separates Y
+    · simp [card_preimage_contractEdge hxy Y.1, hY_card]
 
 /-
 If P is a set of disjoint paths from A to X with size equal to X, then every vertex in X is the endpoint of exactly one path in P, and that path intersects X only at its endpoint.
