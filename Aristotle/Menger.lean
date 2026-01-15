@@ -342,71 +342,50 @@ lemma lift_walk_avoiding_contraction {u v : Quotient (contractEdgeSetoid x y)}
 
 /- =========================== REVIEW BAR ===================== -/
 
-end SimpleGraph
--- #exit
-
-/-
-Definitions for the subgraphs avoiding the contraction.
--/
-def SimpleGraph.avoiding_set (x y : V) : Set V := {v | v ≠ x ∧ v ≠ y}
-
-def SimpleGraph.contractEdge_avoiding_set (x y : V) : Set (Quotient (SimpleGraph.contractEdgeSetoid x y)) := {v | v ≠ SimpleGraph.contractEdge_vertex x y}
-
-def SimpleGraph.avoiding_subgraph (G : SimpleGraph V) (x y : V) : SimpleGraph (SimpleGraph.avoiding_set x y) :=
-  G.induce (SimpleGraph.avoiding_set x y)
-
-def SimpleGraph.contractEdge_avoiding_subgraph (G : SimpleGraph V) (x y : V) : SimpleGraph (SimpleGraph.contractEdge_avoiding_set x y) :=
-  (G.contractEdge' x y).induce (SimpleGraph.contractEdge_avoiding_set x y)
-
 /-
 Define deleting a single edge and prove it reduces edge count if the edge exists.
 -/
-def SimpleGraph.deleteEdge (G : SimpleGraph V) (x y : V) : SimpleGraph V :=
+def deleteEdge (G : SimpleGraph V) (x y : V) : SimpleGraph V :=
   G.deleteEdges {Sym2.mk (x, y)}
 
-lemma SimpleGraph.deleteEdge_edgeSet (G : SimpleGraph V) (x y : V) :
-  (G.deleteEdge x y).edgeSet = G.edgeSet \ {Sym2.mk (x, y)} := by
-    ext ⟨ u, v ⟩ ; simp [ SimpleGraph.deleteEdge ]
-
-lemma SimpleGraph.deleteEdge_card_edges_lt [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (x y : V) (h : G.Adj x y) :
+lemma deleteEdge_card_edges_lt [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (x y : V) (h : G.Adj x y) :
   (G.deleteEdge x y).edgeFinset.card < G.edgeFinset.card := by
     refine' Finset.card_lt_card _;
-    simp [SimpleGraph.deleteEdge, h]
+    simp [deleteEdge, h]
+
+end SimpleGraph
+-- #exit
 
 /-
 A path in the contracted graph avoiding the contracted vertex lifts to a path in the original graph avoiding the contracted edge's endpoints (subset support).
 -/
 lemma SimpleGraph.lift_path_avoiding_contraction_AB (G : SimpleGraph V) (A B : Finset V) (x y : V)
-  {u v : Quotient (SimpleGraph.contractEdgeSetoid x y)} (p : (G.contractEdge' x y).Walk u v)
-  (hp_path : p.IsPath)
-  (hp_avoid : SimpleGraph.contractEdge_vertex x y ∉ p.support)
-  (hu : u ∈ SimpleGraph.contractEdge_liftSet x y A)
-  (hv : v ∈ SimpleGraph.contractEdge_liftSet x y B) :
-  ∃ (u' v' : V) (q : G.Walk u' v'),
-    u' ∈ A ∧ v' ∈ B ∧
-    SimpleGraph.contractEdgeProj x y u' = u ∧
-    SimpleGraph.contractEdgeProj x y v' = v ∧
-    q.IsPath ∧
+    {u v : Quotient (SimpleGraph.contractEdgeSetoid x y)} (p : (G.contractEdge' x y).Walk u v)
+    (hp_avoid : SimpleGraph.contractEdge_vertex x y ∉ p.support)
+    (hu : u ∈ SimpleGraph.contractEdge_liftSet x y A) (hv : v ∈ SimpleGraph.contractEdge_liftSet x y B) :
+  ∃ (u' v' : V) (q : G.Walk u' v'), u' ∈ A ∧ v' ∈ B ∧
+    SimpleGraph.contractEdgeProj x y u' = u ∧ SimpleGraph.contractEdgeProj x y v' = v ∧ q.IsPath ∧
     (q.support.toFinset.image (SimpleGraph.contractEdgeProj x y)) ⊆ p.support.toFinset ∧
     x ∉ q.support ∧ y ∉ q.support := by
-      have := @SimpleGraph.lift_walk_avoiding_contraction V G x y u v p hp_avoid;
-      obtain ⟨ u', v', q, hu', hv', hq ⟩ := this;
-      refine' ⟨ u', v', q.toPath, _, _, hu', hv', _, _, _ ⟩ <;> simp_all [ SimpleGraph.Walk.isPath_def ];
-      · simp [contractEdge_liftSet] at hu
-        obtain ⟨ w, hw, rfl ⟩ := hu;
-        cases h1 : eq_or_ne u' x <;> cases h2 : eq_or_ne u' y <;> cases h3 : eq_or_ne w x <;> cases h4 : eq_or_ne w y
-        all_goals subst_eqs
-        all_goals simp_all [ SimpleGraph.contractEdgeProj, Quotient.eq, contractEdgeSetoid ];
-      · simp [contractEdge_liftSet] at hv
-        obtain ⟨ w, hw ⟩ := hv;
-        have h_inj : ∀ a b : V, SimpleGraph.contractEdgeProj x y a = SimpleGraph.contractEdgeProj x y b → a = b ∨ a = x ∧ b = y ∨ a = y ∧ b = x := by
-          intro a b hab; erw [ Quotient.eq ] at hab; aesop;
-        cases h_inj _ _ ( hv'.trans hw.2.symm ) <;> aesop;
-      · rw [ ← hq.1 ];
-        simp [ Finset.subset_iff ];
-        intro a ha;
-        exact ⟨ a, by simpa using SimpleGraph.Walk.support_toPath_subset q ha, rfl ⟩;
-      · exact ⟨ fun h => hq.2.1 <| by simpa using q.support_bypass_subset h, fun h => hq.2.2 <| by simpa using q.support_bypass_subset h ⟩
+  have := @SimpleGraph.lift_walk_avoiding_contraction V G x y u v p hp_avoid;
+  obtain ⟨ u', v', q, hu', hv', hq ⟩ := this;
+  refine' ⟨ u', v', q.toPath, _, _, hu', hv', _, _, _ ⟩
+  · simp [contractEdge_liftSet] at hu
+    obtain ⟨ w, hw, rfl ⟩ := hu;
+    cases h1 : eq_or_ne u' x <;> cases h2 : eq_or_ne u' y <;> cases h3 : eq_or_ne w x <;> cases h4 : eq_or_ne w y
+    all_goals subst_eqs
+    all_goals simp_all [ SimpleGraph.contractEdgeProj, Quotient.eq, contractEdgeSetoid ];
+  · simp [contractEdge_liftSet] at hv
+    obtain ⟨ w, hw ⟩ := hv;
+    have h_inj : ∀ a b : V, SimpleGraph.contractEdgeProj x y a = SimpleGraph.contractEdgeProj x y b → a = b ∨ a = x ∧ b = y ∨ a = y ∧ b = x := by
+      intro a b hab; erw [ Quotient.eq ] at hab; aesop;
+    cases h_inj _ _ ( hv'.trans hw.2.symm ) <;> aesop;
+  · simp_all [ SimpleGraph.Walk.isPath_def ];
+  · rw [ ← hq.1 ];
+    simp [ Finset.subset_iff ];
+    intro a ha;
+    exact ⟨ a, by simpa using SimpleGraph.Walk.support_toPath_subset q ha, rfl ⟩;
+  · exact ⟨ fun h => hq.2.1 <| by simpa using q.support_bypass_subset h, fun h => hq.2.2 <| by simpa using q.support_bypass_subset h ⟩
 
 /-
 If a vertex is adjacent to the contracted vertex in the quotient graph, then it is adjacent to one of the endpoints of the contracted edge in the original graph.
@@ -969,7 +948,7 @@ lemma SimpleGraph.lift_path_to_contraction_end [Fintype V] (G : SimpleGraph V) (
       obtain ⟨ w', q', hq'_path, hw'_adj ⟩ := SimpleGraph.Walk.exists_prefix_path_of_path_ne p' hp'_path h_ne;
       -- Lift $q'$ to a path $q$ in $G$ ending at $w$, avoiding $x,y$.
       obtain ⟨u, w, q, hu, hw, hq_path, hq_support⟩ : ∃ u w : V, ∃ q : G.Walk u w, u ∈ A ∧ SimpleGraph.contractEdgeProj x y u = u' ∧ SimpleGraph.contractEdgeProj x y w = w' ∧ q.IsPath ∧ q.support.toFinset.image (SimpleGraph.contractEdgeProj x y) ⊆ q'.support.toFinset ∧ x ∉ q.support ∧ y ∉ q.support := by
-        have := SimpleGraph.lift_path_avoiding_contraction_AB G A .univ x y q' hw'_adj.1 hw'_adj.2.1 hu' (by
+        have := SimpleGraph.lift_path_avoiding_contraction_AB G A .univ x y q' hw'_adj.2.1 hu' (by
         simp [contractEdge_liftSet]
         exact ⟨ Classical.choose ( Quotient.exists_rep w' ), Classical.choose_spec ( Quotient.exists_rep w' ) ⟩);
         aesop;
@@ -1222,7 +1201,7 @@ lemma SimpleGraph.exists_lifted_ABPath_avoiding (G : SimpleGraph V) (A B : Finse
       -- Apply the `lift_path_avoiding_contraction_AB` lemma to obtain the path `q` in `G`.
       obtain ⟨u, v, q, hu, hv, hq_isPath, hq_support⟩ : ∃ u v : V, ∃ q : G.Walk u v, (u ∈ A ∧ v ∈ B ∧ SimpleGraph.contractEdgeProj x y u = p'.u ∧ SimpleGraph.contractEdgeProj x y v = p'.v ∧ q.IsPath ∧ (q.support.toFinset.image (SimpleGraph.contractEdgeProj x y)) ⊆ p'.walk.support.toFinset ∧ x ∉ q.support ∧ y ∉ q.support) := by
         rcases p' with ⟨ u', v', p', hp'_path ⟩;
-        obtain ⟨ u, v, q, hq ⟩ := SimpleGraph.lift_path_avoiding_contraction_AB G A B x y p' hp'_path hp'_avoid u'.2 v'.2;
+        obtain ⟨ u, v, q, hq ⟩ := SimpleGraph.lift_path_avoiding_contraction_AB G A B x y p' hp'_avoid u'.2 v'.2;
         exact ⟨ u, v, q, hq ⟩;
       refine' ⟨ ⟨ ⟨ u, hu ⟩, ⟨ v, hv ⟩, q, hq_support.2.1 ⟩, _, _, _, _ ⟩ <;> aesop
 
