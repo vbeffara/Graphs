@@ -167,14 +167,12 @@ lemma SimpleGraph.Menger_strong_base (G : SimpleGraph V) (A B : Finset V) (h : G
     · refine Nat.le_findGreatest (Finset.card_mono Finset.inter_subset_left) ?_
       let γ (a : ((A ∩ B) : Finset _)) : (⊥ : SimpleGraph V).ABPath A B :=
         ⟨⟨a, by grind⟩, ⟨a, by grind⟩ , Walk.nil, Walk.IsPath.nil⟩
-      let ps : ABPathSet _ A B := Set.range γ |>.toFinset
-      refine ⟨⟨ps, ?_⟩, ?_⟩
-      · simp [ABPathSet.disjoint]
-        intro ⟨⟨a, ha⟩, ⟨b, hb⟩, p1, hp1⟩ hp2 ⟨⟨a', ha'⟩, ⟨b', hb'⟩, p'1, hp'1⟩ hp'2 h
+      refine ⟨⟨Set.range γ |>.toFinset, ?_⟩, ?_⟩
+      · intro ⟨⟨a, ha⟩, ⟨b, hb⟩, p1, hp1⟩ hp2 ⟨⟨a', ha'⟩, ⟨b', hb'⟩, p'1, hp'1⟩ hp'2 h
         cases p1 ; swap ; contradiction
         cases p'1 ; swap ; contradiction
         simp_all ; grind
-      · simp [ps]
+      · simp
         rw [Finset.card_image_of_injective]
         · simp
         · intro a b ; simp [γ] ; tauto
