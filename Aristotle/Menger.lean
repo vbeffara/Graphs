@@ -1876,30 +1876,25 @@ lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : F
   (IH_contract : (G.contractEdge' x y).mincut (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) ≤ (G.contractEdge' x y).maxflow (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
   (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B')
   : G.mincut A B ≤ G.maxflow A B := by
-    simp only [maxflow_eq_max] at IH_delete IH_contract
+    simp only [maxflow_eq_max] at IH_delete
     by_cases h : ( G.contractEdge' x y ).mincut (contractEdge_liftSet x y A) (contractEdge_liftSet x y B) < G.mincut A B;
     · obtain ⟨X, hX_sep, hX_card, hx, hy⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = G.mincut A B ∧ x ∈ X ∧ y ∈ X := by
         apply_rules [ SimpleGraph.Menger_case2_exists_X ];
         exact hxy.ne;
       have := SimpleGraph.Menger_case2_imp_paths G A B x y hxy ( G.mincut A B ) rfl X hX_sep hX_card hx hy IH_delete;
-      rw [maxflow_eq_max]
+      rw [← maxflow_eq_max] at *
       aesop;
     · -- By the induction hypothesis on the contracted graph, there exists a set P' of disjoint paths in G/e with |P'| ≥ k.
       obtain ⟨P', hP'_card, hP'_disj⟩ : ∃ P' : (G.contractEdge' x y).ABPathSet (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.card ≥ G.mincut A B ∧ P'.disjoint := by
-        have := IH_contract.trans' ( le_of_not_gt h );
-        contrapose! this;
-        rw [ SimpleGraph.max_disjoint_paths_size ];
-        simp_all +decide [ SimpleGraph.disjoint_path_sets ];
-        exact fun P hP => lt_of_not_ge fun hP' => this P hP' hP;
+        obtain ⟨P, hP⟩ := SimpleGraph.exists_maxflow (G := G.contractEdge' x y) (A := contractEdge_liftSet x y A) (B := contractEdge_liftSet x y B)
+        grind
       have h_exists_P : ∃ P : G.ABPathSet A B, P.card = P'.card ∧ P.disjoint := by
         have := SimpleGraph.exists_disjoint_paths_lift G A B x y hxy P' hP'_disj;
         exact ⟨ this.choose, this.choose_spec.2, this.choose_spec.1 ⟩;
       obtain ⟨ P, hP₁, hP₂ ⟩ := h_exists_P;
       refine' le_trans hP'_card _;
-      rw [maxflow_eq_max]
-      rw [ ← hP₁, SimpleGraph.max_disjoint_paths_size ];
-      refine' Finset.le_max' _ _ _;
-      exact Finset.mem_image_of_mem _ ( Finset.mem_coe.mpr ( Finset.mem_filter.mpr ⟨ Finset.mem_univ _, hP₂ ⟩ ) )
+      apply Nat.le_findGreatest $ (Joiner.card_le ⟨P', hP'_disj⟩).trans Finset.card_image_le
+      exact ⟨⟨P, hP₂⟩, hP₁⟩
 
 /-
 Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edges, proved by strong induction on n.
