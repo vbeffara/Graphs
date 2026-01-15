@@ -1819,8 +1819,9 @@ lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : 
   (hX_card : X.card = k)
   (hx : x ∈ X)
   (hy : y ∈ X)
-  (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).max_disjoint_paths_size A' B') :
-  k ≤ G.max_disjoint_paths_size A B := by
+  (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
+  k ≤ G.maxflow A B := by
+    simp only [maxflow_eq_max] at IH_delete ⊢
     -- Apply the induction hypothesis to the subgraph G-xy.
     have h_ind : (G.deleteEdge x y).max_disjoint_paths_size A X ≥ k ∧ (G.deleteEdge x y).max_disjoint_paths_size X B ≥ k := by
       have h_ind : (G.deleteEdge x y).mincut A X ≥ k ∧ (G.deleteEdge x y).mincut X B ≥ k := by
@@ -1876,13 +1877,11 @@ lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : F
   (IH_contract : (G.contractEdge' x y).mincut (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) ≤ (G.contractEdge' x y).maxflow (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
   (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B')
   : G.mincut A B ≤ G.maxflow A B := by
-    simp only [maxflow_eq_max] at IH_delete
     by_cases h : ( G.contractEdge' x y ).mincut (contractEdge_liftSet x y A) (contractEdge_liftSet x y B) < G.mincut A B;
     · obtain ⟨X, hX_sep, hX_card, hx, hy⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = G.mincut A B ∧ x ∈ X ∧ y ∈ X := by
         apply_rules [ SimpleGraph.Menger_case2_exists_X ];
         exact hxy.ne;
       have := SimpleGraph.Menger_case2_imp_paths G A B x y hxy ( G.mincut A B ) rfl X hX_sep hX_card hx hy IH_delete;
-      rw [← maxflow_eq_max] at *
       aesop;
     · -- By the induction hypothesis on the contracted graph, there exists a set P' of disjoint paths in G/e with |P'| ≥ k.
       obtain ⟨P', hP'_card, hP'_disj⟩ : ∃ P' : (G.contractEdge' x y).ABPathSet (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.card ≥ G.mincut A B ∧ P'.disjoint := by
