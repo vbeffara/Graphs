@@ -340,8 +340,6 @@ lemma lift_walk_avoiding_contraction {u v : Quotient (contractEdgeSetoid x y)}
     · tauto;
     · grind
 
-/- =========================== REVIEW BAR ===================== -/
-
 /-
 Define deleting a single edge and prove it reduces edge count if the edge exists.
 -/
@@ -352,6 +350,8 @@ lemma deleteEdge_card_edges_lt [Fintype V] (G : SimpleGraph V) [DecidableRel G.A
   (G.deleteEdge x y).edgeFinset.card < G.edgeFinset.card := by
     refine' Finset.card_lt_card _;
     simp [deleteEdge, h]
+
+/- =========================== REVIEW BAR ===================== -/
 
 end SimpleGraph
 -- #exit
@@ -619,34 +619,31 @@ lemma SimpleGraph.ABPath_suffix_avoids_X (G : SimpleGraph V) (B X : Finset V) (X
 /-
 If X separates A and B, and p is an A-X path hitting X only at the end, and q is an X-B path hitting X only at the start, then p and q intersect only at their common endpoint in X (if any).
 -/
-lemma SimpleGraph.path_intersection_of_separator (G : SimpleGraph V) (A B : Finset V) (X : Finset V)
-  (hX_sep : G.Separates A B X)
-  (p : G.ABPath A X)
-  (q : G.ABPath X B)
-  (hp_X : p.walk.support.toFinset ∩ X = {p.v.1})
-  (hq_X : q.walk.support.toFinset ∩ X = {q.u.1}) :
-  p.walk.support.toFinset ∩ q.walk.support.toFinset ⊆ {p.v.1} ∩ {q.u.1} := by
-    intro x hx;
-    by_cases hxX : x ∈ X <;> simp_all [ Finset.ext_iff ];
-    · exact ⟨ hp_X x |>.1 ⟨ hx.1, hxX ⟩, hq_X x |>.1 ⟨ hx.2, hxX ⟩ ⟩;
-    · -- Since $x \notin X$, we can construct a walk from $A$ to $B$ avoiding $X$.
-      obtain ⟨w1, hw1⟩ : ∃ w1 : G.Walk p.u x, w1.support.toFinset ∩ X = ∅ := by
-        use p.walk.takeUntil x hx.1;
-        apply SimpleGraph.ABPath_prefix_avoids_X;
-        · ext; aesop;
-        · exact hxX
-      obtain ⟨w2, hw2⟩ : ∃ w2 : G.Walk x q.v, w2.support.toFinset ∩ X = ∅ := by
-        use q.walk.dropUntil x hx.2;
-        rw [ SimpleGraph.ABPath_suffix_avoids_X ] <;> aesop
-      have hw : ∃ w : G.Walk p.u q.v, w.support.toFinset ∩ X = ∅ := by
-        use w1.append w2;
-        simp_all [ Finset.ext_iff ];
-        rintro a ( ha | ha ) <;> tauto;
-      contrapose! hX_sep;
-      obtain ⟨ w, hw ⟩ := hw;
-      simp_all [ SimpleGraph.Separates ];
-      refine' ⟨ p.u, p.u.2, q.v, q.v.2, w, _ ⟩
+lemma SimpleGraph.path_intersection_of_separator (X : G.Separator A B) (p : G.ABPath A X.1)
+    (q : G.ABPath X.1 B) (hp_X : p.walk.support.toFinset ∩ X.1 = {p.v.1})
+    (hq_X : q.walk.support.toFinset ∩ X.1 = {q.u.1}) :
+    p.walk.support.toFinset ∩ q.walk.support.toFinset ⊆ {p.v.1} ∩ {q.u.1} := by
+  intro x hx;
+  by_cases hxX : x ∈ X.1 <;> simp_all [ Finset.ext_iff ];
+  · exact ⟨ hp_X x |>.1 ⟨ hx.1, hxX ⟩, hq_X x |>.1 ⟨ hx.2, hxX ⟩ ⟩;
+  · -- Since $x \notin X$, we can construct a walk from $A$ to $B$ avoiding $X$.
+    obtain ⟨w1, hw1⟩ : ∃ w1 : G.Walk p.u x, w1.support.toFinset ∩ X.1 = ∅ := by
+      use p.walk.takeUntil x hx.1;
+      apply SimpleGraph.ABPath_prefix_avoids_X;
+      · ext; aesop;
+      · exact hxX
+    obtain ⟨w2, hw2⟩ : ∃ w2 : G.Walk x q.v, w2.support.toFinset ∩ X.1 = ∅ := by
+      use q.walk.dropUntil x hx.2;
+      rw [ SimpleGraph.ABPath_suffix_avoids_X ] <;> aesop
+    have hw : ∃ w : G.Walk p.u q.v, w.support.toFinset ∩ X.1 = ∅ := by
+      use w1.append w2;
       simp_all [ Finset.ext_iff ];
+      rintro a ( ha | ha ) <;> tauto;
+    have hX_sep := X.2 ; contrapose! hX_sep
+    obtain ⟨ w, hw ⟩ := hw;
+    simp_all [ SimpleGraph.Separates ];
+    refine' ⟨ p.u, p.u.2, q.v, q.v.2, w, _ ⟩
+    simp_all [ Finset.ext_iff ];
 
 /-
 If P is a set of disjoint paths from X to B with size equal to X, then every vertex in X is the start of exactly one path in P, and that path intersects X only at its start.
@@ -702,7 +699,7 @@ lemma SimpleGraph.joined_path_is_path (G : SimpleGraph V) (A B : Finset V) (X : 
   ((p.walk.copy rfl h_p).append (q.walk.copy h_q rfl)).IsPath := by
     -- Since the intersection of the supports of p and q is {x}, their concatenation is a path.
     have h_support_union : (p.walk.copy rfl h_p).support.toFinset ∩ (q.walk.copy h_q rfl).support.toFinset ⊆ {x} := by
-      convert path_intersection_of_separator G A B X hX_sep _ _ _ _ using 2 <;> aesop;
+      convert path_intersection_of_separator ⟨X, hX_sep⟩ _ _ _ _ using 2 <;> aesop;
     apply_rules [ SimpleGraph.Walk.IsPath_append_of_support_inter_subset_one ];
     · cases p ; aesop;
     · cases q ; aesop
@@ -722,10 +719,10 @@ lemma SimpleGraph.joined_paths_disjoint (G : SimpleGraph V) (A B : Finset V) (X 
   Disjoint (px.walk.support.toFinset ∪ qx.walk.support.toFinset) (py.walk.support.toFinset ∪ qy.walk.support.toFinset) := by
     norm_num +zetaDelta at *;
     have hpqx : ∀ w ∈ px.walk.support, w ∉ qy.walk.support := by
-      have := path_intersection_of_separator G A B X hX_sep px qy; simp_all [ Finset.ext_iff ] ;
+      have := path_intersection_of_separator ⟨X, hX_sep⟩ px qy; simp_all [ Finset.ext_iff ] ;
     have hqypx : ∀ w ∈ qx.walk.support, w ∉ py.walk.support := by
       intro w hw hw';
-      have := SimpleGraph.path_intersection_of_separator G A B X hX_sep py qx; simp_all
+      have := SimpleGraph.path_intersection_of_separator ⟨X, hX_sep⟩ py qx; simp_all
       simp_all [ Finset.ext_iff ];
     tauto
 
