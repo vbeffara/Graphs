@@ -1458,7 +1458,7 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : F
   (k : ℕ)
   (h_min : G.mincut A B = k)
   (h_contract_min : (G.contractEdge' x y).mincut (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) < k) :
-  ∃ X : Finset V, G.Separates A B X ∧ X.card = k ∧ x ∈ X ∧ y ∈ X := by
+  ∃ X : G.Separator A B, X.1.card = k ∧ x ∈ X.1 ∧ y ∈ X.1 := by
     obtain ⟨Y, hY_sep, hY_card⟩ : ∃ Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)), (G.contractEdge' x y).Separates (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) Y ∧ Y.card < k := by
       rw [ SimpleGraph.mincut ] at h_contract_min;
       contrapose! h_contract_min;
@@ -1478,7 +1478,7 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : F
         simp [SimpleGraph.mincut]
         exact ⟨⟨S, hS⟩, le_of_eq rfl⟩
       exact hX_card_eq X hX_sep
-    exact ⟨X, hX_sep, by linarith, hX_card.right.left, hX_card.right.right⟩
+    exact ⟨⟨X, hX_sep⟩, by linarith, hX_card.right.left, hX_card.right.right⟩
 
 /-
 If a path intersects X, there is a suffix starting in X that avoids X internally.
@@ -1630,7 +1630,7 @@ lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : F
   (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B')
   : G.mincut A B ≤ G.maxflow A B := by
     by_cases h : ( G.contractEdge' x y ).mincut (contractEdge_liftSet x y A) (contractEdge_liftSet x y B) < G.mincut A B;
-    · obtain ⟨X, hX_sep, hX_card, hx, hy⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = G.mincut A B ∧ x ∈ X ∧ y ∈ X := by
+    · obtain ⟨⟨X, hX_sep⟩, hX_card, hx, hy⟩ : ∃ X : G.Separator A B, X.1.card = G.mincut A B ∧ x ∈ X.1 ∧ y ∈ X.1 := by
         apply_rules [ SimpleGraph.Menger_case2_exists_X ];
         exact hxy.ne;
       have := SimpleGraph.Menger_case2_imp_paths G A B x y hxy ( G.mincut A B ) rfl X hX_sep hX_card hx hy IH_delete;
