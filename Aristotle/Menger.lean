@@ -1744,11 +1744,14 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
     obtain ⟨P, hP_disj, hP_card⟩ : ∃ P : G.ABPathSet A B, ABPathSet.disjoint P ∧ P.card = k := by
       have := @SimpleGraph.disjoint_paths_join V G A B X hX_sep k hX_card ⟨P_A, hP_A_disj⟩ hP_A_card
         ⟨P_B, hP_B_disj⟩ hP_B_card
-      grind
+      obtain ⟨P, hP⟩ := this
+      exact ⟨P.1, P.2, hP⟩
     apply Nat.le_findGreatest
     · rw [← hP_card]
       exact Joiner.card_le ⟨P, hP_disj⟩
     · refine ⟨⟨P, hP_disj⟩, hP_card⟩
+
+#exit
 
 /-
 Inductive step for Menger's theorem.
