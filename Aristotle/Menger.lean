@@ -689,15 +689,15 @@ lemma SimpleGraph.Walk.IsPath_append_of_support_inter_subset_one {G : SimpleGrap
 /-
 If p is an A-X path ending at x, and q is an X-B path starting at x, and both intersect X only at x, then their concatenation is a path.
 -/
-lemma SimpleGraph.joined_path_is_path (G : SimpleGraph V) (A B : Finset V) (X : Finset V)
-  (hX_sep : G.Separates A B X)
+lemma SimpleGraph.joined_path_is_path (G : SimpleGraph V) (A B : Finset V)
+  (X : G.Separator A B)
   (x : V)
-  (p : G.ABPath A X) (h_p : p.v = x) (h_p_X : p.walk.support.toFinset ∩ X = {x})
-  (q : G.ABPath X B) (h_q : q.u = x) (h_q_X : q.walk.support.toFinset ∩ X = {x}) :
+  (p : G.ABPath A X.1) (h_p : p.v = x) (h_p_X : p.walk.support.toFinset ∩ X.1 = {x})
+  (q : G.ABPath X.1 B) (h_q : q.u = x) (h_q_X : q.walk.support.toFinset ∩ X.1 = {x}) :
   ((p.walk.copy rfl h_p).append (q.walk.copy h_q rfl)).IsPath := by
     -- Since the intersection of the supports of p and q is {x}, their concatenation is a path.
     have h_support_union : (p.walk.copy rfl h_p).support.toFinset ∩ (q.walk.copy h_q rfl).support.toFinset ⊆ {x} := by
-      convert path_intersection_of_separator ⟨X, hX_sep⟩ _ _ _ _ using 2 <;> aesop;
+      convert path_intersection_of_separator X _ _ _ _ using 2 <;> aesop;
     apply_rules [ SimpleGraph.Walk.IsPath_append_of_support_inter_subset_one ];
     · cases p ; aesop;
     · cases q ; aesop
@@ -705,52 +705,45 @@ lemma SimpleGraph.joined_path_is_path (G : SimpleGraph V) (A B : Finset V) (X : 
 /-
 If we have two pairs of paths (px, qx) and (py, qy) meeting at x and y respectively, and the pairs are disjoint from each other, and cross-intersections are empty due to separation, then the joined paths are disjoint.
 -/
-lemma SimpleGraph.joined_paths_disjoint (G : SimpleGraph V) (A B : Finset V) (X : Finset V)
-  (hX_sep : G.Separates A B X)
+lemma SimpleGraph.joined_paths_disjoint (G : SimpleGraph V) (A B : Finset V) (X : G.Separator A B)
   (x y : V) (hxy : x ≠ y)
-  (px : G.ABPath A X) (hpx : px.v = x) (hpx_X : px.walk.support.toFinset ∩ X = {x})
-  (py : G.ABPath A X) (hpy : py.v = y) (hpy_X : py.walk.support.toFinset ∩ X = {y})
-  (qx : G.ABPath X B) (hqx : qx.u = x) (hqx_X : qx.walk.support.toFinset ∩ X = {x})
-  (qy : G.ABPath X B) (hqy : qy.u = y) (hqy_X : qy.walk.support.toFinset ∩ X = {y})
+  (px : G.ABPath A X.1) (hpx : px.v = x) (hpx_X : px.walk.support.toFinset ∩ X.1 = {x})
+  (py : G.ABPath A X.1) (hpy : py.v = y) (hpy_X : py.walk.support.toFinset ∩ X.1 = {y})
+  (qx : G.ABPath X.1 B) (hqx : qx.u = x) (hqx_X : qx.walk.support.toFinset ∩ X.1 = {x})
+  (qy : G.ABPath X.1 B) (hqy : qy.u = y) (hqy_X : qy.walk.support.toFinset ∩ X.1 = {y})
   (hp_disj : Disjoint px.walk.support.toFinset py.walk.support.toFinset)
   (hq_disj : Disjoint qx.walk.support.toFinset qy.walk.support.toFinset) :
   Disjoint (px.walk.support.toFinset ∪ qx.walk.support.toFinset) (py.walk.support.toFinset ∪ qy.walk.support.toFinset) := by
     norm_num +zetaDelta at *;
     have hpqx : ∀ w ∈ px.walk.support, w ∉ qy.walk.support := by
-      have := path_intersection_of_separator ⟨X, hX_sep⟩ px qy; simp_all [ Finset.ext_iff ] ;
+      have := path_intersection_of_separator X px qy; simp_all [ Finset.ext_iff ] ;
     have hqypx : ∀ w ∈ qx.walk.support, w ∉ py.walk.support := by
       intro w hw hw';
-      have := SimpleGraph.path_intersection_of_separator ⟨X, hX_sep⟩ py qx; simp_all
+      have := SimpleGraph.path_intersection_of_separator X py qx; simp_all
       simp_all [ Finset.ext_iff ];
     tauto
 
 /-
 If X separates A and B, and we have k disjoint paths from A to X and k disjoint paths from X to B, then we can combine them to form k disjoint paths from A to B.
 -/
-theorem SimpleGraph.disjoint_paths_join (G : SimpleGraph V) (A B : Finset V) (X : Finset V)
-  (hX_sep : G.Separates A B X)
-  (k : ℕ)
-  (hX_card : X.card = k)
-  (P_A : G.Joiner A X)
-  (hP_A_card : P_A.1.card = k)
-  (P_B : G.Joiner X B)
-  (hP_B_card : P_B.1.card = k) :
-  ∃ P : G.Joiner A B, P.1.card = k := by
-    have h_unique_paths : ∀ x ∈ X, ∃! p ∈ P_A.1, p.v = x ∧ p.walk.support.toFinset ∩ X = {x} := by
-      have := SimpleGraph.disjoint_paths_prop G A ( ↑X ) P_A; aesop;
-    have h_unique_paths_start : ∀ x ∈ X, ∃! q ∈ P_B.1, q.u = x ∧ q.walk.support.toFinset ∩ X = {x} := by
-      have := SimpleGraph.disjoint_paths_prop_start G X B P_B; aesop;
+theorem SimpleGraph.disjoint_paths_join (G : SimpleGraph V) (A B : Finset V) (X : G.Separator A B) (k : ℕ)
+  (hX_card : X.1.card = k) (P_A : G.Joiner A X.1) (hP_A_card : P_A.1.card = k) (P_B : G.Joiner X.1 B)
+  (hP_B_card : P_B.1.card = k) : ∃ P : G.Joiner A B, P.1.card = k := by
+    have h_unique_paths : ∀ x ∈ X.1, ∃! p ∈ P_A.1, p.v = x ∧ p.walk.support.toFinset ∩ X.1 = {x} := by
+      have := SimpleGraph.disjoint_paths_prop G A ( ↑X.1 ) P_A; aesop;
+    have h_unique_paths_start : ∀ x ∈ X.1, ∃! q ∈ P_B.1, q.u = x ∧ q.walk.support.toFinset ∩ X.1 = {x} := by
+      have := SimpleGraph.disjoint_paths_prop_start G X.1 B P_B; aesop;
     generalize_proofs at *; (
     choose! p hp hp' using h_unique_paths
     generalize_proofs at *; (
     choose! q hq hq' using h_unique_paths_start
     generalize_proofs at *; (
-    refine ⟨⟨Finset.image (fun (x : X) => ⟨p x x.2 |>.u, q x x.2 |>.v, ?_, ?_⟩) (Finset.univ : Finset X), ?_⟩, ?_⟩
+    refine ⟨⟨Finset.image (fun (x : X.1) => ⟨p x x.2 |>.u, q x x.2 |>.v, ?_, ?_⟩) (Finset.univ : Finset X.1), ?_⟩, ?_⟩
     any_goals rw [ Finset.card_image_of_injOn ];
     · apply p x x.2 |>.walk.copy rfl (hp x x.2 |>.2.1) |>.append
       exact q x x.2 |>.walk.copy ( hq x x.2 |>.2.1 ) rfl
     · refine
-      joined_path_is_path G A B X hX_sep (↑x) (p (↑x) x.property) (hp (↑x) x.property).right.left ?_
+      joined_path_is_path G A B X (↑x) (p (↑x) x.property) (hp (↑x) x.property).right.left ?_
         (q (↑x) x.property) (hq (↑x) x.property).right.left ?_
       · simp [hp]
       · simp [hq]
@@ -761,7 +754,7 @@ theorem SimpleGraph.disjoint_paths_join (G : SimpleGraph V) (A B : Finset V) (X 
       generalize_proofs at *;
       by_cases hxy : x = y;
       · grind;
-      · convert SimpleGraph.joined_paths_disjoint G A B X hX_sep x y ( by simpa ) ( p x x.2 ) ( hp x x.2 |>.2.1 ) ( hp x x.2 |>.2.2 ) ( p y y.2 ) ( hp y y.2 |>.2.1 ) ( hp y y.2 |>.2.2 ) ( q x x.2 ) ( hq x x.2 |>.2.1 ) ( hq x x.2 |>.2.2 ) ( q y y.2 ) ( hq y y.2 |>.2.1 ) ( hq y y.2 |>.2.2 ) _ _ using 1;
+      · convert SimpleGraph.joined_paths_disjoint G A B X x y ( by simpa ) ( p x x.2 ) ( hp x x.2 |>.2.1 ) ( hp x x.2 |>.2.2 ) ( p y y.2 ) ( hp y y.2 |>.2.1 ) ( hp y y.2 |>.2.2 ) ( q x x.2 ) ( hq x x.2 |>.2.1 ) ( hq x x.2 |>.2.2 ) ( q y y.2 ) ( hq y y.2 |>.2.1 ) ( hq y y.2 |>.2.2 ) _ _ using 1;
         · simp [ Finset.ext_iff ];
         · simp [ Finset.ext_iff ];
         · have := P_A.2 ( p x x.2 ) ( hp x x.2 |>.1 ) ( p y y.2 ) ( hp y y.2 |>.1 ) ; simp_all [ Finset.disjoint_left ] ;
@@ -1482,7 +1475,7 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : F
       contrapose! h_contract_min;
       simp ; grind
     obtain ⟨X, hX_sep, hX_card⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = Y.card + 1 ∧ x ∈ X ∧ y ∈ X := by
-      have := SimpleGraph.contractEdge_separator_contains_vertex G A B x y k h_min Y hY_sep hY_card hxy;
+      have := SimpleGraph.contractEdge_separator_contains_vertex G A B x y k h_min ⟨Y, hY_sep⟩ hY_card hxy;
       have := SimpleGraph.contractEdge_separator_lift_separates G A B x y Y hY_sep;
       refine' ⟨ _, this, _, _, _ ⟩ <;> simp_all [ SimpleGraph.contractEdge_preimage ];
       · convert SimpleGraph.contractEdge_separator_lift_card x y hxy Y ‹_› using 1;
@@ -1632,7 +1625,7 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
       refine ⟨⟨Q, hQ1⟩, ?_⟩
       grind
     obtain ⟨P_B, hP_B_card⟩ := h_lift;
-    obtain ⟨P, hP_card⟩ := SimpleGraph.disjoint_paths_join G A B X hX_sep k hX_card ⟨P_A, hP_A_disj⟩ hP_A_card
+    obtain ⟨P, hP_card⟩ := SimpleGraph.disjoint_paths_join G A B ⟨X, hX_sep⟩ k hX_card ⟨P_A, hP_A_disj⟩ hP_A_card
         P_B hP_B_card
     apply Nat.le_findGreatest
     · rw [← hP_card]
