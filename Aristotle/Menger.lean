@@ -1724,13 +1724,14 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
     obtain ⟨⟨P_A, hP_A_disj⟩, hP_A_card⟩ : ∃ P_A : G.Joiner A X, P_A.1.card = k := by
       have := Finset.exists_subset_card_eq hP_A'_card;
       obtain ⟨ t, ht₁, ht₂ ⟩ := this;
-      have h_lift_A : ∃ P_A : G.ABPathSet A X, ABPathSet.disjoint P_A ∧ P_A.card = t.card := by
-        apply_rules [ SimpleGraph.lift_disjoint_paths_le ];
+      have h_lift_A : ∃ P_A : G.Joiner A X, P_A.1.card = t.card := by
+        have := lift_disjoint_paths_le G (G.deleteEdge x y) ?_ A X t ?_
+        · obtain ⟨Q, hQ1, hQ2⟩ := this
+          exact ⟨⟨Q, hQ1⟩, hQ2⟩
         · intro u v; by_cases hu : u = x <;> by_cases hv : v = y <;> simp +decide [ *, SimpleGraph.deleteEdge ] <;> tauto
         · exact fun p hp q hq hpq => hP_A'_disj p ( ht₁ hp ) q ( ht₁ hq ) hpq;
       simp_rw [← ht₂]
-      obtain ⟨Q, hQ1, hQ2⟩ := h_lift_A
-      exact ⟨⟨Q, hQ1⟩, hQ2⟩
+      exact h_lift_A
     obtain ⟨⟨P_B'', hP_B''_disj⟩, hP_B''_card⟩ : ∃ P_B'' : (G.deleteEdge x y).Joiner X B, P_B''.1.card = k := by
       obtain ⟨ P_B'', hP_B''_disj, hP_B''_card ⟩ := Finset.exists_subset_card_eq hP_B'_card;
       exact ⟨⟨P_B'', fun p hp q hq hpq => hP_B'_disj p ( hP_B''_disj hp ) q ( hP_B''_disj hq ) hpq⟩, hP_B''_card ⟩;
