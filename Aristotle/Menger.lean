@@ -1741,17 +1741,12 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
         rw [ hP_B''_card ];
       exact h_lift;
     -- By the properties of the contraction, we can combine these paths to get a set of k disjoint A-B paths in G.
-    obtain ⟨P, hP_disj, hP_card⟩ : ∃ P : G.ABPathSet A B, ABPathSet.disjoint P ∧ P.card = k := by
-      have := @SimpleGraph.disjoint_paths_join V G A B X hX_sep k hX_card ⟨P_A, hP_A_disj⟩ hP_A_card
+    obtain ⟨P, hP_card⟩ := SimpleGraph.disjoint_paths_join G A B X hX_sep k hX_card ⟨P_A, hP_A_disj⟩ hP_A_card
         ⟨P_B, hP_B_disj⟩ hP_B_card
-      obtain ⟨P, hP⟩ := this
-      exact ⟨P.1, P.2, hP⟩
     apply Nat.le_findGreatest
     · rw [← hP_card]
-      exact Joiner.card_le ⟨P, hP_disj⟩
-    · refine ⟨⟨P, hP_disj⟩, hP_card⟩
-
-#exit
+      exact Joiner.card_le P
+    · refine ⟨P, hP_card⟩
 
 /-
 Inductive step for Menger's theorem.
