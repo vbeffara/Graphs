@@ -633,35 +633,34 @@ theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : Simp
 If P is a set of disjoint paths from A to X with size equal to X, then every vertex in X is the endpoint of exactly one path in P, and that path intersects X only at its endpoint.
 -/
 lemma SimpleGraph.disjoint_paths_prop (G : SimpleGraph V) (A X : Finset V)
-    (P : G.ABPathSet A X) (hP_disj : ABPathSet.disjoint P)
-    (hP_card : P.card = X.card) :
-  ∀ x ∈ X, ∃! p ∈ P, p.v = x ∧ p.walk.support.toFinset ∩ X = {x} := by
+    (P : G.Joiner A X) (hP_card : P.1.card = X.card) :
+  ∀ x ∈ X, ∃! p ∈ P.1, p.v = x ∧ p.walk.support.toFinset ∩ X = {x} := by
     -- Since $P$ consists of disjoint paths, the endpoints in $X$ must be distinct. Thus, the map $p \mapsto p.v$ is injective from $P$ to $X$.
-    have h_inj : Set.InjOn (fun p : G.ABPath A X => p.v.1) (P : Set (G.ABPath A X)) := by
+    have h_inj : Set.InjOn (fun p : G.ABPath A X => p.v.1) P.1 := by
       intro p hp q hq h_eq;
-      have := hP_disj p hp q hq; simp_all +decide [ Finset.disjoint_left ] ;
+      have := P.2 p hp q hq; simp_all +decide [ Finset.disjoint_left ] ;
       contrapose! this;
       exact ⟨ this, p.v, by simp, by simp +decide [ h_eq ] ⟩;
     -- Since $|P| = |X|$, this map is a bijection.
-    have h_bij : Set.BijOn (fun p : G.ABPath A X => p.v.1) (P : Set (G.ABPath A X)) X := by
+    have h_bij : Set.BijOn (fun p : G.ABPath A X => p.v.1) P.1 X := by
       refine' ⟨ _, _, _ ⟩;
       · exact fun p hp => by simp
       · exact h_inj;
-      · have h_surj : Finset.image (fun p : G.ABPath A X => p.v.1) P = X := by
+      · have h_surj : Finset.image (fun p : G.ABPath A X => p.v.1) P.1 = X := by
           refine' Finset.eq_of_subset_of_card_le ( Finset.image_subset_iff.mpr _ ) _;
           · exact fun p hp => p.v.2
           · rw [ Finset.card_image_of_injOn h_inj, hP_card ];
         intro x hx; replace h_surj := Finset.ext_iff.mp h_surj x; aesop;
     intro x hx
-    obtain ⟨p, hp⟩ : ∃ p ∈ P, p.v = x := by
+    obtain ⟨p, hp⟩ : ∃ p ∈ P.1, p.v = x := by
       exact h_bij.surjOn ( by simpa );
     -- If $z \in p.support \cap X$ and $z \ne x$, then there exists some $q \in P$ with $q.v = z$.
     by_contra h_contra
     obtain ⟨z, hzP, hzX, hzne⟩ : ∃ z ∈ p.walk.support, z ∈ X ∧ z ≠ x := by
       contrapose! h_contra; use p; aesop;
-    obtain ⟨ q, hqP, hqz ⟩ : ∃ q ∈ P, q.v = z := by
+    obtain ⟨ q, hqP, hqz ⟩ : ∃ q ∈ P.1, q.v = z := by
       have := h_bij.surjOn ( show z ∈ X from by simpa using hzX ) ; aesop;
-    have := hP_disj p hp.1 q hqP; simp_all +decide [ Finset.disjoint_left ] ;
+    have := P.2 p hp.1 q hqP; simp_all +decide [ Finset.disjoint_left ] ;
     exact this ( by rintro rfl; exact hzne ( by aesop ) ) hzP ( by aesop )
 
 /-
@@ -760,28 +759,28 @@ lemma SimpleGraph.path_intersection_of_separator (G : SimpleGraph V) (A B : Fins
 If P is a set of disjoint paths from X to B with size equal to X, then every vertex in X is the start of exactly one path in P, and that path intersects X only at its start.
 -/
 lemma SimpleGraph.disjoint_paths_prop_start (G : SimpleGraph V) (X B : Finset V)
-    (P : G.ABPathSet X B) (hP_disj : ABPathSet.disjoint P) (hP_card : P.card = X.card) :
-  ∀ x ∈ X, ∃! p ∈ P, p.u = x ∧ p.walk.support.toFinset ∩ X = {x} := by
+    (P : G.Joiner X B) (hP_card : P.1.card = X.card) :
+  ∀ x ∈ X, ∃! p ∈ P.1, p.u = x ∧ p.walk.support.toFinset ∩ X = {x} := by
     -- Since $P$ consists of disjoint paths starting in $X$, the start points in $X$ must be distinct.
-    have h_distinct_start : ∀ p q : G.ABPath X B, p ∈ P → q ∈ P → p ≠ q → p.u.1 ≠ q.u.1 := by
-      intro p q hp hq hpq h; specialize hP_disj p hp q hq; simp_all
-      exact hP_disj ( p.walk.start_mem_support ) ( by simp [ h ] );
+    have h_distinct_start : ∀ p q : G.ABPath X B, p ∈ P.1 → q ∈ P.1 → p ≠ q → p.u.1 ≠ q.u.1 := by
+      intro p q hp hq hpq h; have := P.2 p hp q hq; simp_all
+      exact this ( p.walk.start_mem_support ) ( by simp [ h ] );
     -- Since $P$ consists of disjoint paths starting in $X$, the start points in $X$ must be distinct, and thus each $x \in X$ is the start point of exactly one path in $P$.
-    have h_unique_start : ∀ x ∈ X, ∃ p ∈ P, p.u = x := by
-      have h_unique_start : Finset.image (fun p : G.ABPath X B => p.u.1) P = X := by
+    have h_unique_start : ∀ x ∈ X, ∃ p ∈ P.1, p.u = x := by
+      have h_unique_start : Finset.image (fun p : G.ABPath X B => p.u.1) P.1 = X := by
         refine' Finset.eq_of_subset_of_card_le ( Finset.image_subset_iff.mpr _ ) _;
         · exact fun p hp => p.u.2;
         · rw [ Finset.card_image_of_injOn fun p hp q hq hpq => by contrapose! hpq; exact h_distinct_start p q hp hq hpq, hP_card ];
       intro x hx; replace h_unique_start := Finset.ext_iff.mp h_unique_start x; aesop;
     -- For any $x \in X$, since $p$ is a path from $X$ to $B$ starting at $x$, the only element in $X$ that $p$ can intersect is $x$ itself.
-    have h_path_intersects_X_only_at_start : ∀ x ∈ X, ∀ p ∈ P, p.u = x → p.walk.support.toFinset ∩ X = {x} := by
+    have h_path_intersects_X_only_at_start : ∀ x ∈ X, ∀ p ∈ P.1, p.u = x → p.walk.support.toFinset ∩ X = {x} := by
       intro x hx p hp hp_start
       have h_path_intersects_X_only_at_start : ∀ z ∈ p.walk.support, z ∈ X → z = x := by
         intro z hz hzX
         by_contra h_contra;
         obtain ⟨ q, hq, hq_start ⟩ := h_unique_start z ( by simpa using hzX );
-        specialize hP_disj p hp q hq ; simp_all +decide [ Finset.disjoint_left ];
-        exact hP_disj ( by rintro rfl; exact h_contra ( by aesop ) ) hz ( by aesop );
+        have := P.2 p hp q hq ; simp_all +decide [ Finset.disjoint_left ];
+        exact this ( by rintro rfl; exact h_contra ( by aesop ) ) hz ( by aesop );
       ext z; specialize h_path_intersects_X_only_at_start z; aesop;
     exact fun x hx => by obtain ⟨ p, hp₁, hp₂ ⟩ := h_unique_start x hx; exact ⟨ p, ⟨ hp₁, hp₂, h_path_intersects_X_only_at_start x hx p hp₁ hp₂ ⟩, fun q hq => Classical.not_not.1 fun hq' => h_distinct_start q p hq.1 hp₁ hq' <| by aesop ⟩ ;
 
@@ -844,23 +843,21 @@ theorem SimpleGraph.disjoint_paths_join (G : SimpleGraph V) (A B : Finset V) (X 
   (hX_sep : G.Separates A B X)
   (k : ℕ)
   (hX_card : X.card = k)
-  (P_A : G.ABPathSet A X)
-  (hP_A_disj : ABPathSet.disjoint P_A)
-  (hP_A_card : P_A.card = k)
-  (P_B : G.ABPathSet X B)
-  (hP_B_disj : ABPathSet.disjoint P_B)
-  (hP_B_card : P_B.card = k) :
-  ∃ P : G.ABPathSet A B, ABPathSet.disjoint P ∧ P.card = k := by
-    have h_unique_paths : ∀ x ∈ X, ∃! p ∈ P_A, p.v = x ∧ p.walk.support.toFinset ∩ X = {x} := by
-      have := SimpleGraph.disjoint_paths_prop G A ( ↑X ) P_A hP_A_disj; aesop;
-    have h_unique_paths_start : ∀ x ∈ X, ∃! q ∈ P_B, q.u = x ∧ q.walk.support.toFinset ∩ X = {x} := by
-      have := SimpleGraph.disjoint_paths_prop_start G X B P_B hP_B_disj; aesop;
+  (P_A : G.Joiner A X)
+  (hP_A_card : P_A.1.card = k)
+  (P_B : G.Joiner X B)
+  (hP_B_card : P_B.1.card = k) :
+  ∃ P : G.Joiner A B, P.1.card = k := by
+    have h_unique_paths : ∀ x ∈ X, ∃! p ∈ P_A.1, p.v = x ∧ p.walk.support.toFinset ∩ X = {x} := by
+      have := SimpleGraph.disjoint_paths_prop G A ( ↑X ) P_A; aesop;
+    have h_unique_paths_start : ∀ x ∈ X, ∃! q ∈ P_B.1, q.u = x ∧ q.walk.support.toFinset ∩ X = {x} := by
+      have := SimpleGraph.disjoint_paths_prop_start G X B P_B; aesop;
     generalize_proofs at *; (
     choose! p hp hp' using h_unique_paths
     generalize_proofs at *; (
     choose! q hq hq' using h_unique_paths_start
     generalize_proofs at *; (
-    refine ⟨Finset.image (fun (x : X) => ⟨p x x.2 |>.u, q x x.2 |>.v, ?_, ?_⟩) (Finset.univ : Finset X), ?_, ?_⟩
+    refine ⟨⟨Finset.image (fun (x : X) => ⟨p x x.2 |>.u, q x x.2 |>.v, ?_, ?_⟩) (Finset.univ : Finset X), ?_⟩, ?_⟩
     any_goals rw [ Finset.card_image_of_injOn ];
     · apply p x x.2 |>.walk.copy rfl (hp x x.2 |>.2.1) |>.append
       exact q x x.2 |>.walk.copy ( hq x x.2 |>.2.1 ) rfl
@@ -879,13 +876,13 @@ theorem SimpleGraph.disjoint_paths_join (G : SimpleGraph V) (A B : Finset V) (X 
       · convert SimpleGraph.joined_paths_disjoint G A B X hX_sep x y ( by simpa ) ( p x x.2 ) ( hp x x.2 |>.2.1 ) ( hp x x.2 |>.2.2 ) ( p y y.2 ) ( hp y y.2 |>.2.1 ) ( hp y y.2 |>.2.2 ) ( q x x.2 ) ( hq x x.2 |>.2.1 ) ( hq x x.2 |>.2.2 ) ( q y y.2 ) ( hq y y.2 |>.2.1 ) ( hq y y.2 |>.2.2 ) _ _ using 1;
         · simp +decide [ Finset.ext_iff ];
         · simp +decide [ Finset.ext_iff ];
-        · have := hP_A_disj ( p x x.2 ) ( hp x x.2 |>.1 ) ( p y y.2 ) ( hp y y.2 |>.1 ) ; simp_all +decide [ Finset.disjoint_left ] ;
+        · have := P_A.2 ( p x x.2 ) ( hp x x.2 |>.1 ) ( p y y.2 ) ( hp y y.2 |>.1 ) ; simp_all +decide [ Finset.disjoint_left ] ;
           grind;
-        · have := hP_B_disj ( q x x.2 ) ( by simp [ hq ] ) ( q y y.2 ) ( by simp [ hq ] ) ; simp_all +decide [ Finset.disjoint_left ] ;
+        · have := P_B.2 ( q x x.2 ) ( hq x x.2 |>.1 ) ( q y y.2 ) ( hq y y.2 |>.1 ) ; simp_all +decide [ Finset.disjoint_left ] ;
           exact this ( by intro h; have := hq x x.2; have := hq y y.2; aesop );
     · simp +decide [ hX_card ];
     · intro x hx y hy hxy; simp_all +decide [ Finset.ext_iff ] ;
-      have := hP_A_disj ( p x x.2 ) ( hp x x.2 |>.1 ) ( p y y.2 ) ( hp y y.2 |>.1 )
+      have := P_A.2 ( p x x.2 ) ( hp x x.2 |>.1 ) ( p y y.2 ) ( hp y y.2 |>.1 )
       simp_all +decide [ Finset.disjoint_left ] ;
       contrapose! this;
       refine' ⟨ _, _ ⟩;
@@ -1757,7 +1754,9 @@ lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x
       exact h_lift;
     -- By the properties of the contraction, we can combine these paths to get a set of k disjoint A-B paths in G.
     obtain ⟨P, hP_disj, hP_card⟩ : ∃ P : G.ABPathSet A B, ABPathSet.disjoint P ∧ P.card = k := by
-      apply_rules [ SimpleGraph.disjoint_paths_join ];
+      have := @SimpleGraph.disjoint_paths_join V G A B X hX_sep k hX_card ⟨P_A, hP_A_disj⟩ hP_A_card
+        ⟨P_B, hP_B_disj⟩ hP_B_card
+      grind
     apply Nat.le_findGreatest
     · rw [← hP_card]
       exact Joiner.card_le ⟨P, hP_disj⟩
