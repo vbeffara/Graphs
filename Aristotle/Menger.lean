@@ -38,21 +38,6 @@ variable {V : Type*} {G : SimpleGraph V} {u v : V} {A B X : Finset V} {n : ℕ}
 
 namespace SimpleGraph
 
-/-- General lemmas -/
-
-theorem set_walk_length_succ_eq' : {p : G.Walk u v | p.length = n + 1} =
-    ⋃ x : G.neighborSet u, SimpleGraph.Walk.cons x.2 '' { q : G.Walk x v | q.length = n } := by
-  simp [SimpleGraph.set_walk_length_succ_eq]
-
-theorem finiteWalks_of_length [LocallyFinite G] (n : ℕ) :
-    {p : G.Walk u v | p.length = n}.Finite := by
-  induction n generalizing u v with
-  | zero =>
-    by_cases h : u = v
-    · subst h; simp
-    · simp [set_walk_length_zero_eq_of_ne, h]
-  | succ n ih => simpa only [set_walk_length_succ_eq'] using Set.finite_iUnion (fun u => ih.image _)
-
 /-- A-B Paths -/
 
 /-
@@ -64,40 +49,11 @@ structure ABPath (G : SimpleGraph V) (A B : Finset V) where
   walk : G.Walk u v
   isPath : walk.IsPath
 
-namespace ABPath
-
-instance [Fintype V] : Finite (G.ABPath A B) := by
-  -- Since the vertex set is finite, the set of all possible paths between any two vertices is also finite. We can use the fact that the set of all paths between any two vertices is finite.
-  have h_finite_paths : ∀ u v : V, Set.Finite {p : G.Walk u v | p.IsPath} := by
-    intro u v
-    have h_finite_walks : Set.Finite {p : G.Walk u v | p.length ≤ Fintype.card V} := by
-      exact Set.Finite.subset ( Set.Finite.biUnion ( Set.finite_Iic ( Fintype.card V ) ) fun n hn => SimpleGraph.finiteWalks_of_length n ) fun p hp => by aesop;
-    refine' h_finite_walks.subset fun p hp => _;
-    have := hp.length_lt;
-    exact le_of_lt this;
-  -- Since A and B are finite, the set of pairs (u, v) where u is in A and v is in B is also finite.
-  have h_finite_pairs : Set.Finite {p : V × V | p.1 ∈ A ∧ p.2 ∈ B} := by
-    exact Set.toFinite _;
-  have h_finite_paths : Set.Finite {p : Σ u : V, Σ v : V, G.Walk u v | p.1 ∈ A ∧ p.2.1 ∈ B ∧ p.2.2.IsPath} := by
-    have h_finite_paths : Set.Finite (⋃ p ∈ {p : V × V | p.1 ∈ A ∧ p.2 ∈ B}, {q : Σ u : V, Σ v : V, G.Walk u v | q.1 = p.1 ∧ q.2.1 = p.2 ∧ q.2.2.IsPath}) := by
-      refine' Set.Finite.biUnion h_finite_pairs fun p hp => _;
-      exact Set.Finite.subset ( Set.Finite.image ( fun q : G.Walk p.1 p.2 => ⟨ p.1, p.2, q ⟩ ) ( h_finite_paths p.1 p.2 ) ) fun q hq => by aesop;
-    exact h_finite_paths.subset fun p hp => by aesop;
-  convert h_finite_paths.of_injective _ _;
-  exact fun p => ⟨ ⟨ p.u, p.v, p.walk ⟩, p.u.2, p.v.2, p.isPath ⟩;
-  intro p q h; cases p; cases q; aesop;
-
-noncomputable instance [Fintype V] : Fintype (G.ABPath A B) := Fintype.ofFinite _
-
-end ABPath
-
 /-- Path sets -/
 
 @[reducible] def ABPathSet (G : SimpleGraph V) (A B : Finset V) := Finset (G.ABPath A B)
 
 namespace ABPathSet
-
-noncomputable instance [Fintype V] : Fintype (G.ABPathSet A B) := inferInstance
 
 /-
 A set of A-B paths is disjoint if any two distinct paths in the set are vertex-disjoint.
@@ -246,22 +202,6 @@ def SimpleGraph.contractEdge' (G : SimpleGraph V) (x y : V) : SimpleGraph (Quoti
 
 def SimpleGraph.contractEdgeProj (x y : V) : V → Quotient (SimpleGraph.contractEdgeSetoid x y) :=
   Quotient.mk (SimpleGraph.contractEdgeSetoid x y)
-
-/-
-The number of vertices in the contracted graph is strictly less than in the original graph (if x != y). Also define the image of a set under contraction.
--/
-lemma SimpleGraph.contractEdge_card_lt [Fintype V] (x y : V) (h : x ≠ y) :
-  Fintype.card (Quotient (SimpleGraph.contractEdgeSetoid x y)) < Fintype.card V := by
-    have h_card : Fintype.card (Quotient (SimpleGraph.contractEdgeSetoid x y)) ≤ Finset.card (Finset.image (fun z => Quotient.mk (SimpleGraph.contractEdgeSetoid x y) z) (Finset.univ.erase x)) := by
-      have h_card : Finset.image (fun z => Quotient.mk (SimpleGraph.contractEdgeSetoid x y) z) (Finset.univ.erase x) = Finset.univ := by
-        ext z
-        simp [Finset.mem_image];
-        obtain ⟨ a, rfl ⟩ := Quotient.exists_rep z;
-        by_cases ha : a = x;
-        · exact ⟨ y, by tauto, by rw [ ha ] ; exact Quotient.sound ( by tauto ) ⟩;
-        · exact ⟨ a, ha, rfl ⟩;
-      rw [ h_card, Finset.card_univ ];
-    grind
 
 noncomputable def SimpleGraph.contractEdge_liftSet (x y : V) (S : Finset V) :
     Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)) :=
