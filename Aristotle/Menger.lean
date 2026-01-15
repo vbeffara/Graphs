@@ -1459,11 +1459,10 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : F
   (h_min : G.mincut A B = k)
   (h_contract_min : (G.contractEdge' x y).mincut (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) < k) :
   ∃ X : G.Separator A B, X.1.card = k ∧ x ∈ X.1 ∧ y ∈ X.1 := by
-    obtain ⟨Y, hY_sep, hY_card⟩ : ∃ Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)), (G.contractEdge' x y).Separates (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) Y ∧ Y.card < k := by
-      rw [ SimpleGraph.mincut ] at h_contract_min;
-      contrapose! h_contract_min;
-      simp ; grind
-    obtain ⟨X, hX_sep, hX_card⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = Y.card + 1 ∧ x ∈ X ∧ y ∈ X := by
+    obtain ⟨⟨Y, hY_sep⟩, hY_card⟩ : ∃ Y : (G.contractEdge' x y).Separator (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B), Y.1.card < k := by
+      simp [ SimpleGraph.mincut ] at h_contract_min;
+      exact h_contract_min;
+    obtain ⟨X, hX_sep, hX_card⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = Y.1.card + 1 ∧ x ∈ X ∧ y ∈ X := by
       have := SimpleGraph.contractEdge_separator_contains_vertex G A B x y k h_min ⟨Y, hY_sep⟩ hY_card hxy;
       have := SimpleGraph.contractEdge_preimage_separates ⟨Y, hY_sep⟩;
       refine' ⟨ _, this, _, _, _ ⟩ <;> simp_all [ SimpleGraph.contractEdge_preimage ];
@@ -1478,7 +1477,9 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : F
         simp [SimpleGraph.mincut]
         exact ⟨⟨S, hS⟩, le_of_eq rfl⟩
       exact hX_card_eq X hX_sep
-    exact ⟨⟨X, hX_sep⟩, by linarith, hX_card.right.left, hX_card.right.right⟩
+    refine ⟨⟨X, hX_sep⟩, ?_, hX_card.right.left, hX_card.right.right⟩
+    simp_all
+    grind
 
 /-
 If a path intersects X, there is a suffix starting in X that avoids X internally.
