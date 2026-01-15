@@ -166,28 +166,6 @@ end SimpleGraph
 /-- =========================== REVIEW BAR ===================== -/
 
 /-
-The set of all sets of disjoint A-B paths.
--/
-@[deprecated]
-noncomputable def SimpleGraph.disjoint_path_sets [Fintype V] (G : SimpleGraph V) (A B : Finset V) : Finset (G.ABPathSet A B) :=
-  (Finset.powerset Finset.univ).filter (fun P => P.disjoint)
-
-@[deprecated]
-def SimpleGraph.joiner_equiv_disjoint_path_sets [Fintype V] : G.Joiner A B ≃ G.disjoint_path_sets A B where
-  toFun P := ⟨P.1, by simpa [SimpleGraph.disjoint_path_sets] using P.2⟩
-  invFun P := by
-    obtain ⟨P, hP⟩ := P
-    refine ⟨P, by simpa [SimpleGraph.disjoint_path_sets] using hP⟩
-
-/-
-The set of disjoint path sets is nonempty (the empty set is a valid set of disjoint paths).
--/
-lemma SimpleGraph.disjoint_path_sets_nonempty [Fintype V] (G : SimpleGraph V) (A B : Finset V) :
-  (G.disjoint_path_sets A B).Nonempty := by
-  use ∅
-  simp [disjoint_path_sets, ABPathSet.disjoint]
-
-/-
 The minimum size of a separator and the maximum number of disjoint paths.
 -/
 noncomputable def SimpleGraph.mincut (G : SimpleGraph V) (A B : Finset V) : ℕ :=
@@ -201,27 +179,9 @@ theorem SimpleGraph.exists_mincut : ∃ S : G.Separator A B, S.1.card = G.mincut
 noncomputable def SimpleGraph.maxflow (G : SimpleGraph V) (A B : Finset V) : ℕ :=
   Nat.findGreatest (fun n => ∃ P : G.Joiner A B, P.1.card = n) A.card
 
-@[deprecated "Use maxflow instead"]
-noncomputable def SimpleGraph.max_disjoint_paths_size [Fintype V] (G : SimpleGraph V) (A B : Finset V) : ℕ :=
-  ((G.disjoint_path_sets A B).image Finset.card).max' ((G.disjoint_path_sets_nonempty A B).image Finset.card)
-
 theorem SimpleGraph.exists_maxflow (G : SimpleGraph V) (A B : Finset V) :
     ∃ P : G.Joiner A B, P.1.card = G.maxflow A B :=
   Nat.findGreatest_spec (P := fun n => ∃ P : G.Joiner A B, P.1.card = n) (zero_le _) ⟨⟨∅, by tauto⟩, rfl⟩
-
-@[deprecated "Use maxflow directly"]
-theorem maxflow_eq_max [Fintype V] : G.maxflow A B = G.max_disjoint_paths_size A B := by
-  simp [SimpleGraph.maxflow, SimpleGraph.max_disjoint_paths_size, Nat.findGreatest_eq_iff]
-  refine ⟨fun a ha => ?_, fun h => ?_, fun n h1 h2 P => ?_⟩
-  · simp [SimpleGraph.disjoint_path_sets] at ha
-    exact SimpleGraph.Joiner.card_le ⟨a, ha⟩
-  · have := Finset.max'_mem ((G.disjoint_path_sets A B).image Finset.card)
-      ((G.disjoint_path_sets_nonempty A B).image Finset.card)
-    simp at this
-    obtain ⟨P, hP1, hP2⟩ := this
-    simp [SimpleGraph.disjoint_path_sets] at hP1
-    exact ⟨⟨P, hP1⟩, hP2⟩
-  · exact ne_of_lt $ h1 P.1 $ by simpa [SimpleGraph.disjoint_path_sets] using P.2
 
 /-
 The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
