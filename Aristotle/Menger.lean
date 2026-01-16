@@ -47,7 +47,7 @@ def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
 /-
 The set of all vertex sets that separate A from B.
 -/
-def Separator (G : SimpleGraph V) (A B : Finset V) := {S : Finset V // G.Separates A B S}
+def Separator (G : SimpleGraph V) (A B : Finset V) := { S : Finset V // G.Separates A B S }
 
 /-
 The set of separators is nonempty (e.g., the set of all vertices is a separator).
