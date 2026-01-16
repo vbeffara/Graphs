@@ -17,6 +17,8 @@ This project request had uuid: af8cdac2-86a8-4c71-b303-ccb6ba9df119
 import Mathlib
 import Graphs.Util
 
+set_option maxHeartbeats 0
+
 open scoped Classical
 
 variable {V : Type*} {G : SimpleGraph V} {x y u v : V} {A B X : Finset V} {n : ℕ}
@@ -105,6 +107,10 @@ theorem maxflow_eq_maxflow' : G.maxflow A B = G.maxflow' A B :=
 theorem exists_maxflow (G : SimpleGraph V) (A B : Finset V) :
     ∃ P : G.Joiner A B, P.1.card = G.maxflow A B :=
   Nat.findGreatest_spec (P := fun n => ∃ P : G.Joiner A B, P.1.card = n) (zero_le _) ⟨⟨∅, by tauto⟩, rfl⟩
+
+theorem exists_maxflow' (G : SimpleGraph V) (A B : Finset V) :
+    ∃ P : G.Joiner A B, P.1.card = G.maxflow' A B :=
+  find'_spec (p := fun n => ∃ P : G.Joiner A B, P.1.card = n)
 
 /-
 The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
@@ -754,7 +760,8 @@ theorem SimpleGraph.disjoint_paths_join (G : SimpleGraph V) (A B : Finset V) (X 
         · have := P_B.2 ( q x x.2 ) ( hq x x.2 |>.1 ) ( q y y.2 ) ( hq y y.2 |>.1 ) ; simp_all [ Finset.disjoint_left ] ;
           exact this ( by intro h; have := hq x x.2; have := hq y y.2; aesop );
     · simp [ hX_card ];
-    · intro x hx y hy hxy; simp_all [ Finset.ext_iff ] ;
+    · intro x hx y hy hxy;
+      simp_all [ Finset.ext_iff ]
       have := P_A.2 ( p x x.2 ) ( hp x x.2 |>.1 ) ( p y y.2 ) ( hp y y.2 |>.1 )
       simp_all [ Finset.disjoint_left ] ;
       contrapose! this;
