@@ -8,4 +8,5 @@ import Graphs.Minor
 import Graphs.Ramsey
 import Graphs.Smaller
 import Graphs.TopologicalMinor
+import Graphs.Util
 import Graphs.WQO
