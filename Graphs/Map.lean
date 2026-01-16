@@ -15,6 +15,14 @@ def map' (f : V → V') (G : SimpleGraph V) : SimpleGraph V' where
   Adj := Ne ⊓ Relation.Map G.Adj f f
   symm := λ _ _ ⟨h₁, u, v, h₂, h₃, h₄⟩ => ⟨h₁.symm, v, u, h₂.symm, h₄, h₃⟩
 
+-- This is true but `fromRel` is more tedious to use (because it does not use the
+-- symmetry of `G.Adj`, making all proofs more complicated).
+example : map' f G = .fromRel (Relation.Map G.Adj f f) := by
+  ext x y
+  simp [map']
+  rintro h ⟨a, b, hab, rfl, rfl⟩
+  refine ⟨b, a, hab.symm, rfl, rfl⟩
+
 theorem map'_eq_map_of_injective (hf : Injective f) : G.map' f = G.map ⟨f, hf⟩ := by
   ext x y
   simp [map', Relation.Map]
