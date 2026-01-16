@@ -117,7 +117,7 @@ theorem exists_maxflow (G : SimpleGraph V) (A B : Finset V) :
 /-
 The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
 -/
-theorem Menger_weak (G : SimpleGraph V) (A B : Finset V) : G.maxflow A B ≤ G.mincut A B := by
+theorem Menger_weak : G.maxflow A B ≤ G.mincut A B := by
   obtain ⟨S, hS⟩ := exists_mincut G A B
   obtain ⟨P, hP⟩ := exists_maxflow G A B
   simpa [← hS, ← hP] using Joiner.le_sep _ _
@@ -1462,21 +1462,21 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : F
     obtain ⟨⟨Y, hY_sep⟩, hY_card⟩ : ∃ Y : (G.contractEdge' x y).Separator (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B), Y.1.card < k := by
       simp [ SimpleGraph.mincut ] at h_contract_min;
       exact h_contract_min;
-    obtain ⟨X, hX_sep, hX_card⟩ : ∃ X : Finset V, G.Separates A B X ∧ X.card = Y.1.card + 1 ∧ x ∈ X ∧ y ∈ X := by
+    obtain ⟨⟨X, hX_sep⟩, hX_card⟩ : ∃ X : G.Separator A B, X.1.card = Y.1.card + 1 ∧ x ∈ X.1 ∧ y ∈ X.1 := by
       have := SimpleGraph.contractEdge_separator_contains_vertex G A B x y k h_min ⟨Y, hY_sep⟩ hY_card hxy;
       have := SimpleGraph.contractEdge_preimage_separates ⟨Y, hY_sep⟩;
-      refine' ⟨ _, this, _, _, _ ⟩ <;> simp_all [ SimpleGraph.contractEdge_preimage ];
+      refine' ⟨⟨_, this⟩, _, _, _ ⟩ <;> simp_all [ SimpleGraph.contractEdge_preimage ];
       · convert SimpleGraph.contractEdge_separator_lift_card x y hxy Y ‹_› using 1;
       · convert ‹contractEdge_vertex x y ∈ Y› using 1;
       · convert ‹contractEdge_vertex x y ∈ Y› using 1;
         exact Quotient.sound ( Or.inr ( by tauto ) );
     have hX_card_eq : X.card ≥ k := by
-      have hX_card_eq : ∀ (S : Finset V), G.Separates A B S → S.card ≥ k := by
+      have hX_card_eq : ∀ S : G.Separator A B, S.1.card ≥ k := by
         rw [ ← h_min ];
-        intro S hS
+        intro S
         simp [SimpleGraph.mincut]
-        exact ⟨⟨S, hS⟩, le_of_eq rfl⟩
-      exact hX_card_eq X hX_sep
+        exact ⟨S, le_of_eq rfl⟩
+      exact hX_card_eq ⟨X, hX_sep⟩
     refine ⟨⟨X, hX_sep⟩, ?_, hX_card.right.left, hX_card.right.right⟩
     simp_all
     grind
@@ -1494,165 +1494,154 @@ lemma SimpleGraph.Walk.exists_suffix_path_avoiding_set {G : SimpleGraph V} {u v 
 /-
 If X separates A and B in G and contains x and y, then any separator of X and B in G-xy is also a separator of A and B in G.
 -/
-lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge_right (G : SimpleGraph V) (A B : Finset V) (x y : V) (X : Finset V) (S : Finset V)
-  (hX : G.Separates A B X) (hx : x ∈ X) (hy : y ∈ X) (hxy : x ≠ y)
-  (hS : (G.deleteEdge x y).Separates X B S) :
-  G.Separates A B S := by
-    have := @SimpleGraph.separator_in_G_of_separator_in_G_delete_edge;
-    specialize this G B A;
-    contrapose! this;
-    refine' ⟨ x, y, ⟨X, _⟩, ⟨S, _⟩, hx, hy, hxy, _⟩;
-    · -- Since separation is symmetric, if X separates A and B, then it also separates B and A.
-      have h_symm : G.Separates A B X → G.Separates B A X := by
-        exact fun h u hu v hv p => by obtain ⟨ x, hx₁, hx₂ ⟩ := h v hv u hu p.reverse; exact ⟨ x, by simpa using hx₁, hx₂ ⟩ ;
-      exact h_symm hX;
-    · intro u hu v hv p; specialize hS v hv u hu ( p.reverse ) ; aesop;
-    · convert this using 1;
-      simp [ SimpleGraph.Separates ];
-      constructor <;> intro h u hu v hv p;
-      · exact h v hv u hu p.reverse |> fun ⟨ x, hx₁, hx₂ ⟩ => ⟨ x, by simpa using hx₁, hx₂ ⟩;
-      · convert h v hv u hu ( p.reverse ) using 1;
-        simp [ SimpleGraph.Walk.support_reverse ]
+lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge_right (G : SimpleGraph V) (A B : Finset V)
+    (x y : V) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) (hxy : x ≠ y)
+    (S : (G.deleteEdge x y).Separator X.1 B) : G.Separates A B S.1 := by
+  have := @SimpleGraph.separator_in_G_of_separator_in_G_delete_edge;
+  specialize this G B A;
+  contrapose! this;
+  refine' ⟨ x, y, ⟨X.1, _⟩, ⟨S.1, _⟩, hx, hy, hxy, _⟩;
+  · -- Since separation is symmetric, if X separates A and B, then it also separates B and A.
+    have h_symm : G.Separates A B X.1 → G.Separates B A X.1 := by
+      exact fun h u hu v hv p => by obtain ⟨ x, hx₁, hx₂ ⟩ := h v hv u hu p.reverse; exact ⟨ x, by simpa using hx₁, hx₂ ⟩ ;
+    exact h_symm X.2;
+  · intro u hu v hv p; have hS := S.2; specialize hS v hv u hu ( p.reverse ) ; aesop;
+  · convert this using 1;
+    simp [ SimpleGraph.Separates ];
+    constructor <;> intro h u hu v hv p;
+    · exact h v hv u hu p.reverse |> fun ⟨ x, hx₁, hx₂ ⟩ => ⟨ x, by simpa using hx₁, hx₂ ⟩;
+    · convert h v hv u hu ( p.reverse ) using 1;
+      simp [ SimpleGraph.Walk.support_reverse ]
 
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of A and X in G-xy is at least k.
 -/
-lemma SimpleGraph.min_sep_delete_ge_k_left (G : SimpleGraph V) (A B : Finset V) (x y : V) (X : Finset V)
-  (k : ℕ)
-  (h_min : G.mincut A B = k)
-  (hX_sep : G.Separates A B X) (hx : x ∈ X) (hy : y ∈ X) (hxy : x ≠ y) :
-  (G.deleteEdge x y).mincut A X ≥ k := by
+lemma SimpleGraph.min_sep_delete_ge_k_left (G : SimpleGraph V) (A B : Finset V) (x y : V)
+  (k : ℕ) (h_min : G.mincut A B = k) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) (hxy : x ≠ y) :
+  (G.deleteEdge x y).mincut A X.1 ≥ k := by
     rw [ ← h_min ];
     apply Nat.find_mono
     intro n ⟨S, hS⟩
-    have := separator_in_G_of_separator_in_G_delete_edge G A B x y ⟨X, hX_sep⟩ S hx hy hxy
+    have := separator_in_G_of_separator_in_G_delete_edge G A B x y X S hx hy hxy
     exact ⟨⟨_, this⟩, hS⟩
 
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of X and B in G-xy is at least k.
 -/
-lemma SimpleGraph.min_sep_delete_ge_k_right (G : SimpleGraph V) (A B : Finset V) (x y : V) (X : Finset V)
-  (k : ℕ)
-  (h_min : G.mincut A B = k)
-  (hX_sep : G.Separates A B X) (hx : x ∈ X) (hy : y ∈ X) (hxy : x ≠ y) :
-  (G.deleteEdge x y).mincut X B ≥ k := by
+lemma SimpleGraph.min_sep_delete_ge_k_right (G : SimpleGraph V) (A B : Finset V) (x y : V)
+  (k : ℕ) (h_min : G.mincut A B = k) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) (hxy : x ≠ y) :
+  (G.deleteEdge x y).mincut X.1 B ≥ k := by
     -- Let $S$ be a separator of $X$ and $B$ in $G - xy$.
-    have h.separator : ∀ S : Finset V, (G.deleteEdge x y).Separates X B S → G.Separates A B S := by
-      exact fun S a ↦
-        separator_in_G_of_separator_in_G_delete_edge_right G A B x y X S hX_sep hx hy hxy a;
+    have h.separator : ∀ S : (G.deleteEdge x y).Separator X.1 B, G.Separates A B S.1 := by
+      exact fun S ↦
+        separator_in_G_of_separator_in_G_delete_edge_right G A B x y X hx hy hxy S;
     rw [ ← h_min ];
     apply Nat.find_mono
     intro n ⟨S, hS⟩
-    have := h.separator S.1 S.2
+    have := h.separator S
     refine ⟨⟨_, this⟩, hS⟩
 
 /-
 If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to a set of disjoint paths in G with the same size.
 -/
 lemma SimpleGraph.lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (A B : Finset V)
-  (P : G'.Joiner A B) :
-  ∃ Q : G.Joiner A B, Q.1.card = P.1.card := by
-    obtain ⟨P, hP⟩ := P
-    refine' ⟨⟨P.image _, _⟩, _ ⟩;
-    refine' fun p => ⟨ p.u, p.v, _, _ ⟩;
-    exact p.walk.map ( SimpleGraph.Hom.ofLE h );
-    all_goals simp_all [ Finset.disjoint_left, disjointPaths ];
-    exact p.isPath;
-    · bound;
-    · apply Finset.card_image_of_injOn;
-      intro p hp q hq h_eq;
-      -- Since the walks are equal, their supports must be the same. Therefore, p and q must be the same path.
-      have h_support_eq : p.walk.support = q.walk.support := by
-        replace h_eq := congr_arg ( fun f => f.walk.support ) h_eq ; aesop;
-      contrapose hP
-      intro hh
-      specialize hh p hp q hq hP
-      simp [← h_support_eq] at hh
+    (P : G'.Joiner A B) : ∃ Q : G.Joiner A B, Q.1.card = P.1.card := by
+  obtain ⟨P, hP⟩ := P
+  refine' ⟨⟨P.image _, _⟩, _ ⟩;
+  refine' fun p => ⟨ p.u, p.v, _, _ ⟩;
+  exact p.walk.map ( SimpleGraph.Hom.ofLE h );
+  all_goals simp_all [ Finset.disjoint_left, disjointPaths ];
+  exact p.isPath;
+  · bound;
+  · apply Finset.card_image_of_injOn;
+    intro p hp q hq h_eq;
+    -- Since the walks are equal, their supports must be the same. Therefore, p and q must be the same path.
+    have h_support_eq : p.walk.support = q.walk.support := by
+      replace h_eq := congr_arg ( fun f => f.walk.support ) h_eq ; aesop;
+    contrapose hP
+    intro hh
+    specialize hh p hp q hq hP
+    simp [← h_support_eq] at hh
 
 /-
 If there exists a separator X of size k containing x and y, then G has k disjoint A-B paths.
 -/
 lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Finset V) (x y : V) (hxy : G.Adj x y)
-  (k : ℕ)
-  (h_min : G.mincut A B = k)
-  (X : Finset V)
-  (hX_sep : G.Separates A B X)
-  (hX_card : X.card = k)
-  (hx : x ∈ X)
-  (hy : y ∈ X)
-  (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
-  k ≤ G.maxflow A B := by
-    -- Apply the induction hypothesis to the subgraph G-xy.
-    have h_ind : (G.deleteEdge x y).maxflow A X ≥ k ∧ (G.deleteEdge x y).maxflow X B ≥ k := by
-      have h_ind : (G.deleteEdge x y).mincut A X ≥ k ∧ (G.deleteEdge x y).mincut X B ≥ k := by
-        exact ⟨ by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_left G A B x y X k h_min hX_sep hx hy hxy.ne, by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_right G A B x y X k h_min hX_sep hx hy hxy.ne ⟩;
-      exact ⟨ le_trans h_ind.1 ( IH_delete _ _ ), le_trans h_ind.2 ( IH_delete _ _ ) ⟩;
-    -- By the induction hypothesis, there exist sets of disjoint A-X paths and X-B paths in G-xy with size at least k.
-    obtain ⟨⟨P_A', hP_A'_disj⟩, hP_A'_card⟩ : ∃ P_A' : (G.deleteEdge x y).Joiner A X, P_A'.1.card ≥ k := by
-      grind [exists_maxflow (G.deleteEdge x y) A X]
-    obtain ⟨⟨P_B', hP_B'_disj⟩, hP_B'_card⟩ : ∃ P_B' : (G.deleteEdge x y).Joiner X B, P_B'.1.card ≥ k := by
-      grind [exists_maxflow (G.deleteEdge x y) X B]
-    -- By the properties of the contraction, we can lift these paths to G.
-    obtain ⟨⟨P_A, hP_A_disj⟩, hP_A_card⟩ : ∃ P_A : G.Joiner A X, P_A.1.card = k := by
-      have := Finset.exists_subset_card_eq hP_A'_card;
-      obtain ⟨ t, ht₁, ht₂ ⟩ := this;
-      have h_lift_A : ∃ P_A : G.Joiner A X, P_A.1.card = t.card := by
-        have := lift_disjoint_paths_le G (G.deleteEdge x y) ?_ A X ⟨t, ?_⟩
-        · obtain ⟨⟨Q, hQ1⟩, hQ2⟩ := this
-          exact ⟨⟨Q, hQ1⟩, hQ2⟩
-        · intro u v; by_cases hu : u = x <;> by_cases hv : v = y <;> simp [ *, SimpleGraph.deleteEdge ] <;> tauto
-        · exact fun p hp q hq hpq => hP_A'_disj p ( ht₁ hp ) q ( ht₁ hq ) hpq;
-      simp_rw [← ht₂]
-      exact h_lift_A
-    obtain ⟨⟨P_B'', hP_B''_disj⟩, hP_B''_card⟩ : ∃ P_B'' : (G.deleteEdge x y).Joiner X B, P_B''.1.card = k := by
-      obtain ⟨ P_B'', hP_B''_disj, hP_B''_card ⟩ := Finset.exists_subset_card_eq hP_B'_card;
-      exact ⟨⟨P_B'', fun p hp q hq hpq => hP_B'_disj p ( hP_B''_disj hp ) q ( hP_B''_disj hq ) hpq⟩, hP_B''_card ⟩;
-    have h_lift : ∃ P_B : G.Joiner X B, P_B.1.card = k := by
-      have h_subgraph : (G.deleteEdge x y) ≤ G := by
-        intro u v; simp [ SimpleGraph.deleteEdge ] ;
-        tauto
-      obtain ⟨⟨Q, hQ1⟩, hQ2⟩ := SimpleGraph.lift_disjoint_paths_le _ _ h_subgraph _ _ ⟨P_B'', hP_B''_disj⟩
-      refine ⟨⟨Q, hQ1⟩, ?_⟩
-      grind
-    obtain ⟨P_B, hP_B_card⟩ := h_lift;
-    obtain ⟨P, hP_card⟩ := SimpleGraph.disjoint_paths_join G A B ⟨X, hX_sep⟩ k hX_card ⟨P_A, hP_A_disj⟩ hP_A_card
-        P_B hP_B_card
-    apply Nat.le_findGreatest
-    · rw [← hP_card]
-      exact Joiner.card_le P
-    · refine ⟨P, hP_card⟩
+    (k : ℕ) (h_min : G.mincut A B = k) (X : G.Separator A B) (hX_card : X.1.card = k) (hx : x ∈ X.1)
+    (hy : y ∈ X.1) (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
+    k ≤ G.maxflow A B := by
+  -- Apply the induction hypothesis to the subgraph G-xy.
+  have h_ind : (G.deleteEdge x y).maxflow A X.1 ≥ k ∧ (G.deleteEdge x y).maxflow X.1 B ≥ k := by
+    have h_ind : (G.deleteEdge x y).mincut A X.1 ≥ k ∧ (G.deleteEdge x y).mincut X.1 B ≥ k := by
+      exact ⟨ by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_left G A B x y k h_min X hx hy hxy.ne, by simpa only [ ← h_min ] using SimpleGraph.min_sep_delete_ge_k_right G A B x y k h_min X hx hy hxy.ne ⟩;
+    exact ⟨ le_trans h_ind.1 ( IH_delete _ _ ), le_trans h_ind.2 ( IH_delete _ _ ) ⟩;
+  -- By the induction hypothesis, there exist sets of disjoint A-X paths and X-B paths in G-xy with size at least k.
+  obtain ⟨⟨P_A', hP_A'_disj⟩, hP_A'_card⟩ : ∃ P_A' : (G.deleteEdge x y).Joiner A X.1, P_A'.1.card ≥ k := by
+    grind [exists_maxflow (G.deleteEdge x y) A X.1]
+  obtain ⟨⟨P_B', hP_B'_disj⟩, hP_B'_card⟩ : ∃ P_B' : (G.deleteEdge x y).Joiner X.1 B, P_B'.1.card ≥ k := by
+    grind [exists_maxflow (G.deleteEdge x y) X.1 B]
+  -- By the properties of the contraction, we can lift these paths to G.
+  obtain ⟨⟨P_A, hP_A_disj⟩, hP_A_card⟩ : ∃ P_A : G.Joiner A X.1, P_A.1.card = k := by
+    have := Finset.exists_subset_card_eq hP_A'_card;
+    obtain ⟨ t, ht₁, ht₂ ⟩ := this;
+    have h_lift_A : ∃ P_A : G.Joiner A X.1, P_A.1.card = t.card := by
+      have := lift_disjoint_paths_le G (G.deleteEdge x y) ?_ A X.1 ⟨t, ?_⟩
+      · obtain ⟨⟨Q, hQ1⟩, hQ2⟩ := this
+        exact ⟨⟨Q, hQ1⟩, hQ2⟩
+      · intro u v; by_cases hu : u = x <;> by_cases hv : v = y <;> simp [ *, SimpleGraph.deleteEdge ] <;> tauto
+      · exact fun p hp q hq hpq => hP_A'_disj p ( ht₁ hp ) q ( ht₁ hq ) hpq;
+    simp_rw [← ht₂]
+    exact h_lift_A
+  obtain ⟨⟨P_B'', hP_B''_disj⟩, hP_B''_card⟩ : ∃ P_B'' : (G.deleteEdge x y).Joiner X.1 B, P_B''.1.card = k := by
+    obtain ⟨ P_B'', hP_B''_disj, hP_B''_card ⟩ := Finset.exists_subset_card_eq hP_B'_card;
+    exact ⟨⟨P_B'', fun p hp q hq hpq => hP_B'_disj p ( hP_B''_disj hp ) q ( hP_B''_disj hq ) hpq⟩, hP_B''_card ⟩;
+  have h_lift : ∃ P_B : G.Joiner X.1 B, P_B.1.card = k := by
+    have h_subgraph : (G.deleteEdge x y) ≤ G := by
+      intro u v; simp [ SimpleGraph.deleteEdge ] ;
+      tauto
+    obtain ⟨⟨Q, hQ1⟩, hQ2⟩ := SimpleGraph.lift_disjoint_paths_le _ _ h_subgraph _ _ ⟨P_B'', hP_B''_disj⟩
+    refine ⟨⟨Q, hQ1⟩, ?_⟩
+    grind
+  obtain ⟨P_B, hP_B_card⟩ := h_lift;
+  obtain ⟨P, hP_card⟩ := SimpleGraph.disjoint_paths_join G A B X k hX_card ⟨P_A, hP_A_disj⟩ hP_A_card
+      P_B hP_B_card
+  apply Nat.le_findGreatest
+  · rw [← hP_card]
+    exact Joiner.card_le P
+  · refine ⟨P, hP_card⟩
 
 /-
 Inductive step for Menger's theorem.
 -/
 lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : Finset V) (x y : V)
     (hxy : G.Adj x y)
-  (IH_contract : (G.contractEdge' x y).mincut (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) ≤ (G.contractEdge' x y).maxflow (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
-  (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B')
-  : G.mincut A B ≤ G.maxflow A B := by
-    by_cases h : ( G.contractEdge' x y ).mincut (contractEdge_liftSet x y A) (contractEdge_liftSet x y B) < G.mincut A B;
-    · obtain ⟨⟨X, hX_sep⟩, hX_card, hx, hy⟩ : ∃ X : G.Separator A B, X.1.card = G.mincut A B ∧ x ∈ X.1 ∧ y ∈ X.1 := by
-        apply_rules [ SimpleGraph.Menger_case2_exists_X ];
-        exact hxy.ne;
-      have := SimpleGraph.Menger_case2_imp_paths G A B x y hxy ( G.mincut A B ) rfl X hX_sep hX_card hx hy IH_delete;
-      aesop;
-    · -- By the induction hypothesis on the contracted graph, there exists a set P' of disjoint paths in G/e with |P'| ≥ k.
-      obtain ⟨P', hP'_card⟩ : ∃ P' : (G.contractEdge' x y).Joiner (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.1.card ≥ G.mincut A B := by
-        obtain ⟨P, hP⟩ := SimpleGraph.exists_maxflow (G := G.contractEdge' x y) (A := contractEdge_liftSet x y A) (B := contractEdge_liftSet x y B)
-        refine ⟨P, ?_⟩
-        grind
-      refine' le_trans hP'_card _;
-      apply Nat.le_findGreatest $ (Joiner.card_le P').trans Finset.card_image_le
-      exact SimpleGraph.exists_disjoint_paths_lift G A B x y hxy P';
+    (IH_contract : (G.contractEdge' x y).mincut (SimpleGraph.contractEdge_liftSet x y A)
+      (SimpleGraph.contractEdge_liftSet x y B) ≤
+      (G.contractEdge' x y).maxflow (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
+    (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
+    G.mincut A B ≤ G.maxflow A B := by
+  by_cases h : ( G.contractEdge' x y ).mincut (contractEdge_liftSet x y A) (contractEdge_liftSet x y B) < G.mincut A B;
+  · obtain ⟨⟨X, hX_sep⟩, hX_card, hx, hy⟩ : ∃ X : G.Separator A B, X.1.card = G.mincut A B ∧ x ∈ X.1 ∧ y ∈ X.1 := by
+      apply_rules [ SimpleGraph.Menger_case2_exists_X ];
+      exact hxy.ne;
+    have := SimpleGraph.Menger_case2_imp_paths G A B x y hxy ( G.mincut A B ) rfl ⟨X, hX_sep⟩ hX_card hx hy IH_delete;
+    aesop;
+  · -- By the induction hypothesis on the contracted graph, there exists a set P' of disjoint paths in G/e with |P'| ≥ k.
+    obtain ⟨P', hP'_card⟩ : ∃ P' : (G.contractEdge' x y).Joiner (contractEdge_liftSet x y A) (contractEdge_liftSet x y B), P'.1.card ≥ G.mincut A B := by
+      obtain ⟨P, hP⟩ := SimpleGraph.exists_maxflow (G := G.contractEdge' x y) (A := contractEdge_liftSet x y A) (B := contractEdge_liftSet x y B)
+      refine ⟨P, ?_⟩
+      grind
+    refine' le_trans hP'_card _;
+    apply Nat.le_findGreatest $ (Joiner.card_le P').trans Finset.card_image_le
+    exact SimpleGraph.exists_disjoint_paths_lift G A B x y hxy P';
 
 /-
 Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edges, proved by strong induction on n.
 -/
-theorem SimpleGraph.Menger_strong_aux (n : ℕ) :
-  ∀ (V : Type*) [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V),
+theorem SimpleGraph.Menger_strong_aux [Fintype V] (n : ℕ) :
   G.edgeFinset.card = n → G.mincut A B ≤ G.maxflow A B := by
-    induction' n using Nat.strong_induction_on with n ih;
-    intros V _ _ G _ A B h_card
+    induction' n using Nat.strong_induction_on with n ih generalizing V;
+    intros h_card
     by_cases h_empty : G.edgeFinset = ∅;
     · convert SimpleGraph.Menger_strong_base G A B _;
       aesop;
@@ -1667,24 +1656,20 @@ theorem SimpleGraph.Menger_strong_aux (n : ℕ) :
       have h_delete : (G.deleteEdge x y).edgeFinset.card < n := by
         apply SimpleGraph.deleteEdge_card_edges_lt G x y hxy |> lt_of_lt_of_le <| by aesop;
       apply SimpleGraph.Menger_inductive_step G A B x y hxy;
-      · convert ih _ h_contract _ _ _ _ rfl;
-      · exact fun A' B' ↦
-        (fun {i₁ i₂} ↦ String.Pos.Raw.mk_le_mk.mp)
-          (ih (G.deleteEdge x y).edgeFinset.card h_delete V (G.deleteEdge x y) A' B' rfl)
+      · apply ih _ h_contract ; rfl
+      · intro A' B' ; apply ih _ h_delete ; rfl
 
 /-
 Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G. (This is the strong direction: min separator <= max paths)
 -/
-theorem SimpleGraph.Menger_strong [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V) :
-  G.mincut A B ≤ G.maxflow A B := by
-    convert SimpleGraph.Menger_strong_aux ( G.edgeFinset.card ) V G A B rfl
+theorem SimpleGraph.Menger_strong [Fintype V] : G.mincut A B ≤ G.maxflow A B :=
+  Menger_strong_aux _ rfl
 
 /-
 Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G.
 -/
-theorem SimpleGraph.Menger [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (A B : Finset V) :
-  G.mincut A B = G.maxflow A B := by
-    exact le_antisymm ( SimpleGraph.Menger_strong G A B ) ( SimpleGraph.Menger_weak G A B )
+theorem SimpleGraph.Menger [Fintype V] : G.mincut A B = G.maxflow A B :=
+  le_antisymm SimpleGraph.Menger_strong SimpleGraph.Menger_weak
 
 /-
 Menger's theorem: there exist a separator set `S` between `A` and `B` and a set
