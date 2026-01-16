@@ -37,10 +37,36 @@ theorem FarkasLemma (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) : Exact
       linarith [s4 x hx]
     let e (i : Fin n) : Fin n → ℝ := fun j => if j = i then 1 else 0
     let x (i : Fin n) := w + e i
-    have s6 : ∀ i, 0 ≤ y ⬝ᵥ (A *ᵥ e i) := sorry
-    have s7 : ∀ i, 0 ≤ (y ᵥ* A) i := sorry
+    have s12 : ∀ i, e i = x i - w := by simp [x]
+    have s13 : ∀ i, 0 ≤ x i := by
+      intro i j
+      simp [x, e]
+      split_ifs <;> specialize hw₁ j <;> simp at hw₁ <;> linarith
+    have s6 : ∀ i, 0 ≤ y ⬝ᵥ (A *ᵥ e i) := by
+      intro i
+      rw [s12]
+      exact s5 (x i) (s13 i)
+    have s7 : ∀ i, 0 ≤ (y ᵥ* A) i := by
+      intro i
+      convert s6 i
+      simp [dotProduct_mulVec]
+      simp only [dotProduct, e]
+      rw [Finset.sum_eq_single i]
+      · simp [↓reduceIte]
+      · simp ; grind
+      · simp
     have s8 : 0 ≤ y ᵥ* A := s7
-    have s9 : y ⬝ᵥ b = y ⬝ᵥ (A *ᵥ w) - y ⬝ᵥ y := sorry
-    have s10 : y ⬝ᵥ (A *ᵥ w) ≤ 0 := sorry
-    have s11 : y ⬝ᵥ (A *ᵥ w) - y ⬝ᵥ y < 0 := sorry
+    have s9 : y ⬝ᵥ b = y ⬝ᵥ (A *ᵥ w) - y ⬝ᵥ y := by simp [y]
+    have s10 : y ⬝ᵥ (A *ᵥ w) ≤ 0 := by
+      have := s4 0 le_rfl
+      simp at this
+      simpa [y]
+    have s14 : y ⬝ᵥ y > 0 := by
+      have r1 : y = A *ᵥ w - b := rfl
+      have r2 : b ∉ K := s1
+      have r3 : A *ᵥ w ∈ K := ⟨w, hw₁, rfl⟩
+      have r4 : A *ᵥ w ≠ b := by grind
+      have r5 : y ≠ 0 := by simp [r1, sub_eq_zero, r4]
+      exact Matrix.dotProduct_star_self_pos_iff.mpr r5
+    have s11 : y ⬝ᵥ (A *ᵥ w) - y ⬝ᵥ y < 0 := by linarith
     exact ⟨y, s8, by linarith⟩
