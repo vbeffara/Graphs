@@ -2,6 +2,7 @@ import Graphs.Basic
 import Graphs.Cayley
 import Graphs.Contraction
 import Graphs.Expander
+import Graphs.Farkas
 import Graphs.GraphMinorTheorem
 import Graphs.Map
 import Graphs.Minor
