@@ -12,6 +12,27 @@ theorem exactlyOneOf_iff {P Q : Prop} : ExactlyOneOf P Q ↔ (P ↔ ¬Q) := by
 theorem exactlyOneOf_iff' {P Q : Prop} : ExactlyOneOf P Q ↔ (¬(P ∧ Q) ∧ (¬P → Q)) := by
   simp [ExactlyOneOf] ; tauto
 
+@[reducible] def V (n : ℕ) := PiLp 2 (fun _ : Fin n => ℝ)
+
+theorem HB₀ (K : Set (V n)) (b : V n) (hK1 : Convex ℝ K) (hK2 : IsClosed K) (hK3 : K.Nonempty) :
+    ∃ p ∈ K, ∀ x ∈ K, inner ℝ (b - p) (x - p) ≤ 0 := by
+  obtain ⟨p, hp₁, hp₂⟩ := hK2.exists_infDist_eq_dist hK3 b
+  refine ⟨p, hp₁, norm_eq_iInf_iff_real_inner_le_zero hK1 hp₁ |>.mp ?_⟩
+  simpa [dist_eq_norm, Metric.infDist_eq_iInf] using hp₂.symm
+
+theorem HB (K : Set (Fin n → ℝ)) (b : Fin n → ℝ) (hK1 : Convex ℝ K) (hK2 : IsClosed K)
+    (hK3 : K.Nonempty) (hb : b ∉ K) : ∃ p ∈ K, ∀ x ∈ K, (b - p) ⬝ᵥ (x - p) ≤ 0 := by
+  let φ : (Fin n → ℝ) → (V n) := WithLp.toLp 2
+  let ψ : (V n) → (Fin n → ℝ) := WithLp.ofLp
+  have h1 : Convex ℝ (φ '' K) := sorry
+  have h2 : IsClosed (φ '' K) := sorry
+  have h3 : (φ '' K).Nonempty := sorry
+  obtain ⟨q, ⟨p, hp, rfl⟩, hq₂⟩ := HB₀ (φ '' K) (φ b) h1 h2 h3
+  refine ⟨p, hp, fun x hx => ?_⟩
+  specialize hq₂ (φ x) ⟨x, hx, rfl⟩
+  rw [EuclideanSpace.inner_toLp_toLp] at hq₂
+  simpa only [WithLp.ofLp_sub, star_trivial, φ, dotProduct_comm] using hq₂
+
 theorem FarkasLemma (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) : ExactlyOneOf
     (∃ x : Fin n → ℝ, (A *ᵥ x = b) ∧ (0 ≤ x))
     (∃ y : Fin m → ℝ, (0 ≤ y ᵥ* A) ∧ (y ⬝ᵥ b < 0)) := by
@@ -26,9 +47,12 @@ theorem FarkasLemma (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) : Exact
     let K := { y : Fin m → ℝ | ∃ x : Fin n → ℝ, 0 ≤ x ∧ A *ᵥ x = y }
     have s1 : b ∉ K := by grind
     have s2 : IsClosed K := sorry
+    have s14 : Convex ℝ K := sorry
     have s3 : K.Nonempty := ⟨0, 0, le_rfl, mulVec_zero A⟩
-    obtain ⟨p, ⟨w, hw₁, rfl⟩, hp₂⟩ := s2.exists_infDist_eq_dist s3 b
-    have s4 : ∀ x ≥ 0, (b - A *ᵥ w) ⬝ᵥ (A *ᵥ x - A *ᵥ w) ≤ 0 := sorry -- Geometric lemma
+    obtain ⟨p, ⟨w, hw₁, rfl⟩, hw₂⟩ := HB K b s14 s2 s3 s1
+    have s4 : ∀ x ≥ 0, (b - A *ᵥ w) ⬝ᵥ (A *ᵥ x - A *ᵥ w) ≤ 0 := by
+      intro x hx
+      exact hw₂ (A *ᵥ x) ⟨x, hx, rfl⟩
     let y := A *ᵥ w - b
     have s5 : ∀ x ≥ 0, 0 ≤ y ⬝ᵥ (A *ᵥ (x - w)) := by
       intro x hx
