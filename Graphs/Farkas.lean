@@ -1,6 +1,6 @@
 import Mathlib
 
-open Matrix
+open Matrix Metric
 
 variable {m n : ℕ} (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ)
 
@@ -44,11 +44,11 @@ theorem FarkasLemma (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) : Exact
                  _ < 0 := hy₂
     linarith
   · intro h
-    let K := { y : Fin m → ℝ | ∃ x : Fin n → ℝ, 0 ≤ x ∧ A *ᵥ x = y }
-    have s1 : b ∉ K := by grind
-    have s2 : IsClosed K := sorry
-    have s14 : Convex ℝ K := sorry
-    have s3 : K.Nonempty := ⟨0, 0, le_rfl, mulVec_zero A⟩
+    let K := ImgCone A
+    have s1 : b ∉ K := by rintro ⟨x, hx1, hx2⟩ ; exact h ⟨x, hx2, hx1⟩
+    have s2 : IsClosed K.carrier := K.isClosed
+    have s14 : Convex ℝ K.carrier := K.convex
+    have s3 : K.carrier.Nonempty := K.nonempty
     obtain ⟨p, ⟨w, hw₁, rfl⟩, hw₂⟩ := HB K b s14 s2 s3 s1
     have s4 : ∀ x ≥ 0, (b - A *ᵥ w) ⬝ᵥ (A *ᵥ x - A *ᵥ w) ≤ 0 := by
       intro x hx
@@ -86,11 +86,75 @@ theorem FarkasLemma (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) : Exact
       simp at this
       simpa [y]
     have s14 : y ⬝ᵥ y > 0 := by
-      have r1 : y = A *ᵥ w - b := rfl
-      have r2 : b ∉ K := s1
       have r3 : A *ᵥ w ∈ K := ⟨w, hw₁, rfl⟩
-      have r4 : A *ᵥ w ≠ b := by grind
-      have r5 : y ≠ 0 := by simp [r1, sub_eq_zero, r4]
+      have r4 : A *ᵥ w ≠ b := by contrapose s1 ; simpa [← s1]
+      have r5 : y ≠ 0 := by simp [y, sub_eq_zero, r4]
       exact Matrix.dotProduct_star_self_pos_iff.mpr r5
     have s11 : y ⬝ᵥ (A *ᵥ w) - y ⬝ᵥ y < 0 := by linarith
     exact ⟨y, s8, by linarith⟩
+
+theorem isClosed_cone_of_ball (C : PointedCone ℝ (V n)) (hC : IsClosed (closedBall 0 1 ∩ C.carrier)) :
+    IsClosed C.carrier := by
+  let C' := (ball 0 1)ᶜ ∩ C.carrier
+  suffices h : IsClosed C'
+  · convert hC.union h ; ext ; simp [C'] ; grind
+  let f : V n → V n := fun x => (1 / ‖x‖) • x
+  have h1 : ContinuousOn f (ball 0 1)ᶜ := by
+    have s0 : (∀ x ∈ Set.Ici (1 : ℝ), id x ≠ 0) := by grind
+    have s1 : ContinuousOn (fun (x : ℝ) ↦ 1 / x) (Set.Ici 1) := by
+      have := @ContinuousOn.inv₀ ℝ ℝ _ _ _ _ id (Set.Ici 1) _ continuousOn_id s0
+      simp_rw [inv_eq_one_div] at this
+      exact this
+    have s2 : Set.MapsTo (fun (x : V n) ↦ ‖x‖) (ball 0 1)ᶜ (Set.Ici 1) := by simp [Set.MapsTo]
+    exact ContinuousOn.smul (s1.comp continuous_norm.continuousOn s2) continuousOn_id
+  have h2 : IsClosed (ball (0 : V n) 1)ᶜ := by simp only [isClosed_compl_iff, isOpen_ball]
+  have key := h1.preimage_isClosed_of_isClosed h2 hC
+  convert key using 1
+  ext x
+  simp [C', f, norm_smul]
+  intro hx
+  have h3 : ‖x‖ ≠ 0 := by linarith
+  simp [h3]
+  constructor
+  · apply C.smul_mem
+    positivity
+  · intro h
+    simpa [smul_smul, h3] using C.smul_mem (r := ‖x‖) (by positivity) h
+
+theorem coneclosed (S : Finset (V n)) : IsClosed (PointedCone.span ℝ (S : Set (V n))).carrier := by
+  induction S using Finset.induction with
+  | empty => simpa using isClosed_singleton
+  | insert a s _ _ =>
+    simp [PointedCone.span, Submodule.span_insert]
+    sorry
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--
