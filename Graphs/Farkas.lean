@@ -124,12 +124,17 @@ theorem isClosed_cone_of_ball (C : PointedCone ℝ E) (hC : IsClosed (closedBall
   · exact C.smul_mem (by positivity) h
   · simpa [smul_smul, h3] using C.smul_mem (r := ‖x‖) (by positivity) h
 
-theorem coneclosed (S : Finset (V n)) : IsClosed (PointedCone.span ℝ (S : Set (V n))).carrier := by
-  induction S using Finset.induction with
-  | empty => simpa using isClosed_singleton
-  | insert a s _ _ =>
-    simp [PointedCone.span, Submodule.span_insert]
-    sorry
+theorem coneclosed [ContinuousAdd E] (S : Finset E) :
+    IsClosed (PointedCone.span ℝ (S : Set E) : Set E) := by
+  let K1 := stdSimplex ℝ S
+  have h1 : IsCompact K1 := isCompact_stdSimplex _
+  let φ (f : S → ℝ) : E := ∑ s : S, f s • s
+  have h2 : Continuous φ := by continuity
+  let K2 : Set E := φ '' K1
+  have h3 : IsCompact K2 := h1.image h2
+  apply isClosed_cone_of_ball
+
+  sorry
 
 
 
