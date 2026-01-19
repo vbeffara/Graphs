@@ -44,11 +44,11 @@ theorem FarkasLemma (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) : Exact
                  _ < 0 := hy₂
     linarith
   · intro h
-    let K := ImgCone A
+    let K := (fun x => A *ᵥ x) '' {x | 0 ≤ x}
     have s1 : b ∉ K := by rintro ⟨x, hx1, hx2⟩ ; exact h ⟨x, hx2, hx1⟩
-    have s2 : IsClosed K.carrier := K.isClosed
-    have s14 : Convex ℝ K.carrier := K.convex
-    have s3 : K.carrier.Nonempty := K.nonempty
+    have s2 : IsClosed K := sorry
+    have s14 : Convex ℝ K := sorry
+    have s3 : K.Nonempty := sorry
     obtain ⟨p, ⟨w, hw₁, rfl⟩, hw₂⟩ := HB K b s14 s2 s3 s1
     have s4 : ∀ x ≥ 0, (b - A *ᵥ w) ⬝ᵥ (A *ᵥ x - A *ᵥ w) ≤ 0 := by
       intro x hx
@@ -93,21 +93,28 @@ theorem FarkasLemma (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) : Exact
     have s11 : y ⬝ᵥ (A *ᵥ w) - y ⬝ᵥ y < 0 := by linarith
     exact ⟨y, s8, by linarith⟩
 
-theorem isClosed_cone_of_ball (C : PointedCone ℝ (V n)) (hC : IsClosed (closedBall 0 1 ∩ C.carrier)) :
-    IsClosed C.carrier := by
-  let C' := (ball 0 1)ᶜ ∩ C.carrier
+variable {E : Type*}
+  [AddCommMonoid E]
+  [Module ℝ E]
+  [SeminormedAddGroup E]
+  [ContinuousSMul ℝ E]
+  [NormSMulClass ℝ E]
+
+theorem isClosed_cone_of_ball (C : PointedCone ℝ E) (hC : IsClosed (closedBall (0 : E) 1 ∩ C)) :
+    IsClosed (C : Set E) := by
+  let C' : Set E := (ball 0 1)ᶜ ∩ C
   suffices h : IsClosed C'
   · convert hC.union h ; ext ; simp [C'] ; grind
-  let f : V n → V n := fun x => (1 / ‖x‖) • x
+  let f : E → E := fun x => (1 / ‖x‖) • x
   have h1 : ContinuousOn f (ball 0 1)ᶜ := by
     have s0 : (∀ x ∈ Set.Ici (1 : ℝ), id x ≠ 0) := by grind
     have s1 : ContinuousOn (fun (x : ℝ) ↦ 1 / x) (Set.Ici 1) := by
       have := @ContinuousOn.inv₀ ℝ ℝ _ _ _ _ id (Set.Ici 1) _ continuousOn_id s0
       simp_rw [inv_eq_one_div] at this
       exact this
-    have s2 : Set.MapsTo (fun (x : V n) ↦ ‖x‖) (ball 0 1)ᶜ (Set.Ici 1) := by simp [Set.MapsTo]
+    have s2 : Set.MapsTo (fun (x : E) ↦ ‖x‖) (ball 0 1)ᶜ (Set.Ici 1) := by simp [Set.MapsTo]
     exact ContinuousOn.smul (s1.comp continuous_norm.continuousOn s2) continuousOn_id
-  have h2 : IsClosed (ball (0 : V n) 1)ᶜ := by simp only [isClosed_compl_iff, isOpen_ball]
+  have h2 : IsClosed (ball (0 : E) 1)ᶜ := by simp only [isClosed_compl_iff, isOpen_ball]
   have key := h1.preimage_isClosed_of_isClosed h2 hC
   convert key using 1
   ext x
