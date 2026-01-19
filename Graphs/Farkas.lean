@@ -20,6 +20,8 @@ theorem HB₀ (K : Set (V n)) (b : V n) (hK1 : Convex ℝ K) (hK2 : IsClosed K) 
   refine ⟨p, hp₁, norm_eq_iInf_iff_real_inner_le_zero hK1 hp₁ |>.mp ?_⟩
   simpa [dist_eq_norm, Metric.infDist_eq_iInf] using hp₂.symm
 
+#check ConvexCone.hyperplane_separation_of_nonempty_of_isClosed_of_notMem
+
 theorem HB (K : Set (Fin n → ℝ)) (b : Fin n → ℝ) (hK1 : Convex ℝ K) (hK2 : IsClosed K)
     (hK3 : K.Nonempty) (hb : b ∉ K) : ∃ p ∈ K, ∀ x ∈ K, (b - p) ⬝ᵥ (x - p) ≤ 0 := by
   let φ : (Fin n → ℝ) → (V n) := WithLp.toLp 2
@@ -102,31 +104,25 @@ variable {E : Type*}
 
 theorem isClosed_cone_of_ball (C : PointedCone ℝ E) (hC : IsClosed (closedBall (0 : E) 1 ∩ C)) :
     IsClosed (C : Set E) := by
-  let C' : Set E := (ball 0 1)ᶜ ∩ C
-  suffices h : IsClosed C'
-  · convert hC.union h ; ext ; simp [C'] ; grind
+  suffices IsClosed ((ball 0 1)ᶜ ∩ C : Set E) by { convert hC.union this ; ext ; simp ; grind }
   let f : E → E := fun x => (1 / ‖x‖) • x
   have h1 : ContinuousOn f (ball 0 1)ᶜ := by
-    have s0 : (∀ x ∈ Set.Ici (1 : ℝ), id x ≠ 0) := by grind
+    have s0 (x : ℝ) (hx : x ∈ Set.Ici 1) : x ≠ 0 := by
+      simp only [Set.mem_Ici] at hx ; linarith
     have s1 : ContinuousOn (fun (x : ℝ) ↦ 1 / x) (Set.Ici 1) := by
-      have := @ContinuousOn.inv₀ ℝ ℝ _ _ _ _ id (Set.Ici 1) _ continuousOn_id s0
-      simp_rw [inv_eq_one_div] at this
-      exact this
+      simpa using continuousOn_id.inv₀ s0
     have s2 : Set.MapsTo (fun (x : E) ↦ ‖x‖) (ball 0 1)ᶜ (Set.Ici 1) := by simp [Set.MapsTo]
-    exact ContinuousOn.smul (s1.comp continuous_norm.continuousOn s2) continuousOn_id
+    exact (s1.comp continuous_norm.continuousOn s2).smul continuousOn_id
   have h2 : IsClosed (ball (0 : E) 1)ᶜ := by simp only [isClosed_compl_iff, isOpen_ball]
-  have key := h1.preimage_isClosed_of_isClosed h2 hC
-  convert key using 1
+  convert h1.preimage_isClosed_of_isClosed h2 hC using 1
   ext x
-  simp [C', f, norm_smul]
+  suffices 1 ≤ ‖x‖ → (x ∈ C ↔ ‖x‖⁻¹ * ‖x‖ ≤ 1 ∧ ‖x‖⁻¹ • x ∈ C) by simpa [f, norm_smul]
   intro hx
   have h3 : ‖x‖ ≠ 0 := by linarith
-  simp [h3]
-  constructor
-  · apply C.smul_mem
-    positivity
-  · intro h
-    simpa [smul_smul, h3] using C.smul_mem (r := ‖x‖) (by positivity) h
+  simp only [ne_eq, h3, not_false_eq_true, inv_mul_cancel₀, le_refl, true_and]
+  constructor <;> intro h
+  · exact C.smul_mem (by positivity) h
+  · simpa [smul_smul, h3] using C.smul_mem (r := ‖x‖) (by positivity) h
 
 theorem coneclosed (S : Finset (V n)) : IsClosed (PointedCone.span ℝ (S : Set (V n))).carrier := by
   induction S using Finset.induction with
