@@ -21,6 +21,36 @@
   infinite increasing subsequence.
 \end{corollary}
 
+\begin{proof}
+  Let \(\leq\) be a quasi-order on \(X\). 
+  
+  Suppose that \(X\) is well-quasi-ordered.
+
+  Let \((x_i)_{i\in\mathbb{N}}\) an infinite sequence in \(X\).
+
+  There exists an index \(i\) such that \(\{j>i/x_i\leq x_j\}\) is infinite.
+
+  Indeed, if we suppose not, for all index \(i\), there exists \(j>i\) such that \(x_i\not\leq x_j\)
+
+  Therefore, as \((x_i)_{i\in\mathbb{N}}\) is infinite, we can construct an infinite subsequence \((x_{i_k})_{k\in\mathbb{N}}\) such that \(\forall k\in\mathbb{N}, x_{i_k}\not\leq\x_{i_{k+1}}\)
+  
+  This is an antichain which contradicts the well-quasi-ordered property.
+
+  Let \(i_0\) be an index such that \(\{j>i_0/x_{i_0}\leq x_j\}\) is infinite.
+
+  We proceed by induction. 
+  
+  Let \(n\in\mathbb{N}\), we suppose constructed \(x_{i_0},...,x_{i_n}\) such that \(i_0<...<i_n\), \(x_{i_0}\leq ...\leq x_{i_n}\) and \(A_n:=\{j>i_n/x_{i_n}\leq x_j\}\) is infinite.
+  
+  \((x_i)_{i\in A_n}\) is an infinite sequence in \(X\), therefore, according to the previous result, there exists an index \(i_{n+1}\in A_n\) such that \(A_{n+1}=\{j>i_{n+1}/x_{i_{n+1}}\leq x_j\}\) is infinite.
+  
+  As \(i_{n+1}\in A_n\), it follows that \(i_n<i_{n+1}\) and \(x_{i_n}\leq x_{i_{n+1}}\)
+  
+  We have obtained \(x_{i_0},...,x_{i_{n+1}}\) such that \(i_0<...<i_{n+1}\), \(x_{i_0}\leq ...\leq x_{i_{n+1}}\) and \(A_{n+1}=\{j>i_n/x_{i_{n+1}}\leq x_j\}\) is infinite, which concludes the induction
+  
+  We have constructed an infinite increasing subsequence \((x_{i_k})_{k\in\mathbb{N}}\) of \((x_i)_{i\in\mathbb{N}}\)
+\end{proof}
+
 \begin{theorem}[Higman's Lemma, Diestel 12.1.3]
   \label{theo:Higman} \lean{Higman} \leanok
   If $X$ is well-quasi-ordered by , then so is $[X]^{<ω}$.
