@@ -33,21 +33,18 @@ def prev {n : ℕ} (i : Fin n) : Fin n :=
 end Fin
 
 structure PlanarMap (V : Type*) where
-  degree : V → ℕ
-  α' : Perm (Σ v, Fin (degree v))
+  deg : V → ℕ
+  α' : Perm (Σ v, Fin (deg v))
   α_ne e : α' e ≠ e
-  α_sq : α' * α' = 1
+  α_sq e : α' (α' e) = e
 
 variable {G : PlanarMap V}
 
 namespace PlanarMap
 
-def darts (G : PlanarMap V) := Σ v, Fin (G.degree v)
+def darts (G : PlanarMap V) := Σ v, Fin (G.deg v)
 
 instance [Fintype V] : Fintype G.darts := by unfold darts ; infer_instance
-
-theorem darts_even [Fintype V] : Even (Fintype.card G.darts) := by
-  sorry
 
 def σ (G : PlanarMap V) : Perm (darts G) where
   toFun e := ⟨e.1, e.2.next⟩
@@ -69,6 +66,33 @@ def n_edges [Fintype V] (G : PlanarMap V) : ℕ := Fintype.card (G.darts) / 2
 
 noncomputable def n_faces [Fintype V] (G : PlanarMap V) : ℕ := by
   exact G.φ.cycleType.card + Fintype.card (fixedPoints G.φ)
+
+@[simp] theorem fixedPoints_α [Fintype V] : fixedPoints G.α = ∅ := by
+  by_contra! ; obtain ⟨e, he⟩ := this ; exact G.α_ne e he
+
+theorem darts_even [Fintype V] : Even (Fintype.card G.darts) := by
+  let S : Finset (Finset G.darts) := Finset.image ( fun e  => { e, G.α e } ) Finset.univ
+  have h1 : ∀ s ∈ S, s.card = 2 := by
+    simp only [S, Finset.mem_image, Finset.mem_univ, true_and, forall_exists_index,
+      forall_apply_eq_imp_iff]
+    intro e
+    exact Finset.card_pair (G.α_ne e).symm
+  have h3 : (Finset.univ : Finset G.darts) = Finset.biUnion S id := by
+    ext e; simp [S, Finset.mem_biUnion, Finset.mem_image]
+  have h4 : (S : Set (Finset G.darts)).PairwiseDisjoint id := by
+    simp [S]
+    rintro d1 ⟨e1, rfl⟩ d2 ⟨e2, rfl⟩
+    simp [Finset.disjoint_left]
+    have h1 : G.α e1 ≠ e1 := G.α_ne e1
+    have h2 : G.α e2 ≠ e2 := G.α_ne e2
+    have h3 : G.α (G.α e1) = e1 := G.α_sq e1
+    have h4 : G.α (G.α e2) = e2 := G.α_sq e2
+    grind
+  have h_even_card : Even (Finset.card (Finset.univ : Finset G.darts)) := by
+    rw [h3, Finset.card_biUnion h4]
+    apply Finset.even_sum
+    grind
+  exact h_even_card
 
 noncomputable def χ [Fintype V] (G : PlanarMap V) : ℤ :=
   G.n_vertices - G.n_edges + G.n_faces
