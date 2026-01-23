@@ -71,7 +71,7 @@ noncomputable def n_faces [Fintype V] (G : PlanarMap V) : ℕ := by
   by_contra! ; obtain ⟨e, he⟩ := this ; exact G.α_ne e he
 
 theorem darts_even [Fintype V] : Even (Fintype.card G.darts) := by
-  let S : Finset (Finset G.darts) := Finset.image ( fun e  => { e, G.α e } ) Finset.univ
+  let S : Finset (Finset G.darts) := Finset.image (fun e => {e, G.α e}) Finset.univ
   have h1 : ∀ s ∈ S, s.card = 2 := by
     simp only [S, Finset.mem_image, Finset.mem_univ, true_and, forall_exists_index,
       forall_apply_eq_imp_iff]
@@ -83,16 +83,10 @@ theorem darts_even [Fintype V] : Even (Fintype.card G.darts) := by
     simp [S]
     rintro d1 ⟨e1, rfl⟩ d2 ⟨e2, rfl⟩
     simp [Finset.disjoint_left]
-    have h1 : G.α e1 ≠ e1 := G.α_ne e1
-    have h2 : G.α e2 ≠ e2 := G.α_ne e2
-    have h3 : G.α (G.α e1) = e1 := G.α_sq e1
-    have h4 : G.α (G.α e2) = e2 := G.α_sq e2
+    have s1 : ∀ e, G.α e ≠ e := G.α_ne
+    have s2 : ∀ e, G.α (G.α e) = e := G.α_sq
     grind
-  have h_even_card : Even (Finset.card (Finset.univ : Finset G.darts)) := by
-    rw [h3, Finset.card_biUnion h4]
-    apply Finset.even_sum
-    grind
-  exact h_even_card
+  simpa [← Finset.card_univ, h3, Finset.card_biUnion h4] using Finset.even_sum _ (by grind)
 
 noncomputable def χ [Fintype V] (G : PlanarMap V) : ℤ :=
   G.n_vertices - G.n_edges + G.n_faces
