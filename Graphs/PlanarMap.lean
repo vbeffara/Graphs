@@ -36,13 +36,13 @@ structure PlanarMap (V : Type*) where
   deg : V → ℕ
   α' : Perm (Σ v, Fin (deg v))
   α'_ne e : α' e ≠ e
-  α'_sq e : α' (α' e) = e
-
-variable {G : PlanarMap V}
+  α'_sq : α' ^ 2 = 1
 
 namespace PlanarMap
 
 def darts (G : PlanarMap V) := Σ v, Fin (G.deg v)
+
+variable {G : PlanarMap V} {e : G.darts}
 
 instance [Fintype V] : Fintype G.darts := by unfold darts ; infer_instance
 
@@ -52,13 +52,15 @@ def σ (G : PlanarMap V) : Perm (darts G) where
   left_inv e := by simp
   right_inv e := by simp
 
-@[simp] theorem σ_fst {e : G.darts} : (G.σ e).1 = e.1 := rfl
+@[simp] theorem σ_fst : (G.σ e).1 = e.1 := rfl
 
 def α (G : PlanarMap V) : Perm (darts G) := G.α'
 
-@[simp] theorem α_ne {e : G.darts} : G.α e ≠ e := G.α'_ne e
+@[simp] theorem α_ne : G.α e ≠ e := G.α'_ne e
 
-@[simp] theorem α_sq {e : G.darts} : G.α (G.α e) = e := G.α'_sq e
+@[simp] theorem α_sq : G.α ^ 2 = 1 := G.α'_sq
+
+@[simp] theorem α_α : G.α (G.α e) = e := by change (G.α ^ 2) e = e ; simp
 
 def φ (G : PlanarMap V) : Perm (darts G) := (G.σ)⁻¹ * (G.α)⁻¹
 
@@ -75,19 +77,8 @@ noncomputable def n_faces [Fintype V] (G : PlanarMap V) : ℕ := by
   by_contra! ; obtain ⟨e, he⟩ := this ; exact G.α_ne he
 
 theorem darts_even [Fintype V] : Even (Fintype.card G.darts) := by
-  let S : Finset (Finset G.darts) := Finset.image (fun e => {e, G.α e}) Finset.univ
-  have h1 : ∀ s ∈ S, s.card = 2 := by
-    simp only [S, Finset.mem_image, Finset.mem_univ, true_and, forall_exists_index,
-      forall_apply_eq_imp_iff]
-    exact fun e => Finset.card_pair G.α_ne.symm
-  have h3 : (Finset.univ : Finset G.darts) = Finset.biUnion S id := by
-    ext e; simp [S, Finset.mem_biUnion, Finset.mem_image]
-  rw [← Finset.card_univ, h3, Finset.card_biUnion]
-  · apply Finset.even_sum _ (by grind)
-  · simp only [Finset.coe_image, Finset.coe_univ, Set.image_univ, S]
-    rintro d1 ⟨e1, rfl⟩ d2 ⟨e2, rfl⟩
-    simp [Finset.disjoint_left]
-    grind [α_sq]
+  have h2 : G.α.support = Finset.univ := by ext e ; simp
+  simpa [even_iff_two_dvd, ← Finset.card_univ, ← h2] using G.α.two_dvd_card_support G.α_sq
 
 noncomputable def χ [Fintype V] (G : PlanarMap V) : ℤ :=
   G.n_vertices - G.n_edges + G.n_faces
