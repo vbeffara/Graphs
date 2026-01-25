@@ -32,9 +32,11 @@
 
   Indeed, if we suppose not, for all index \(i\), there exists \(j>i\) such that \(x_i\not\leq x_j\)
 
-  Therefore, as \((x_i)_{i\in\mathbb{N}}\) is infinite, we can construct an infinite subsequence \((x_{i_k})_{k\in\mathbb{N}}\) such that \(\forall k\in\mathbb{N}, x_{i_k}\not\leq\x_{i_{k+1}}\)
+  Therefore, as \((x_i)_{i\in\mathbb{N}}\) is infinite, we can construct an infinite subsequence \((x_{i_k})_{k\in\mathbb{N}}\) such that \(\forall k\in\mathbb{N}, x_{i_k}>\x_{i_{k+1}}\) or \(x_{i_k}\) and \(\x_{i_{k+1}}\) are incomparable
   
-  This is an antichain which contradicts the well-quasi-ordered property.
+  Suppose there is an infinite subsequence of incomparable elements, this is an antichain which contradicts the well-quasi-ordered property.
+
+  If not, there exists an index \(k_*\) such that \(\forall k>k_*, x_{i_k}>\x_{i_{k+1}}\), this is an infinite strictly decreasing sequence which also contradicts the well-quasi-ordered property.
 
   Let \(i_0\) be an index such that \(\{j>i_0/x_{i_0}\leq x_j\}\) is infinite.
 
