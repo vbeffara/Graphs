@@ -6,6 +6,7 @@ import Graphs.Farkas
 import Graphs.GraphMinorTheorem
 import Graphs.Map
 import Graphs.Minor
+import Graphs.PlanarMap
 import Graphs.Ramsey
 import Graphs.Smaller
 import Graphs.TopologicalMinor
