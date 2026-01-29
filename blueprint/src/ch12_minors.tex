@@ -2,6 +2,29 @@
 
 \section{Well-quasi-ordering}
 
+\begin{lemma}
+  \label{QO_tricolor} \lean{QO_tricolor} \uses{theo:ramsey_infgraph}
+  If \(X\) is a quasi-ordered set, in any infinite sequence, there exists either an infinite increasing subsequence, an infinite strictly decreasing subsequence or an infinite antichain
+\end{lemma}
+
+\begin{proof}
+  Let \(\leq\) be a quasi-order on \(X\)
+
+  Let \((x_i)_{i\in\mathbb{N}}\) be an infinite sequence in \(X\)
+
+  Let \(K\) be the complete graph on \(\mathbb{N}\)
+
+  Let \(C=\{0,1,2\}\) a set of colors
+
+  For each edge \((i,j)\in E(K)\), we assign to it the color \(0\) if \(x_i\leq x_j\), \(1\) if \(x_i>x_j\) and \(2\) if \(x_i\) and \(x_j\) are incomparable
+
+  By Ramsey's Theorem, there exists an subset \(S\subset E(K)\) which is infinite and monochromatic
+
+  Therefore, if its color is \(0\), then for all \((i,j)\in S, x_i\leq x_j\), if its color is \(1\), then for all \((i,j)\in S, x_i>x_j\) and if its color is \(2\), then for all \((i,j)\in S\), \(x_i\) and \(x_j\) are incomparable
+
+  It follows that there exists either an infinite increasing subsequence, an infinite strictly decreasing subsequence or an infinite antichain
+\end{proof}
+
 \begin{proposition}
   \label{WQO_iff} \lean{WQO_iff} \leanok \mathlibok
   A quasi-ordering $\leq$ on $X$ is a well-quasi-ordering if and only if $X$
@@ -21,37 +44,37 @@
   infinite increasing subsequence.
 \end{corollary}
 
-\begin{proof}
-  Let \(\leq\) be a quasi-order on \(X\). 
+% \begin{proof}
+%   Let \(\leq\) be a quasi-order on \(X\). 
   
-  Suppose that \(X\) is well-quasi-ordered.
+%   Suppose that \(X\) is well-quasi-ordered.
 
-  Let \((x_i)_{i\in\mathbb{N}}\) an infinite sequence in \(X\).
+%   Let \((x_i)_{i\in\mathbb{N}}\) an infinite sequence in \(X\).
 
-  There exists an index \(i\) such that \(\{j>i/x_i\leq x_j\}\) is infinite.
+%   There exists an index \(i\) such that \(\{j>i/x_i\leq x_j\}\) is infinite.
 
-  Indeed, if we suppose not, for all index \(i\), there exists \(j>i\) such that \(x_i\not\leq x_j\)
+%   Indeed, if we suppose not, for all index \(i\), there exists \(j>i\) such that \(x_i\not\leq x_j\)
 
-  Therefore, as \((x_i)_{i\in\mathbb{N}}\) is infinite, we can construct an infinite subsequence \((x_{i_k})_{k\in\mathbb{N}}\) such that \(\forall k\in\mathbb{N}, x_{i_k}>\x_{i_{k+1}}\) or \(x_{i_k}\) and \(\x_{i_{k+1}}\) are incomparable
+%   Therefore, as \((x_i)_{i\in\mathbb{N}}\) is infinite, we can construct an infinite subsequence \((x_{i_k})_{k\in\mathbb{N}}\) such that \(\forall k\in\mathbb{N}, x_{i_k}>\x_{i_{k+1}}\) or \(x_{i_k}\) and \(\x_{i_{k+1}}\) are incomparable
   
-  Suppose there is an infinite subsequence of incomparable elements, this is an antichain which contradicts the well-quasi-ordered property.
+%   Suppose there is an infinite subsequence of incomparable elements, this is an antichain which contradicts the well-quasi-ordered property.
 
-  If not, there exists an index \(k_*\) such that \(\forall k>k_*, x_{i_k}>\x_{i_{k+1}}\), this is an infinite strictly decreasing sequence which also contradicts the well-quasi-ordered property.
+%   If not, there exists an index \(k_*\) such that \(\forall k>k_*, x_{i_k}>\x_{i_{k+1}}\), this is an infinite strictly decreasing sequence which also contradicts the well-quasi-ordered property.
 
-  Let \(i_0\) be an index such that \(\{j>i_0/x_{i_0}\leq x_j\}\) is infinite.
+%   Let \(i_0\) be an index such that \(\{j>i_0/x_{i_0}\leq x_j\}\) is infinite.
 
-  We proceed by induction. 
+%   We proceed by induction. 
   
-  Let \(n\in\mathbb{N}\), we suppose constructed \(x_{i_0},...,x_{i_n}\) such that \(i_0<...<i_n\), \(x_{i_0}\leq ...\leq x_{i_n}\) and \(A_n:=\{j>i_n/x_{i_n}\leq x_j\}\) is infinite.
+%   Let \(n\in\mathbb{N}\), we suppose constructed \(x_{i_0},...,x_{i_n}\) such that \(i_0<...<i_n\), \(x_{i_0}\leq ...\leq x_{i_n}\) and \(A_n:=\{j>i_n/x_{i_n}\leq x_j\}\) is infinite.
   
-  \((x_i)_{i\in A_n}\) is an infinite sequence in \(X\), therefore, according to the previous result, there exists an index \(i_{n+1}\in A_n\) such that \(A_{n+1}=\{j>i_{n+1}/x_{i_{n+1}}\leq x_j\}\) is infinite.
+%   \((x_i)_{i\in A_n}\) is an infinite sequence in \(X\), therefore, according to the previous result, there exists an index \(i_{n+1}\in A_n\) such that \(A_{n+1}=\{j>i_{n+1}/x_{i_{n+1}}\leq x_j\}\) is infinite.
   
-  As \(i_{n+1}\in A_n\), it follows that \(i_n<i_{n+1}\) and \(x_{i_n}\leq x_{i_{n+1}}\)
+%   As \(i_{n+1}\in A_n\), it follows that \(i_n<i_{n+1}\) and \(x_{i_n}\leq x_{i_{n+1}}\)
   
-  We have obtained \(x_{i_0},...,x_{i_{n+1}}\) such that \(i_0<...<i_{n+1}\), \(x_{i_0}\leq ...\leq x_{i_{n+1}}\) and \(A_{n+1}=\{j>i_n/x_{i_{n+1}}\leq x_j\}\) is infinite, which concludes the induction
+%   We have obtained \(x_{i_0},...,x_{i_{n+1}}\) such that \(i_0<...<i_{n+1}\), \(x_{i_0}\leq ...\leq x_{i_{n+1}}\) and \(A_{n+1}=\{j>i_n/x_{i_{n+1}}\leq x_j\}\) is infinite, which concludes the induction
   
-  We have constructed an infinite increasing subsequence \((x_{i_k})_{k\in\mathbb{N}}\) of \((x_i)_{i\in\mathbb{N}}\)
-\end{proof}
+%   We have constructed an infinite increasing subsequence \((x_{i_k})_{k\in\mathbb{N}}\) of \((x_i)_{i\in\mathbb{N}}\)
+% \end{proof}
 
 \begin{theorem}[Higman's Lemma, Diestel 12.1.3]
   \label{theo:Higman} \lean{Higman} \leanok

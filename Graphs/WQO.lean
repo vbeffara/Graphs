@@ -2,6 +2,9 @@ import Mathlib
 
 variable {α : Type*} [PartialOrder α]
 
+theorem QO_tricolor {X : Type*} [Preorder X] {f : ℕ → X} : ∃ g : ℕ → ℕ, (∀ n : ℕ, g n ≤ g (n + 1)) ∧ ((∀ i : ℕ, ∀ j : ℕ, f (g i) ≤ f (g j)) ∨ (∀ i : ℕ, ∀ j : ℕ, f (g i) > f (g j)) ∨ (∀ i : ℕ, ∀ j : ℕ, ¬ ((f (g i) ≤ f (g j)) ∨ (f (g i) > f (g j))))) := by
+  sorry
+
 theorem StrictAnti_iff_descending {X : Type*} [Preorder X] {f : ℕ → X} :
     StrictAnti f ↔ ∀ n, f (n + 1) < f n := by
   refine ⟨?_, strictAnti_nat_of_succ_lt⟩
