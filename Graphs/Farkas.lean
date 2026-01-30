@@ -20,7 +20,7 @@ theorem HB₀ (K : Set (V n)) (b : V n) (hK1 : Convex ℝ K) (hK2 : IsClosed K) 
   refine ⟨p, hp₁, norm_eq_iInf_iff_real_inner_le_zero hK1 hp₁ |>.mp ?_⟩
   simpa [dist_eq_norm, Metric.infDist_eq_iInf] using hp₂.symm
 
-#check ConvexCone.hyperplane_separation_of_nonempty_of_isClosed_of_notMem
+-- #check ConvexCone.hyperplane_separation_of_nonempty_of_isClosed_of_notMem
 
 theorem HB (K : Set (Fin n → ℝ)) (b : Fin n → ℝ) (hK1 : Convex ℝ K) (hK2 : IsClosed K)
     (hK3 : K.Nonempty) (hb : b ∉ K) : ∃ p ∈ K, ∀ x ∈ K, (b - p) ⬝ᵥ (x - p) ≤ 0 := by

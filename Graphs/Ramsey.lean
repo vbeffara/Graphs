@@ -31,7 +31,7 @@ structure Fan (φ : parts (k+1) α → ι) where
 
 theorem inj {x : ℕ → α} {X : ℕ → Set α} (h : ∀ n, x n ∉ X n) (H3 : ∀ {m n}, m < n → x n ∈ X m) :
     Injective x :=
-  injective_of_lt_imp_ne (by grind)
+  .of_lt_imp_ne (by grind)
 
 end ramsey912
 
