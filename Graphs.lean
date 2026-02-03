@@ -8,6 +8,7 @@ import Graphs.Map
 import Graphs.Minor
 import Graphs.PlanarMap
 import Graphs.Ramsey
+import Graphs.Return
 import Graphs.Smaller
 import Graphs.TopologicalMinor
 import Graphs.Util
