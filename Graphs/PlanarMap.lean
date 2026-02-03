@@ -1,6 +1,6 @@
 import Mathlib
 
-open Equiv Classical Function MulAction
+open Equiv Classical Function MulAction Set
 
 variable {V E : Type*} {n : ℕ} {i : Fin n} {d : V → ℕ}
 
@@ -18,6 +18,9 @@ namespace PlanarMap
 
 variable {G : PlanarMap E} {e : E}
 
+theorem αα_eq (G : PlanarMap E) (e : E) : G.α (G.α e) = e := by
+  rw [← Equiv.Perm.mul_apply, G.invol] ; rfl
+
 @[reducible]
 def vertexType (G : PlanarMap E) := orbitRel.Quotient (Subgroup.closure {G.σ}) E
 
@@ -27,8 +30,52 @@ def edgeType (G : PlanarMap E) := orbitRel.Quotient (Subgroup.closure {G.α}) E
 @[reducible]
 def faceType (G : PlanarMap E) := orbitRel.Quotient (Subgroup.closure {G.φ}) E
 
-noncomputable def eulerCharacteristic [Fintype E] (G : PlanarMap E) : ℤ :=
-  Fintype.card G.vertexType - Fintype.card G.edgeType + Fintype.card G.faceType
+lemma good_s (f : Perm E) (s : Finset E) (x : E) (hx : x ∉ s) : ∃ n > 0, f^[n] x ∉ s := by
+  sorry
+
+noncomputable def skip (f : Perm E) (s : Finset E) : Perm {e : E // e ∉ s} where
+  toFun x := by
+    let n' := Nat.find (p := fun n => n > 0 ∧ f^[n] x ∉ s) (good_s f s x x.2)
+    exact ⟨f^[n'] x, Nat.find_spec (p := fun n => n > 0 ∧ f^[n] x ∉ s) _ |>.2⟩
+  invFun x := by
+    let n' := Nat.find (p := fun n => n > 0 ∧ f.symm^[n] x ∉ s) (good_s f⁻¹ s x x.2)
+    exact ⟨f.symm^[n'] x, Nat.find_spec (p := fun n => n > 0 ∧ f.symm^[n] x ∉ s) _ |>.2⟩
+  left_inv x := sorry
+  right_inv x := sorry
+
+theorem skip_empty (f : Perm E) (x : E) : skip f ∅ ⟨x, by simp⟩ = f x := by
+  simp [skip]
+  sorry
+
+#exit
+
+def σ_skip (G : PlanarMap E) (e : E) : Perm {f : E // f ≠ e ∧ f ≠ G.α e} where
+  toFun d := by
+    by_cases h : G.σ d ≠ e ∧ G.σ d ≠ G.α e ; exact ⟨_, h⟩
+    refine ⟨G.σ (G.α (G.σ d)), ?_⟩
+    · rw [← or_iff_not_and_not] at h
+      obtain ⟨d, hd1, hd2⟩ := d
+      dsimp at h ⊢
+      obtain rfl | h := h
+      · simp
+        constructor
+        · exact hd2.symm
+        · intro h
+          have h1 := G.σ.injective.ne hd2
+          rw [h] at h1
+          have h2 := G.α.injective.ne hd1
+          sorry
+      · sorry
+  invFun := sorry
+
+def contract (G : PlanarMap E) (e : E) : PlanarMap {f : E // f ≠ e ∧ f ≠ G.α e} where
+  σ := sorry
+  α := sorry
+  φ := sorry
+  rel := sorry
+  trans := sorry
+  invol := sorry
+  nofix := sorry
 
 noncomputable def genus [Fintype E] (G : PlanarMap E) : ℤ :=
   (2 - G.eulerCharacteristic) / 2
