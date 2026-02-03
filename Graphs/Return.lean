@@ -4,7 +4,7 @@ open Equiv Classical Function MulAction Set
 
 variable {V : Type*} {f : Perm V} {s : Set V} {x y : V} {n : ℕ}
 
-def IsRecurrent (f : Perm V) (s : Set V) : Prop := ∀ x : s, ∃ n, (f ^ n) (f x) ∈ s
+def IsRecurrent (f : Perm V) (s : Set V) : Prop := ∀ x : s, ∃ n, (f ^ (n + 1)) x ∈ s
 
 theorem isRecurrent_of_cofinite (hs : sᶜ.Finite) : IsRecurrent f s := by
   rintro ⟨x, hx⟩
@@ -17,10 +17,9 @@ theorem isRecurrent_of_cofinite (hs : sᶜ.Finite) : IsRecurrent f s := by
   specialize h k
   contradiction
 
-noncomputable def next_return (hs : IsRecurrent f s) (x : s) : s :=
-  ⟨_, Nat.find_spec (hs x)⟩
+noncomputable def next_return (hs : IsRecurrent f s) (x : s) : s := ⟨_, Nat.find_spec (hs x)⟩
 
-theorem next_return_iff (x y : s) (hs : IsRecurrent f s) : next_return hs x = y ↔
+theorem next_return_eq_iff (x y : s) (hs : IsRecurrent f s) : next_return hs x = y ↔
     ∃ n, y = (f ^ (n + 1)) x ∧ ∀ m < n, (f ^ (m + 1)) x ∉ s := by
   constructor
   · rintro rfl ; exact ⟨Nat.find (hs x), rfl, fun m => Nat.find_min _⟩
@@ -29,20 +28,16 @@ theorem next_return_iff (x y : s) (hs : IsRecurrent f s) : next_return hs x = y 
     simp [← Nat.find_eq_iff (hs x) |>.mpr ⟨hy, hn⟩]
     rfl
 
+theorem next_return_back (hs : IsRecurrent f s) (hs' : IsRecurrent f⁻¹ s) (x : s) :
+    next_return hs' (next_return hs x) = x := by
+  obtain ⟨n, h1, h2⟩ := next_return_eq_iff x (next_return hs x) hs |>.mp rfl
+  refine next_return_eq_iff _ _ _ |>.mpr ⟨n, by simp [h1], fun m hm => ?_⟩
+  rw [h1, ← Perm.mul_apply]
+  convert h2 (n - m - 1) (by omega) using 3
+  group ; congr 1 ; omega
+
 noncomputable def returns (hs : IsRecurrent f s) (hs' : IsRecurrent f⁻¹ s) : Perm s where
   toFun := next_return hs
   invFun := next_return hs'
-  left_inv x := by
-    obtain ⟨n, h1, h2⟩ := next_return_iff x (next_return hs x) hs |>.mp rfl
-    rw [next_return_iff, h1]
-    refine ⟨n, by simp, fun m hm => ?_⟩
-    rw [← Perm.mul_apply]
-    convert h2 (n - m - 1) (by omega) using 3
-    group ; congr 1 ; omega
-  right_inv x := by
-    obtain ⟨n, h1, h2⟩ := next_return_iff x (next_return hs' x) hs' |>.mp rfl
-    rw [next_return_iff, h1]
-    refine ⟨n, by simp, fun m hm => ?_⟩
-    rw [← Perm.mul_apply]
-    convert h2 (n - m - 1) (by omega) using 3
-    group ; congr 1 ; omega
+  left_inv := next_return_back hs hs'
+  right_inv := next_return_back hs' hs
