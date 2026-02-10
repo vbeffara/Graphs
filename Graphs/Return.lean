@@ -1,6 +1,8 @@
-import Mathlib
+import Mathlib.Algebra.Group.End
+import Mathlib.Order.Preorder.Finite
+import Mathlib.Tactic.Group
 
-open Equiv Classical Function MulAction Set
+open Equiv Classical Function Set
 
 variable {V : Type*} {f : Perm V} {s : Set V} {x y : V} {n : ℕ}
 
