@@ -39,14 +39,122 @@ theorem QO_tricolor {X : Type*} [Preorder X] {f : ℕ → X} : ∃ g : ℕ ↪o 
   have : Infinite S := Set.infinite_coe_iff.mpr h1
   let g := Nat.orderEmbeddingOfSet S
   use g
+  have h5 {i : ℕ} : g i ∈ S := by simp [g]
   fin_cases i
   simp at h2
   left
-  unfold Monotone
-  intro a b hab
-  have h3 {i : ℕ} : g i ∈ S := by simp [g]
-  have h4 {i j : ℕ} : K.Adj i j := by sorry
-  specialize h2 (g a) h3 (g b) h3 h4
+  rw [monotone_iff_forall_lt]
+  intro a b h3
+  simp
+  have h4 : g a < g b := by
+    rw [OrderEmbedding.lt_iff_lt]
+    exact h3
+  specialize h2 (g a) h5 (g b) h5
+  have h6 : min (g a) (g b) = g a := by
+    rw [min_eq_left_iff]
+    apply LT.lt.le
+    exact h4
+  have h7 : max (g a) (g b) = g b := by
+    rw [max_eq_right_iff]
+    apply LT.lt.le
+    exact h4
+  rw [← h6]
+  nth_rw 2 [← h7]
+  have h8 : K.Adj (g a) (g b) := by
+    simp [K]
+    intro h
+    apply h3.ne
+    exact h
+  specialize h2 h8
+  by_contra this2
+  apply h2 at this2
+  by_cases P : f (max (g a) (g b)) < f (min (g a) (g b))
+  simp [P] at this2
+  simp [P] at this2
+  exact (by decide : (2 : Fin 3) ≠ 0) this2
+  right
+  left
+  unfold StrictAnti
+  intro a b h3
+  simp
+  have h4 : g a < g b := by
+    rw [OrderEmbedding.lt_iff_lt]
+    exact h3
+  specialize h2 (g a) h5 (g b) h5
+  have h6 : min (g a) (g b) = g a := by
+    rw [min_eq_left_iff]
+    apply LT.lt.le
+    exact h4
+  have h7 : max (g a) (g b) = g b := by
+    rw [max_eq_right_iff]
+    apply LT.lt.le
+    exact h4
+  rw [← h6]
+  nth_rw 1 [← h7]
+  have h8 : K.Adj (g a) (g b) := by
+    simp [K]
+    intro h
+    apply h3.ne
+    exact h
+  specialize h2 h8
+  by_cases P : f (min (g a) (g b)) ≤ f (max (g a) (g b))
+  simp [P] at h2
+  simp [P] at h2
+  by_contra this2
+  apply h2 at this2
+  exact (by decide : (2 : Fin 3) ≠ 1) this2
+  right
+  right
+  intro a b P
+  specialize h2 (g a) h5 (g b) h5
+  by_cases h3 : a < b
+  have h8 : K.Adj (g a) (g b) := by
+    simp [K]
+    intro h
+    apply h3.ne
+    exact h
+  specialize h2 h8
+  have h4 : g a < g b := by
+    rw [OrderEmbedding.lt_iff_lt]
+    exact h3
+  have h6 : min (g a) (g b) = g a := by
+    rw [min_eq_left_iff]
+    apply LT.lt.le
+    exact h4
+  have h7 : max (g a) (g b) = g b := by
+    rw [max_eq_right_iff]
+    apply LT.lt.le
+    exact h4
+  rw [h6] at h2
+  rw [h7] at h2
+  cases' P with P1 P2
+  simp [P1] at h2
+  exact (by decide : 0 ≠ (2 : Fin 3)) h2
+  simp [P2,not_le_of_gt P2] at h2
+  exact (by decide : 1 ≠ (2 : Fin 3)) h2
+  simp at h3
+  by_cases h3b : b < a
+  have h8 : K.Adj (g a) (g b) := by
+    simp [K]
+    intro h
+    apply h3b.ne
+    exact h.symm
+  specialize h2 h8
+  have h4 : g b < g a := by
+    rw [OrderEmbedding.lt_iff_lt]
+    exact h3b
+  have h6 : min (g a) (g b) = g b := by
+    rw [min_eq_right_iff]
+    apply LT.lt.le
+    exact h4
+  have h7 : max (g a) (g b) = g a := by
+    rw [max_eq_left_iff]
+    apply LT.lt.le
+    exact h4
+  rw [h6] at h2
+  rw [h7] at h2
+  cases' P with P1 P2
+
 
 theorem StrictAnti_iff_descending {X : Type*} [Preorder X] {f : ℕ → X} :
     StrictAnti f ↔ ∀ n, f (n + 1) < f n := by
