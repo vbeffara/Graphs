@@ -341,7 +341,10 @@ def deleteEdge (G : SimpleGraph V) (x y : V) : SimpleGraph V :=
 lemma deleteEdge_card_edges_lt [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (x y : V) (h : G.Adj x y) :
   (G.deleteEdge x y).edgeFinset.card < G.edgeFinset.card := by
     refine' Finset.card_lt_card _;
-    simp [deleteEdge, h]
+    rw [ssubset_iff_subset_ne]
+    constructor
+    · simp [deleteEdge, deleteEdges]
+    · simpa [deleteEdge]
 
 /- =========================== REVIEW BAR ===================== -/
 
