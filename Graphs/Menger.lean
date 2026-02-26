@@ -16,6 +16,7 @@ This project request had uuid: af8cdac2-86a8-4c71-b303-ccb6ba9df119
 
 import Mathlib
 import Graphs.Util
+import Graphs.Separation
 
 set_option maxHeartbeats 0
 
@@ -24,12 +25,6 @@ open scoped Classical
 variable {V : Type*} {G : SimpleGraph V} {x y u v : V} {A B X : Finset V} {n : ℕ}
 
 namespace SimpleGraph
-
-/-
-A set of vertices S separates A from B in G if every A-B path in G contains a vertex from S.
--/
-def Separates (G : SimpleGraph V) (A B : Set V) (S : Set V) : Prop :=
-  ∀ u ∈ A, ∀ v ∈ B, ∀ p : G.Walk u v, ∃ x ∈ p.support, x ∈ S
 
 /-
 The set of all vertex sets that separate A from B.

@@ -10,6 +10,7 @@ import Graphs.Minor
 import Graphs.PlanarMap
 import Graphs.Ramsey
 import Graphs.Return
+import Graphs.Separation
 import Graphs.Smaller
 import Graphs.TopologicalMinor
 import Graphs.TreeDecomposition
