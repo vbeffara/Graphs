@@ -25,3 +25,37 @@ theorem findGreatest_le_find' : Nat.findGreatest p m ≤ find' h1 h2 := by
 
 theorem find_le_find' : Nat.find h1 ≤ find' h1 h2 :=
   le_find' $ Nat.find_spec h1
+
+namespace Fin
+
+def next {n : ℕ} (i : Fin n) : Fin n :=
+  match n with
+  | 0 => i.elim0
+  | 1 => i
+  | _ + 2 => i + 1
+
+def prev {n : ℕ} (i : Fin n) : Fin n :=
+  match n with
+  | 0 => i.elim0
+  | 1 => i
+  | _ + 2 => i - 1
+
+@[simp] theorem next_prev : i.prev.next = i := by
+  match n with
+  | 0 => exact i.elim0
+  | 1 => rfl
+  | _ + 2 => simp only [next, prev, sub_add_cancel]
+
+@[simp] theorem prev_next : i.next.prev = i := by
+  match n with
+  | 0 => exact i.elim0
+  | 1 => rfl
+  | _ + 2 => simp only [prev, next, add_sub_cancel_right]
+
+def rotate : Perm (Σ v, Fin (d v)) where
+  toFun e := ⟨e.1, e.2.next⟩
+  invFun e := ⟨e.1, e.2.prev⟩
+  left_inv e := by simp
+  right_inv e := by simp
+
+end Fin

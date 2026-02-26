@@ -18,6 +18,15 @@ namespace PlanarMap
 
 variable {G : PlanarMap E} {e : E}
 
+def cartoGroup (G : PlanarMap E) := Subgroup.closure {G.σ, G.α, G.φ}
+
+@[simp] theorem fixed : fixedPoints G.α = ∅ := by
+  by_contra! ; obtain ⟨e, he⟩ := this ; exact G.nofix e he
+
+theorem even {G : PlanarMap E} [Fintype E] : Even (Fintype.card E) := by
+  have h2 : G.α.support = Finset.univ := by ext e; simpa using G.nofix e
+  simpa [even_iff_two_dvd, h2] using G.α.two_dvd_card_support G.invol
+
 theorem αα_eq (G : PlanarMap E) (e : E) : G.α (G.α e) = e := by
   rw [← Equiv.Perm.mul_apply, G.invol] ; rfl
 
@@ -29,6 +38,9 @@ def edgeType (G : PlanarMap E) := orbitRel.Quotient (Subgroup.closure {G.α}) E
 
 @[reducible]
 def faceType (G : PlanarMap E) := orbitRel.Quotient (Subgroup.closure {G.φ}) E
+
+noncomputable def eulerChar [Fintype E] (G : PlanarMap E) : ℤ :=
+  Fintype.card (vertexType G) - Fintype.card (edgeType G) + Fintype.card (faceType G)
 
 def dual (G : PlanarMap E) : PlanarMap E where
   σ := G.φ⁻¹
@@ -43,97 +55,3 @@ def dual (G : PlanarMap E) : PlanarMap E where
   nofix e he := G.nofix (G.α⁻¹ e) (by simpa using he.symm)
 
 end PlanarMap
-
-namespace Fin
-
-def next {n : ℕ} (i : Fin n) : Fin n :=
-  match n with
-  | 0 => i.elim0
-  | 1 => i
-  | _ + 2 => i + 1
-
-def prev {n : ℕ} (i : Fin n) : Fin n :=
-  match n with
-  | 0 => i.elim0
-  | 1 => i
-  | _ + 2 => i - 1
-
-@[simp] theorem next_prev : i.prev.next = i := by
-  match n with
-  | 0 => exact i.elim0
-  | 1 => rfl
-  | _ + 2 => simp only [next, prev, sub_add_cancel]
-
-@[simp] theorem prev_next : i.next.prev = i := by
-  match n with
-  | 0 => exact i.elim0
-  | 1 => rfl
-  | _ + 2 => simp only [prev, next, add_sub_cancel_right]
-
-def rotate : Perm (Σ v, Fin (d v)) where
-  toFun e := ⟨e.1, e.2.next⟩
-  invFun e := ⟨e.1, e.2.prev⟩
-  left_inv e := by simp
-  right_inv e := by simp
-
-end Fin
-
-structure ConcretePlanarMap (V : Type*) where
-  deg : V → ℕ
-  α' : Perm (Σ v, Fin (deg v))
-  α'_ne e : α' e ≠ e
-  α'_sq : α' ^ 2 = 1
-  trans' : MulAction.IsPretransitive (Subgroup.closure {Fin.rotate, α'}) (Σ v, Fin (deg v))
-
-namespace ConcretePlanarMap
-
-def darts (G : ConcretePlanarMap V) := Σ v, Fin (G.deg v)
-
-variable {G : ConcretePlanarMap V} {e : G.darts}
-
-instance [Fintype V] : Fintype G.darts := by unfold darts ; infer_instance
-
-def σ (G : ConcretePlanarMap V) : Perm (darts G) := Fin.rotate
-
-@[simp] theorem σ_fst : (G.σ e).1 = e.1 := rfl
-
-def α (G : ConcretePlanarMap V) : Perm (darts G) := G.α'
-
-@[simp] theorem α_ne : G.α e ≠ e := G.α'_ne e
-
-@[simp] theorem α_sq : G.α ^ 2 = 1 := G.α'_sq
-
-@[simp] theorem α_α : G.α (G.α e) = e := by change (G.α ^ 2) e = e ; simp
-
-@[simp] theorem fixedPoints_α : fixedPoints G.α = ∅ := by
-  by_contra! ; obtain ⟨e, he⟩ := this ; exact G.α_ne he
-
-def φ (G : ConcretePlanarMap V) : Perm (darts G) := (G.σ)⁻¹ * (G.α)⁻¹
-
-@[simp] theorem σαφ : G.φ * G.α * G.σ = 1 := by simp [φ]
-
-def n_vertices [Fintype V] (_ : ConcretePlanarMap V) : ℕ := Fintype.card V
-
-def n_edges [Fintype V] (G : ConcretePlanarMap V) : ℕ := Fintype.card (G.darts) / 2
-
-noncomputable def n_faces [Fintype V] (G : ConcretePlanarMap V) : ℕ := by
-  exact G.φ.cycleType.card + Fintype.card (fixedPoints G.φ)
-
-theorem darts_even [Fintype V] : Even (Fintype.card G.darts) := by
-  have h2 : G.α.support = Finset.univ := by ext e ; simp
-  simpa [even_iff_two_dvd, ← Finset.card_univ, ← h2] using G.α.two_dvd_card_support G.α_sq
-
-def CartoGroup (G : ConcretePlanarMap V) := Subgroup.closure {G.α, G.σ}
-
-noncomputable def χ [Fintype V] (G : ConcretePlanarMap V) : ℤ :=
-  G.n_vertices - G.n_edges + G.n_faces
-
-example [Fintype V] : Even G.χ := by -- this is only true for connected planar maps
-  sorry
-
-noncomputable def genus [Fintype V] (G : ConcretePlanarMap V) : ℤ :=
-  (2 - G.χ) / 2
-
-instance : HasQuotient E (Subgroup (Perm E)) := ⟨fun G => orbitRel.Quotient G E⟩
-
-end ConcretePlanarMap
