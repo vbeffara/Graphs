@@ -14,24 +14,21 @@ def SimpleGraph.IsTree.leftPart (h : G.IsTree) (u v : α) : Set α := {w : α | 
 def SimpleGraph.IsTree.rightPart (h : G.IsTree) (u v : α) : Set α := {w : α | v ∈ (h.thePath w u).1.support}
 
 structure TreeDecomposition (G : SimpleGraph α) where
-  support : Type
+  bags : Set (Finset α)
   --
-  T : SimpleGraph support
+  T : SimpleGraph bags
   T_tree : T.IsTree
   --
-  bag : support → Finset α
-  union_bags a : ∃ b, a ∈ bag b
-  edge_mem_bag {u v} : G.Adj u v → ∃ w, u ∈ bag w ∧ v ∈ bag w
-  bag_inter {b₁ b₂ b₃} : b₂ ∈ (T_tree.thePath b₁ b₃).1.support → bag b₁ ∩ bag b₃ ⊆ bag b₂
+  union_bags a : ∃ b ∈ bags, a ∈ b
+  edge_mem_bag {u v} : G.Adj u v → ∃ b ∈ bags, u ∈ b ∧ v ∈ b
+  bag_inter {b₁ b₂ b₃} : b₂ ∈ (T_tree.thePath b₁ b₃).1.support → b₁.1 ∩ b₃.1 ⊆ b₂.1
 
 namespace TreeDecomposition
 
-noncomputable def width (D : TreeDecomposition G) : ℕ∞ :=
-  iSup (fun w => ((D.bag w).card : ℕ∞))
+noncomputable def width (D : TreeDecomposition G) : ℕ∞ := ⨆ b ∈ D.bags, b.card
 
-lemma diestel_12_3_1 (D : TreeDecomposition G) (t₁ t₂ : D.support) (h : D.T.Adj t₁ t₂) :
-  G.Separates (⋃ b ∈ D.T_tree.leftPart t₁ t₂, D.bag b) (⋃ b ∈ D.T_tree.rightPart t₁ t₂, D.bag b)
-    (D.bag t₁ ∩ D.bag t₂) :=
+lemma diestel_12_3_1 (D : TreeDecomposition G) (t₁ t₂ : D.bags) (h : D.T.Adj t₁ t₂) :
+  G.Separates (⋃ b ∈ D.T_tree.leftPart t₁ t₂, b) (⋃ b ∈ D.T_tree.rightPart t₁ t₂, b) (t₁ ∩ t₂) := by
   sorry
 
 end TreeDecomposition
