@@ -28,7 +28,7 @@ namespace SimpleGraph
 /-
 A set of vertices S separates A from B in G if every A-B path in G contains a vertex from S.
 -/
-def Separates (G : SimpleGraph V) (A B : Set V) (S : Finset V) : Prop :=
+def Separates (G : SimpleGraph V) (A B : Set V) (S : Set V) : Prop :=
   ∀ u ∈ A, ∀ v ∈ B, ∀ p : G.Walk u v, ∃ x ∈ p.support, x ∈ S
 
 /-
@@ -134,7 +134,7 @@ lemma Menger_strong_base (G : SimpleGraph V) (A B : Finset V) (h : G.edgeSet = �
       intro a ha b hb p
       refine ⟨a, p.start_mem_support, ?_⟩
       simp [← h_empty a b p] at hb
-      simpa [ha, hb]
+      simp [ha, hb]
     · refine Nat.le_findGreatest (Finset.card_mono Finset.inter_subset_left) ?_
       let γ (a : ((A ∩ B) : Finset _)) : (⊥ : SimpleGraph V).ABPath A B :=
         ⟨⟨a, by grind⟩, ⟨a, by grind⟩ , Walk.nil, Walk.IsPath.nil⟩

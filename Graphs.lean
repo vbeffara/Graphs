@@ -5,11 +5,13 @@ import Graphs.Expander
 import Graphs.Farkas
 import Graphs.GraphMinorTheorem
 import Graphs.Map
+import Graphs.Menger
 import Graphs.Minor
 import Graphs.PlanarMap
 import Graphs.Ramsey
 import Graphs.Return
 import Graphs.Smaller
 import Graphs.TopologicalMinor
+import Graphs.TreeDecomposition
 import Graphs.Util
 import Graphs.WQO
