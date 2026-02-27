@@ -1,4 +1,5 @@
 import Mathlib
+import Graphs.Contraction
 import Graphs.Separation
 import Graphs.Tree
 
@@ -316,3 +317,92 @@ theorem treeWidth_mono [Fintype α] {H : G.Subgraph} : treeWidth H.coe ≤ treeW
   refine le_csInf ⟨_, TreeDecomposition.trivial, rfl⟩ ?_
   rintro w ⟨D, rfl⟩
   exact le_trans (sInf_le ⟨D.restrict H, rfl⟩) (D.width_restrict_le H)
+
+variable {β : Type u} {H : SimpleGraph β}
+
+theorem treeWidth_contract [Fintype α] [Fintype β] (h : G ≼c H) : treeWidth G ≤ treeWidth H := by
+  rcases h with ⟨φ, hφs, hφa, rfl⟩
+  unfold treeWidth
+  refine le_csInf ⟨_, TreeDecomposition.trivial, rfl⟩ ?_
+  rintro w ⟨D, rfl⟩
+  have build_walk :
+      ∀ {u v : β} (p : H.Walk u v) {a : α} (hp : ∀ z ∈ p.support, φ z = a)
+        {s t : D.ι}, u ∈ D.V s → v ∈ D.V t →
+        ∃ q : D.T.Walk s t, ∀ r ∈ q.support, ∃ x ∈ D.V r, φ x = a := by
+    intro u v p a hp s t hs ht
+    induction p generalizing s with
+    | @nil u =>
+        refine ⟨(D.tree.path s t).1, ?_⟩
+        intro r hr
+        refine ⟨u, ?_, ?_⟩
+        · exact D.bag_inter (by simpa [SimpleGraph.IsTree.ordered] using hr) ⟨hs, ht⟩
+        · exact hp u (by simp)
+    | @cons u v w huv p ih =>
+        have hua : φ u = a := hp u (by simp)
+        have htail : ∀ z ∈ p.support, φ z = a := by
+          intro z hz
+          exact hp z (by simp [hz])
+        obtain ⟨b, hub, hvb⟩ := D.edge_mem_bag huv
+        obtain ⟨q₂, hq₂⟩ := ih htail hvb ht
+        let q₁ : D.T.Walk s b := (D.tree.path s b).1
+        have hq₁ : ∀ r ∈ q₁.support, ∃ x ∈ D.V r, φ x = a := by
+          intro r hr
+          refine ⟨u, ?_, hua⟩
+          exact D.bag_inter (by simpa [q₁, SimpleGraph.IsTree.ordered] using hr) ⟨hs, hub⟩
+        refine ⟨q₁.append q₂, ?_⟩
+        intro r hr
+        have hmem : r ∈ q₁.support ∨ r ∈ q₂.support.tail := by
+          simpa [SimpleGraph.Walk.support_append] using hr
+        rcases hmem with hr | hr
+        · exact hq₁ r hr
+        · exact hq₂ r (List.mem_of_mem_tail hr)
+  let D' : TreeDecomposition (H.map' φ) := {
+    ι := D.ι
+    V := fun t => φ '' D.V t
+    T := D.T
+    tree := D.tree
+    union_bags := by
+      ext a
+      constructor
+      · intro ha
+        simp
+      · intro ha
+        rcases hφs a with ⟨b, rfl⟩
+        have hb : b ∈ ⋃ i, D.V i := by simp [D.union_bags]
+        rcases mem_iUnion.mp hb with ⟨t, ht⟩
+        exact mem_iUnion.mpr ⟨t, ⟨b, ht, rfl⟩⟩
+    edge_mem_bag := by
+      intro u v huv
+      rcases huv with ⟨_, x, y, hxy, rfl, rfl⟩
+      rcases D.edge_mem_bag hxy with ⟨t, hxt, hyt⟩
+      exact ⟨t, ⟨x, hxt, rfl⟩, ⟨y, hyt, rfl⟩⟩
+    bag_inter := by
+      intro t₁ t₂ t₃ hordered a ha
+      rcases ha.1 with ⟨x₁, hx₁, rfl⟩
+      rcases ha.2 with ⟨x₃, hx₃, hx₃₁⟩
+      obtain ⟨p, hp⟩ := hφa hx₃₁.symm
+      obtain ⟨q, hq⟩ := build_walk p hp hx₁ hx₃
+      have ht₂_toPath : t₂ ∈ (q.toPath : D.T.Walk t₁ t₃).support := by
+        have hqpath : (q.toPath : D.T.Walk t₁ t₃) = (D.tree.path t₁ t₃).1 := by
+          simpa using (D.tree.path_spec' (u := t₁) (v := t₃) q.toPath)
+        simpa [SimpleGraph.IsTree.ordered, hqpath] using hordered
+      have ht₂ : t₂ ∈ q.support := (SimpleGraph.Walk.support_toPath_subset q) ht₂_toPath
+      rcases hq t₂ ht₂ with ⟨x₂, hx₂, hx₂φ⟩
+      exact ⟨x₂, hx₂, hx₂φ.trans hx₃₁⟩ }
+  have hwidth : D'.width ≤ D.width := by
+    unfold TreeDecomposition.width
+    refine iSup_le ?_
+    intro t
+    letI : Fintype (D'.V t) := Subtype.fintype (Membership.mem (D'.V t))
+    have hcard :
+        @Fintype.card (D'.V t) (Subtype.fintype (Membership.mem (D'.V t))) ≤ Fintype.card (D.V t) := by
+      let f : D.V t → D'.V t := fun x => ⟨φ x, ⟨x, x.2, rfl⟩⟩
+      have hf : Function.Surjective f := by
+        rintro ⟨y, ⟨x, hx, rfl⟩⟩
+        exact ⟨⟨x, hx⟩, rfl⟩
+      exact Fintype.card_le_of_surjective f hf
+    have hcast :
+        ((@Fintype.card (D'.V t) (Subtype.fintype (Membership.mem (D'.V t))) : ℕ∞)) ≤
+          (Fintype.card (D.V t) : ℕ∞) := Nat.cast_le.mpr hcard
+    exact le_iSup_of_le t (tsub_le_tsub_right hcast 1)
+  exact le_trans (sInf_le ⟨D', rfl⟩) hwidth
