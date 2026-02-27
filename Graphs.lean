@@ -15,5 +15,6 @@ import Graphs.Smaller
 import Graphs.TopologicalMinor
 import Graphs.Tree
 import Graphs.TreeDecomposition
+import Graphs.TreeWidth
 import Graphs.Util
 import Graphs.WQO

@@ -245,4 +245,84 @@ theorem left_right_separates (huv : G.Adj u v) :
       exact h_unique_path ( by simpa using SimpleGraph.Walk.support_bypass_subset _ h_eq );
     aesop
 
+/-
+In a tree rooted at `root`, for any edge `(u, v)`, either `u` is ordered before `v`
+or `v` is ordered before `u`.
+-/
+lemma adj_ordered_cases (hG : G.IsTree) (root : α) {u v : α} (huv : G.Adj u v) :
+    hG.ordered root u v ∨ hG.ordered root v u := by
+  obtain ⟨p₁, hp₁⟩ := hG.existsUnique_path root u
+  obtain ⟨p₂, hp₂⟩ := hG.existsUnique_path root v
+  have h_intersect : p₁.IsPath ∧ p₂.IsPath → u ∈ p₂.support ∨ v ∈ p₁.support := by
+    intro h_paths
+    by_contra h_contra
+    have h_path_root_u_v : ∃ p : G.Walk root u, p.IsPath ∧ v ∈ p.support := by
+      use p₂.append (SimpleGraph.Walk.cons huv.symm SimpleGraph.Walk.nil)
+      simp_all +decide [SimpleGraph.Walk.isPath_def]
+      simp_all +decide [SimpleGraph.Walk.support_append]
+      rw [List.nodup_append]
+      aesop
+    grind +ring
+  unfold SimpleGraph.IsTree.ordered
+  aesop
+
+/-
+In a rooted tree, a node has at most one parent.
+-/
+lemma parent_unique (hG : G.IsTree) (root : α) (t : α) (p₁ p₂ : α)
+    (h₁ : G.Adj t p₁ ∧ hG.ordered root p₁ t)
+    (h₂ : G.Adj t p₂ ∧ hG.ordered root p₂ t) : p₁ = p₂ := by
+  have h_path : ∀ {p : α}, G.Adj t p → hG.ordered root p t →
+      ∀ {q : α}, G.Adj t q → hG.ordered root q t → p = q := by
+    intro p hp hpath_p q hq hpath_q
+    have h_path_eq :
+        (hG.path root t).1 = (hG.path root p).1.append (hG.path p t).1 ∧
+        (hG.path root t).1 = (hG.path root q).1.append (hG.path q t).1 := by
+      exact ⟨hG.path_split hpath_p, hG.path_split hpath_q⟩
+    have h_support_eq : (hG.path p t).1.support = [p, t] ∧ (hG.path q t).1.support = [q, t] := by
+      have h_support_eq' : ∀ {p : α}, G.Adj t p → (hG.path p t).1.support = [p, t] := by
+        intro p hp
+        have := hG.path_adj hp.symm
+        aesop
+      exact ⟨h_support_eq' hp, h_support_eq' hq⟩
+    have h_support_eq :
+        (hG.path root t).1.support = (hG.path root p).1.support ++ [t] ∧
+        (hG.path root t).1.support = (hG.path root q).1.support ++ [t] := by
+      have := congr_arg SimpleGraph.Walk.support h_path_eq.1
+      have := congr_arg SimpleGraph.Walk.support h_path_eq.2
+      simp_all +decide [SimpleGraph.Walk.support_append]
+    have h_support_eq :
+        (hG.path root p).1.support.getLast? = some p ∧
+        (hG.path root q).1.support.getLast? = some q := by
+      have h_support_eq' : ∀ {u v : α} (p : G.Walk u v), p.support.getLast? = some v := by
+        intro u v p
+        induction p <;> simp +decide [*]
+        grind
+      exact ⟨h_support_eq' _, h_support_eq' _⟩
+    aesop
+  exact h_path h₁.1 h₁.2 h₂.1 h₂.2
+
+/-
+Transitivity of the ordered relation in a rooted tree.
+-/
+lemma ordered_trans (hG : G.IsTree) (root : α) {a b c : α}
+    (hab : hG.ordered root a b) (hbc : hG.ordered root b c) : hG.ordered root a c := by
+  have h_concat : (hG.path root c).1 = (hG.path root b).1.append (hG.path b c).1 := by
+    exact path_split hG hbc
+  unfold SimpleGraph.IsTree.ordered at *
+  aesop
+
+/-
+Antisymmetry of the ordered relation in a rooted tree.
+-/
+lemma ordered_antisymm (hG : G.IsTree) (root : α) {a b : α}
+    (hab : hG.ordered root a b) (hba : hG.ordered root b a) : a = b := by
+  have h_path_eq : (hG.path root b).1 = (hG.path root a).1.append (hG.path a b).1 := by
+    exact path_split hG hab
+  have h_path_eq' : (hG.path root a).1 = (hG.path root b).1.append (hG.path b a).1 := by
+    exact path_split hG hba
+  replace h_path_eq' := congr_arg (fun p => p.support) h_path_eq'
+  simp_all +decide [SimpleGraph.Walk.support_append]
+  cases h : (hG.path a b : G.Walk a b) <;> aesop
+
 end SimpleGraph.IsTree
