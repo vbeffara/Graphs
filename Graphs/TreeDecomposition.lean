@@ -1,5 +1,5 @@
 import Mathlib
-import Graphs.Contraction
+import Graphs.Minor
 import Graphs.Separation
 import Graphs.Tree
 
@@ -406,3 +406,7 @@ theorem treeWidth_contract [Fintype α] [Fintype β] (h : G ≼c H) : treeWidth 
           (Fintype.card (D.V t) : ℕ∞) := Nat.cast_le.mpr hcard
     exact le_iSup_of_le t (tsub_le_tsub_right hcast 1)
   exact le_trans (sInf_le ⟨D', rfl⟩) hwidth
+
+theorem treeWidth_minor [Fintype α] [Fintype β] (h : G ≼ H) : treeWidth G ≤ treeWidth H := by
+  rcases h with ⟨K, hK⟩
+  exact le_trans (treeWidth_contract hK) treeWidth_mono
