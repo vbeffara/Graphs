@@ -287,4 +287,41 @@ theorem tree_treeWidth [Fintype α] (hG : G.IsTree) (hG' : G ≠ ⊥) : treeWidt
     · exact treeWidth_ge_one hG'
 
 theorem bot_treeWidth [Fintype α] : treeWidth (⊥ : SimpleGraph α) = 0 := by
-  sorry
+  classical
+  by_cases hne : Nonempty α
+  · letI : Nonempty α := hne
+    obtain ⟨T, hTle, hTtree⟩ : ∃ T : SimpleGraph α, T ≤ (⊤ : SimpleGraph α) ∧ T.IsTree :=
+      (SimpleGraph.connected_top (V := α)).exists_isTree_le
+    let D : TreeDecomposition (⊥ : SimpleGraph α) := {
+      ι := α
+      V := fun t ↦ {t}
+      T := T
+      tree := hTtree
+      union_bags := by ext x; simp
+      edge_mem_bag := by intro u v huv; cases huv
+      bag_inter := by
+        intro t₁ t₂ t₃ h x hx
+        rcases hx with ⟨hx1, hx3⟩
+        have hx1' : x = t₁ := by simpa using hx1
+        have hx3' : x = t₃ := by simpa using hx3
+        have ht13 : t₁ = t₃ := hx1'.symm.trans hx3'
+        have h' : hTtree.ordered t₁ t₂ t₁ := by simpa [ht13] using h
+        have ht2 : t₂ = t₁ := by
+          have : t₂ ∈ (hTtree.path t₁ t₁).1.support := by
+            simpa [SimpleGraph.IsTree.ordered] using h'
+          have hnil : (hTtree.path t₁ t₁).1 = (SimpleGraph.Walk.nil : T.Walk t₁ t₁) := by
+            simpa using (hTtree.path_spec' (u := t₁) (v := t₁) ⟨SimpleGraph.Walk.nil, by simp⟩).symm
+          simpa [hnil] using this
+        simp [hx1', ht2] }
+    have hD : D.width = 0 := by
+      simp [TreeDecomposition.width, D]
+    refine le_antisymm ?_ bot_le
+    unfold treeWidth
+    exact sInf_le ⟨D, hD⟩
+  · letI : IsEmpty α := not_nonempty_iff.mp hne
+    let D : TreeDecomposition (⊥ : SimpleGraph α) := TreeDecomposition.trivial
+    have hD : D.width = 0 := by
+      simp [TreeDecomposition.width, D]
+    refine le_antisymm ?_ bot_le
+    unfold treeWidth
+    exact sInf_le ⟨D, hD⟩
