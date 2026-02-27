@@ -4,31 +4,35 @@ import Graphs.Tree
 
 open Classical Set SimpleGraph
 
-variable {α : Type*} {G : SimpleGraph α}
+universe u
+
+variable {α : Type u} {G : SimpleGraph α}
 
 structure TreeDecomposition (G : SimpleGraph α) where
-  bags : Set (Set α)
-  T : SimpleGraph bags
+  ι : Type u
+  V : ι → Set α
+  T : SimpleGraph ι
   --
   tree : T.IsTree
-  union_bags : ⋃₀ bags = univ
-  edge_mem_bag {u v : α} : G.Adj u v → ∃ b : bags, u ∈ b.1 ∧ v ∈ b.1
-  bag_inter {b₁ b₂ b₃ : bags} : tree.ordered b₁ b₂ b₃ → b₁.1 ∩ b₃.1 ⊆ b₂.1
+  union_bags : ⋃ i, V i = univ
+  edge_mem_bag {u v : α} : G.Adj u v → ∃ t : ι, u ∈ V t ∧ v ∈ V t
+  bag_inter {t₁ t₂ t₃ : ι} : tree.ordered t₁ t₂ t₃ → V t₁ ∩ V t₃ ⊆ V t₂
 
 namespace TreeDecomposition
 
-variable {D : TreeDecomposition G} {b₁ b₂ : D.bags}
+variable {D : TreeDecomposition G} {t₁ t₂ : D.ι}
 
-def U₁ (D : TreeDecomposition G) (b₁ b₂ : D.bags) : Set α := ⋃₀ D.tree.left b₁ b₂
+def U₁ (D : TreeDecomposition G) (t₁ t₂ : D.ι) : Set α := ⋃₀ (D.V '' D.tree.left t₁ t₂)
 
-def U₂ (D : TreeDecomposition G) (b₁ b₂ : D.bags) : Set α := ⋃₀ D.tree.right b₁ b₂
+def U₂ (D : TreeDecomposition G) (t₁ t₂ : D.ι) : Set α := ⋃₀ (D.V '' D.tree.right t₁ t₂)
 
-theorem U_cover (h : D.T.Adj b₁ b₂) : D.U₁ b₁ b₂ ∪ D.U₂ b₁ b₂ = univ := by
+theorem U_cover (h : D.T.Adj t₁ t₂) : D.U₁ t₁ t₂ ∪ D.U₂ t₁ t₂ = univ := by
   simp only [U₁, U₂, sUnion_eq_biUnion, ← biUnion_union, ← image_union]
   simp only [D.tree.left_union_right h, ← sUnion_eq_biUnion]
-  simp only [image_univ, Subtype.range_coe_subtype, setOf_mem_eq, D.union_bags]
+  simpa [image_univ] using D.union_bags
 
-lemma diestel_12_3_1 (h : D.T.Adj b₁ b₂) : G.Separates (D.U₁ b₁ b₂) (D.U₂ b₁ b₂) (b₁ ∩ b₂) := by
+lemma diestel_12_3_1 (h : D.T.Adj t₁ t₂) :
+    G.Separates (D.U₁ t₁ t₂) (D.U₂ t₁ t₂) (D.V t₁ ∩ D.V t₂) := by
   refine separates_cover (U_cover h) |>.2 ⟨?_, ?_⟩
   · intro v hv
     obtain ⟨a', ⟨a, ha, rfl⟩, hv₁⟩ := hv.1
@@ -38,29 +42,54 @@ lemma diestel_12_3_1 (h : D.T.Adj b₁ b₂) : G.Separates (D.U₁ b₁ b₂) (D
     have h3 := D.bag_inter ha;
     grind
   · intros u hu v hv huv
-    obtain ⟨b₃, hb₃⟩ := D.edge_mem_bag huv;
+    obtain ⟨t₃, ht₃⟩ := D.edge_mem_bag huv;
     have h1 := D.tree.left_union_right h;
-    obtain h2 | h2 := eq_univ_iff_forall.mp h1 b₃
-    · obtain ⟨b₄, hb₄, hb₄'⟩ := hv;
-      obtain ⟨b₅, hb₅, rfl⟩ := hb₄;
-      have h3 := D.tree.left_right_ordered h h2 hb₅
+    obtain h2 | h2 := eq_univ_iff_forall.mp h1 t₃
+    · obtain ⟨t₄, ht₄, ht₄'⟩ := hv;
+      obtain ⟨t₅, ht₅, rfl⟩ := ht₄;
+      have h3 := D.tree.left_right_ordered h h2 ht₅
       have h4 := D.bag_inter h3.1
       have h5 := D.bag_inter h3.2
       grind
-    · obtain ⟨b₄, hb₄, hb₄'⟩ := hu;
-      obtain ⟨b₅, hb₅, rfl⟩ := hb₄;
-      have h3 := D.tree.left_right_ordered h hb₅ h2
+    · obtain ⟨t₄, ht₄, ht₄'⟩ := hu;
+      obtain ⟨t₅, ht₅, rfl⟩ := ht₄;
+      have h3 := D.tree.left_right_ordered h ht₅ h2
       have h4 := D.bag_inter h2
       have h5 := D.bag_inter h3.1
       grind
 
-theorem adhesion (h : D.T.Adj b₁ b₂) : D.U₁ b₁ b₂ ∩ D.U₂ b₁ b₂ = b₁.1 ∩ b₂.1 := by
+theorem adhesion (h : D.T.Adj t₁ t₂) :
+    D.U₁ t₁ t₂ ∩ D.U₂ t₁ t₂ = D.V t₁ ∩ D.V t₂ := by
   ext x; constructor <;> intro hx
   · obtain ⟨y, h1, h2⟩ := diestel_12_3_1 h x hx.1 x hx.2 SimpleGraph.Walk.nil ; simp_all
-  · refine ⟨⟨b₁, ?_⟩, ⟨b₂, ?_⟩⟩ <;>
-    simp [SimpleGraph.IsTree.left, SimpleGraph.IsTree.right, SimpleGraph.IsTree.ordered, hx.1, hx.2]
+  · refine ⟨⟨D.V t₁, ?_, hx.1⟩, ⟨D.V t₂, ?_, hx.2⟩⟩
+    · exact ⟨t₁, by simp [SimpleGraph.IsTree.left, SimpleGraph.IsTree.ordered]⟩
+    · exact ⟨t₂, by simp [SimpleGraph.IsTree.right, SimpleGraph.IsTree.ordered]⟩
 
-noncomputable def width [Fintype α] (D : TreeDecomposition G) : ℕ∞ := ⨆ b ∈ D.bags, Fintype.card b
+def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.coe where
+  ι := D.ι
+  V t := {v | (v : α) ∈ D.V t}
+  T := D.T
+  tree := D.tree
+  union_bags := by
+    ext v
+    constructor
+    · intro hv
+      simp
+    · intro hv
+      have hv' : (v : α) ∈ ⋃ i, D.V i := by simp [D.union_bags]
+      obtain ⟨i, hi⟩ := mem_iUnion.mp hv'
+      exact mem_iUnion.mpr ⟨i, hi⟩
+  edge_mem_bag := by
+    intro u v huv
+    have huv' : G.Adj (u : α) (v : α) := H.coe_adj_sub u v huv
+    obtain ⟨b, hub, hvb⟩ := D.edge_mem_bag huv'
+    exact ⟨b, hub, hvb⟩
+  bag_inter := by
+    intro b₁ b₂ b₃ hordered x hx
+    exact D.bag_inter hordered ⟨hx.1, hx.2⟩
+
+noncomputable def width [Fintype α] (D : TreeDecomposition G) : ℕ∞ := ⨆ b, Fintype.card (D.V b)
 
 end TreeDecomposition
 
