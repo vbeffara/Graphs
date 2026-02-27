@@ -22,21 +22,32 @@ namespace TreeDecomposition
 
 variable {D : TreeDecomposition G} {t₁ t₂ : D.ι}
 
-def U₁ (D : TreeDecomposition G) (t₁ t₂ : D.ι) : Set α := ⋃₀ (D.V '' D.tree.left t₁ t₂)
+def U₁ (D : TreeDecomposition G) (t₁ t₂ : D.ι) : Set α := ⋃ t ∈ D.tree.left t₁ t₂, D.V t
 
-def U₂ (D : TreeDecomposition G) (t₁ t₂ : D.ι) : Set α := ⋃₀ (D.V '' D.tree.right t₁ t₂)
+def U₂ (D : TreeDecomposition G) (t₁ t₂ : D.ι) : Set α := ⋃ t ∈ D.tree.right t₁ t₂, D.V t
 
 theorem U_cover (h : D.T.Adj t₁ t₂) : D.U₁ t₁ t₂ ∪ D.U₂ t₁ t₂ = univ := by
-  simp only [U₁, U₂, sUnion_eq_biUnion, ← biUnion_union, ← image_union]
-  simp only [D.tree.left_union_right h, ← sUnion_eq_biUnion]
-  simpa [image_univ] using D.union_bags
+  ext x
+  constructor
+  · intro hx
+    simp
+  · intro hx
+    have hx' : x ∈ ⋃ i, D.V i := by simp [D.union_bags]
+    obtain ⟨i, hi⟩ := mem_iUnion.mp hx'
+    have hi_lr : i ∈ D.tree.left t₁ t₂ ∪ D.tree.right t₁ t₂ := by
+      simp [D.tree.left_union_right h]
+    rcases hi_lr with hleft | hright
+    · exact Or.inl (mem_iUnion.mpr ⟨i, mem_iUnion.mpr ⟨hleft, hi⟩⟩)
+    · exact Or.inr (mem_iUnion.mpr ⟨i, mem_iUnion.mpr ⟨hright, hi⟩⟩)
 
 lemma diestel_12_3_1 (h : D.T.Adj t₁ t₂) :
     G.Separates (D.U₁ t₁ t₂) (D.U₂ t₁ t₂) (D.V t₁ ∩ D.V t₂) := by
   refine separates_cover (U_cover h) |>.2 ⟨?_, ?_⟩
   · intro v hv
-    obtain ⟨a', ⟨a, ha, rfl⟩, hv₁⟩ := hv.1
-    obtain ⟨b', ⟨b, hb, rfl⟩, hv₂⟩ := hv.2
+    obtain ⟨a, ha⟩ := mem_iUnion.mp hv.1
+    obtain ⟨ha, hv₁⟩ := mem_iUnion.mp ha
+    obtain ⟨b, hb⟩ := mem_iUnion.mp hv.2
+    obtain ⟨hb, hv₂⟩ := mem_iUnion.mp hb
     have h1 := D.tree.left_right_ordered h ha hb
     have h2 := D.bag_inter h1.2
     have h3 := D.bag_inter ha;
@@ -45,14 +56,14 @@ lemma diestel_12_3_1 (h : D.T.Adj t₁ t₂) :
     obtain ⟨t₃, ht₃⟩ := D.edge_mem_bag huv;
     have h1 := D.tree.left_union_right h;
     obtain h2 | h2 := eq_univ_iff_forall.mp h1 t₃
-    · obtain ⟨t₄, ht₄, ht₄'⟩ := hv;
-      obtain ⟨t₅, ht₅, rfl⟩ := ht₄;
+    · obtain ⟨t₄, ht₄⟩ := mem_iUnion.mp hv;
+      obtain ⟨ht₅, ht₄'⟩ := mem_iUnion.mp ht₄
       have h3 := D.tree.left_right_ordered h h2 ht₅
       have h4 := D.bag_inter h3.1
       have h5 := D.bag_inter h3.2
       grind
-    · obtain ⟨t₄, ht₄, ht₄'⟩ := hu;
-      obtain ⟨t₅, ht₅, rfl⟩ := ht₄;
+    · obtain ⟨t₄, ht₄⟩ := mem_iUnion.mp hu;
+      obtain ⟨ht₅, ht₄'⟩ := mem_iUnion.mp ht₄
       have h3 := D.tree.left_right_ordered h ht₅ h2
       have h4 := D.bag_inter h2
       have h5 := D.bag_inter h3.1
@@ -62,9 +73,11 @@ theorem adhesion (h : D.T.Adj t₁ t₂) :
     D.U₁ t₁ t₂ ∩ D.U₂ t₁ t₂ = D.V t₁ ∩ D.V t₂ := by
   ext x; constructor <;> intro hx
   · obtain ⟨y, h1, h2⟩ := diestel_12_3_1 h x hx.1 x hx.2 SimpleGraph.Walk.nil ; simp_all
-  · refine ⟨⟨D.V t₁, ?_, hx.1⟩, ⟨D.V t₂, ?_, hx.2⟩⟩
-    · exact ⟨t₁, by simp [SimpleGraph.IsTree.left, SimpleGraph.IsTree.ordered]⟩
-    · exact ⟨t₂, by simp [SimpleGraph.IsTree.right, SimpleGraph.IsTree.ordered]⟩
+  · refine ⟨?_, ?_⟩
+    · exact mem_iUnion.mpr ⟨t₁, mem_iUnion.mpr ⟨by
+        simp [SimpleGraph.IsTree.left, SimpleGraph.IsTree.ordered], hx.1⟩⟩
+    · exact mem_iUnion.mpr ⟨t₂, mem_iUnion.mpr ⟨by
+        simp [SimpleGraph.IsTree.right, SimpleGraph.IsTree.ordered], hx.2⟩⟩
 
 def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.coe where
   ι := D.ι
