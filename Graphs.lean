@@ -11,7 +11,6 @@ import Graphs.PlanarMap
 import Graphs.Ramsey
 import Graphs.Return
 import Graphs.Separation
-import Graphs.Separation_aristotle
 import Graphs.Smaller
 import Graphs.TopologicalMinor
 import Graphs.Tree
