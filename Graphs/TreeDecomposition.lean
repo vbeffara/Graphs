@@ -2,7 +2,7 @@ import Mathlib
 import Graphs.Separation
 import Graphs.Tree
 
-open Classical Set
+open Classical Set SimpleGraph
 
 variable {α : Type*} [Fintype α] {G : SimpleGraph α}
 
@@ -31,8 +31,9 @@ lemma diestel_12_3_1 {b₁ b₂ : D.bags} (h : D.T.Adj b₁ b₂) :
     simp only [U₁, U₂, T₁, T₂, sUnion_eq_biUnion, ← biUnion_union, ← image_union]
     simp only [D.T_tree.left_union_right h, ← sUnion_eq_biUnion]
     simp only [image_univ, Subtype.range_coe_subtype, setOf_mem_eq, D.union_bags]
-  intro u hu v hv p
-  sorry
+  refine separates_cover h1 |>.2 ⟨?_, ?_⟩
+  · sorry
+  · sorry
 
 end TreeDecomposition
 

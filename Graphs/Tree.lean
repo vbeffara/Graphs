@@ -8,8 +8,14 @@ namespace SimpleGraph.IsTree
 variable {α : Type*} {G : SimpleGraph α} {a b u v w : α} (h : G.IsTree)
 
 noncomputable def path (u v : α) : G.Path u v := by
-  choose p hp₁ hp₂ using h.existsUnique_path u v
-  refine ⟨p, hp₁⟩
+  have := h.existsUnique_path u v
+  exact ⟨this.choose, this.choose_spec.1⟩
+
+theorem path_spec' (p : G.Path u v) : p.1 = (h.path u v).1 := by
+  exact (h.existsUnique_path u v).choose_spec.2 p p.2
+
+theorem path_spec (p : G.Path u v) : p = h.path u v := by
+  ext ; exact h.path_spec' p
 
 def ordered (a b c : α) : Prop := b ∈ (h.path a c).1.support
 
@@ -17,13 +23,8 @@ def left (u v : α) : Set α := {w | h.ordered w u v}
 
 def right (u v : α) : Set α := {w | h.ordered u v w}
 
-lemma path_adj (huv : G.Adj u v) : h.path u v = Walk.nil.cons huv := by
-  have := h.existsUnique_path u v
-  have h_unique_path : ∀ p : G.Path u v, p = ⟨Walk.cons huv Walk.nil, by aesop⟩ := by
-    intro p
-    generalize_proofs at *;
-    cases this ; aesop
-  exact congr_arg Subtype.val (h_unique_path _)
+lemma path_adj (huv : G.Adj u v) : h.path u v = huv.toWalk := by
+  exact h.path_spec' ⟨_, Walk.IsPath.of_adj huv⟩ |>.symm
 
 lemma path_split (hv : h.ordered u v w) : h.path u w = (h.path u v).1.append (h.path v w).1 := by
   have h_split : ∀ (p : G.Walk u w), v ∈ p.support → ∃ q : G.Walk u v, ∃ r : G.Walk v w, p = q.append r := by
