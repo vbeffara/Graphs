@@ -81,14 +81,31 @@ def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.co
 
 noncomputable def width [Fintype α] (D : TreeDecomposition G) : ℕ∞ := ⨆ b, Fintype.card (D.V b) - 1
 
+lemma width_restrict_le [Fintype α] (D : TreeDecomposition G) (H : G.Subgraph) :
+    (D.restrict H).width ≤ D.width := by
+  classical
+  unfold width
+  refine iSup_le ?_
+  intro t
+  have hcard : Fintype.card ((D.restrict H).V t) ≤ Fintype.card (D.V t) := by
+    let f : ((D.restrict H).V t) → (D.V t) := fun x => ⟨x.1.1, x.2⟩
+    have hf : Function.Injective f := by
+      intro x y hxy
+      have hval : (x.1.1 : α) = y.1.1 := by
+        exact congrArg (fun z : D.V t => (z : α)) hxy
+      apply Subtype.ext
+      apply Subtype.ext
+      exact hval
+    exact Fintype.card_le_of_injective f hf
+  have hcard' : (Fintype.card ((D.restrict H).V t) : ℕ∞) ≤ (Fintype.card (D.V t) : ℕ∞) := by
+    exact Nat.cast_le.mpr hcard
+  exact le_iSup_of_le t (tsub_le_tsub_right hcard' 1)
+
 end TreeDecomposition
 
 noncomputable def treeWidth [Fintype α] (G : SimpleGraph α) : ℕ∞ :=
   sInf {w | ∃ D : TreeDecomposition G, D.width = w}
 
-/-
-If a graph G is not the empty graph (i.e., it has at least one edge), then its tree-width is at least 1.
--/
 theorem treeWidth_ge_one [Fintype α] (h : G ≠ ⊥) : 1 ≤ treeWidth G := by
   refine le_csInf ⟨_, .trivial, rfl⟩ ?_
   rintro w ⟨D, rfl⟩
@@ -121,10 +138,9 @@ lemma SimpleGraph.IsTree.adj_ordered_cases {α : Type*} {G : SimpleGraph α} (hG
 /-
 In a rooted tree, a node has at most one parent.
 -/
-lemma SimpleGraph.IsTree.parent_unique {α : Type*} {G : SimpleGraph α} (hG : G.IsTree) (root : α) (t : α) (p₁ p₂ : α)
+lemma SimpleGraph.IsTree.parent_unique (hG : G.IsTree) (root : α) (t : α) (p₁ p₂ : α)
   (h₁ : G.Adj t p₁ ∧ hG.ordered root p₁ t)
   (h₂ : G.Adj t p₂ ∧ hG.ordered root p₂ t) : p₁ = p₂ := by
-    -- Since p₁ and p₂ are both adjacent to t and lie on the path from root to t, they must be the same vertex.
     have h_path : ∀ {p : α}, G.Adj t p → hG.ordered root p t → ∀ {q : α}, G.Adj t q → hG.ordered root q t → p = q := by
       intros p hp hpath_p q hq hpath_q
       have h_path_eq : (hG.path root t).1 = (hG.path root p).1.append (hG.path p t).1 ∧ (hG.path root t).1 = (hG.path root q).1.append (hG.path q t).1 := by
@@ -146,7 +162,7 @@ lemma SimpleGraph.IsTree.parent_unique {α : Type*} {G : SimpleGraph α} (hG : G
 /-
 Transitivity of the ancestor relation in a rooted tree.
 -/
-lemma SimpleGraph.IsTree.ordered_trans {α : Type*} {G : SimpleGraph α} (hG : G.IsTree) (root : α) {a b c : α}
+lemma SimpleGraph.IsTree.ordered_trans (hG : G.IsTree) (root : α) {a b c : α}
     (hab : hG.ordered root a b) (hbc : hG.ordered root b c) : hG.ordered root a c := by
       -- By definition of `IsTree`, since there is a path from `root` to `b` and from `root` to `c`, and `b` is on the path from `root` to `c`, the path from `root` to `c` is the concatenation of the path from `root` to `b` and the path from `b` to `c`.
       have h_concat : (hG.path root c).1 = (hG.path root b).1.append (hG.path b c).1 := by
@@ -156,7 +172,7 @@ lemma SimpleGraph.IsTree.ordered_trans {α : Type*} {G : SimpleGraph α} (hG : G
 /-
 Antisymmetry of the ancestor relation in a rooted tree.
 -/
-lemma SimpleGraph.IsTree.ordered_antisymm {α : Type*} {G : SimpleGraph α} (hG : G.IsTree) (root : α) {a b : α}
+lemma SimpleGraph.IsTree.ordered_antisymm (hG : G.IsTree) (root : α) {a b : α}
     (hab : hG.ordered root a b) (hba : hG.ordered root b a) : a = b := by
       -- By the uniqueness of paths in a tree, the path from `root` to `b` and the path from `root` to `a` must be the same.
       have h_path_eq : (hG.path root b).1 = (hG.path root a).1.append (hG.path a b).1 := by
@@ -166,9 +182,6 @@ lemma SimpleGraph.IsTree.ordered_antisymm {α : Type*} {G : SimpleGraph α} (hG 
       replace h_path_eq' := congr_arg ( fun p => p.support ) h_path_eq'; simp_all +decide [ SimpleGraph.Walk.support_append ] ;
       cases h : ( hG.path a b : G.Walk a b ) <;> aesop
 
-/-
-The intersection property for the specific tree decomposition bags: if a node is in the bags of two nodes, it is in the bag of any node on the path between them.
--/
 def tree_bag [Fintype α] (hG : G.IsTree) (root : α) (t : α) : Set α :=
   insert t {p | G.Adj t p ∧ hG.ordered root p t}
 
@@ -214,48 +227,21 @@ noncomputable def treeDecompositionOfTree [Fintype α] (hG : G.IsTree) (root : �
   tree := hG
   union_bags := by
     exact Set.eq_univ_iff_forall.mpr fun x => Set.mem_iUnion.mpr ⟨ x, Set.mem_insert _ _ ⟩
-  edge_mem_bag := by
-    -- Let `uv` be an edge. By `adj_ordered_cases`, either `ordered root u v` or `ordered root v u`.
-    intro u v huv
-    by_cases h_ordered : hG.ordered root u v;
-    · -- Since $u$ is the parent of $v$, we have $u \in \text{tree\_bag } hG \text{ root } v$ and $v \in \text{tree\_bag } hG \text{ root } v$.
-      use v
-      simp [tree_bag, h_ordered];
-      exact Or.inr huv.symm;
-    · -- Since `¬hG.ordered root u v`, we have `hG.ordered root v u`.
-      have h_ordered_rev : hG.ordered root v u := by
-        exact Or.resolve_left ( hG.adj_ordered_cases root huv ) h_ordered;
-      unfold tree_bag; aesop;
-  bag_inter := by
-    exact fun {t₁ t₂ t₃} a ↦ tree_bag_inter hG root a
-
-/-
-Constructs a tree decomposition of a tree `G` where the decomposition tree is `G` itself and bags are `{node, parent}`.
--/
-noncomputable def treeDecompositionOfTree' [Fintype α] (hG : G.IsTree) (root : α) : TreeDecomposition G where
-  ι := α
-  V := tree_bag hG root
-  T := G
-  tree := hG
-  union_bags := by
-    exact Set.eq_univ_iff_forall.mpr fun x => Set.mem_iUnion.mpr ⟨ x, Set.mem_insert _ _ ⟩
-  edge_mem_bag := by
-    intro u v huv
-    have h_cases : hG.ordered root u v ∨ hG.ordered root v u := by
-      exact IsTree.adj_ordered_cases hG root huv;
-    cases' h_cases with h h;
-    · use v;
-      unfold tree_bag;
-      simp_all +decide [ SimpleGraph.adj_comm ];
-    · unfold tree_bag; aesop;
-  bag_inter := by
-    exact fun {t₁ t₂ t₃} a ↦ tree_bag_inter hG root a
+  edge_mem_bag {u v} huv := by
+    by_cases h_ordered : hG.ordered root u v
+    · refine ⟨v, ?_, by simp [tree_bag]⟩
+      exact Or.inr ⟨huv.symm, h_ordered⟩
+    · have h_ordered_rev : hG.ordered root v u := by
+        exact Or.resolve_left (hG.adj_ordered_cases root huv) h_ordered
+      refine ⟨u, by simp [tree_bag], ?_⟩
+      exact Or.inr ⟨huv, h_ordered_rev⟩
+  bag_inter h := tree_bag_inter hG root h
 
 /-
 The width of the canonical tree decomposition of a tree is at most 1.
 -/
-lemma treeDecompositionOfTree'_width [Fintype α] (hG : G.IsTree) (root : α) :
-    (treeDecompositionOfTree' hG root).width ≤ 1 := by
+lemma treeDecompositionOfTree_width [Fintype α] (hG : G.IsTree) (root : α) :
+    (treeDecompositionOfTree hG root).width ≤ 1 := by
       -- Each bag in the tree decomposition contains at most 2 vertices, so the width is at most 1.
       have h_card : ∀ t : α, (Fintype.card (tree_bag hG root t)) ≤ 2 := by
         intros t
@@ -274,23 +260,22 @@ lemma treeDecompositionOfTree'_width [Fintype α] (hG : G.IsTree) (root : α) :
       · exact fun _ => inferInstance;
       · infer_instance
 
-theorem tree_treeWidth [Fintype α] (hG : G.IsTree) (hG' : G ≠ ⊥) : treeWidth G = 1 :=
-  by
-    refine' le_antisymm _ _;
-    · refine' le_trans ( csInf_le _ _ ) _;
-      exact ( treeDecompositionOfTree' hG ( Classical.choose ( show ∃ x : α, True from by
-                                                                contrapose! hG'; aesop ) ) ).width
-      all_goals generalize_proofs at *;
-      · exact ⟨ 0, fun w hw => hw.choose_spec.symm ▸ zero_le _ ⟩;
-      · exact ⟨ _, rfl ⟩;
-      · (expose_names; exact treeDecompositionOfTree'_width hG (choose pf));
-    · exact treeWidth_ge_one hG'
+theorem tree_treeWidth [Fintype α] (hG : G.IsTree) (hG' : G ≠ ⊥) : treeWidth G = 1 := by
+  refine' le_antisymm _ _;
+  · refine' le_trans ( csInf_le _ _ ) _;
+    exact ( treeDecompositionOfTree hG ( Classical.choose ( show ∃ x : α, True from by
+                                                              contrapose! hG'; aesop ) ) ).width
+    all_goals generalize_proofs at *;
+    · exact ⟨ 0, fun w hw => hw.choose_spec.symm ▸ zero_le _ ⟩;
+    · exact ⟨ _, rfl ⟩;
+    · (expose_names; exact treeDecompositionOfTree_width hG (choose pf));
+  · exact treeWidth_ge_one hG'
 
 theorem bot_treeWidth [Fintype α] : treeWidth (⊥ : SimpleGraph α) = 0 := by
   classical
   by_cases hne : Nonempty α
   · letI : Nonempty α := hne
-    obtain ⟨T, hTle, hTtree⟩ : ∃ T : SimpleGraph α, T ≤ (⊤ : SimpleGraph α) ∧ T.IsTree :=
+    obtain ⟨T, _, hTtree⟩ : ∃ T : SimpleGraph α, T ≤ (⊤ : SimpleGraph α) ∧ T.IsTree :=
       (SimpleGraph.connected_top (V := α)).exists_isTree_le
     let D : TreeDecomposition (⊥ : SimpleGraph α) := {
       ι := α
@@ -325,3 +310,9 @@ theorem bot_treeWidth [Fintype α] : treeWidth (⊥ : SimpleGraph α) = 0 := by
     refine le_antisymm ?_ bot_le
     unfold treeWidth
     exact sInf_le ⟨D, hD⟩
+
+theorem treeWidth_mono [Fintype α] {H : G.Subgraph} : treeWidth H.coe ≤ treeWidth G := by
+  unfold treeWidth
+  refine le_csInf ⟨_, TreeDecomposition.trivial, rfl⟩ ?_
+  rintro w ⟨D, rfl⟩
+  exact le_trans (sInf_le ⟨D.restrict H, rfl⟩) (D.width_restrict_le H)
