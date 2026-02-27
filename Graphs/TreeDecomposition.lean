@@ -70,9 +70,12 @@ def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.co
   edge_mem_bag {u v} huv := D.edge_mem_bag (H.coe_adj_sub u v huv)
   bag_inter {b₁ b₂ b₃} hordered x hx := D.bag_inter hordered ⟨hx.1, hx.2⟩
 
-noncomputable def width [Fintype α] (D : TreeDecomposition G) : ℕ∞ := ⨆ b, Fintype.card (D.V b)
+noncomputable def width [Fintype α] (D : TreeDecomposition G) : ℕ∞ := ⨆ b, Fintype.card (D.V b) - 1
 
 end TreeDecomposition
 
 noncomputable def treeWidth [Fintype α] (G : SimpleGraph α) : ℕ∞ :=
   sInf {w | ∃ D : TreeDecomposition G, D.width = w}
+
+theorem tree_treeWidth [Fintype α] (hG : G.IsTree) : treeWidth G = 1 :=
+  sorry
