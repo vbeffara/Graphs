@@ -10,62 +10,54 @@ structure TreeDecomposition (G : SimpleGraph α) where
   bags : Set (Set α)
   T : SimpleGraph bags
   --
-  T_tree : T.IsTree
+  tree : T.IsTree
   union_bags : ⋃₀ bags = univ
   edge_mem_bag {u v : α} : G.Adj u v → ∃ b : bags, u ∈ b.1 ∧ v ∈ b.1
-  bag_inter {b₁ b₂ b₃ : bags} : T_tree.ordered b₁ b₂ b₃ → b₁.1 ∩ b₃.1 ⊆ b₂.1
+  bag_inter {b₁ b₂ b₃ : bags} : tree.ordered b₁ b₂ b₃ → b₁.1 ∩ b₃.1 ⊆ b₂.1
 
 namespace TreeDecomposition
 
-variable {D : TreeDecomposition G}
+variable {D : TreeDecomposition G} {b₁ b₂ : D.bags}
+
+def U₁ (D : TreeDecomposition G) (b₁ b₂ : D.bags) : Set α := ⋃₀ D.tree.left b₁ b₂
+
+def U₂ (D : TreeDecomposition G) (b₁ b₂ : D.bags) : Set α := ⋃₀ D.tree.right b₁ b₂
+
+theorem U_cover (h : D.T.Adj b₁ b₂) : D.U₁ b₁ b₂ ∪ D.U₂ b₁ b₂ = univ := by
+  simp only [U₁, U₂, sUnion_eq_biUnion, ← biUnion_union, ← image_union]
+  simp only [D.tree.left_union_right h, ← sUnion_eq_biUnion]
+  simp only [image_univ, Subtype.range_coe_subtype, setOf_mem_eq, D.union_bags]
+
+lemma diestel_12_3_1 (h : D.T.Adj b₁ b₂) : G.Separates (D.U₁ b₁ b₂) (D.U₂ b₁ b₂) (b₁ ∩ b₂) := by
+  refine separates_cover (U_cover h) |>.2 ⟨?_, ?_⟩
+  · intro v hv
+    obtain ⟨a', ⟨a, ha, rfl⟩, hv₁⟩ := hv.1
+    obtain ⟨b', ⟨b, hb, rfl⟩, hv₂⟩ := hv.2
+    have h1 := D.tree.left_right_ordered h ha hb
+    have h2 := D.bag_inter h1.2
+    have h3 := D.bag_inter ha;
+    grind
+  · intros u hu v hv huv
+    obtain ⟨b₃, hb₃⟩ := D.edge_mem_bag huv;
+    have h1 := D.tree.left_union_right h;
+    obtain h2 | h2 := eq_univ_iff_forall.mp h1 b₃
+    · obtain ⟨b₄, hb₄, hb₄'⟩ := hv;
+      obtain ⟨b₅, hb₅, rfl⟩ := hb₄;
+      have h3 := D.tree.left_right_ordered h h2 hb₅
+      have h4 := D.bag_inter h3.1
+      have h5 := D.bag_inter h3.2
+      grind
+    · obtain ⟨b₄, hb₄, hb₄'⟩ := hu;
+      obtain ⟨b₅, hb₅, rfl⟩ := hb₄;
+      have h3 := D.tree.left_right_ordered h hb₅ h2
+      have h4 := D.bag_inter h2
+      have h5 := D.bag_inter h3.1
+      grind
+
+theorem adhesion (h : D.T.Adj b₁ b₂) : D.U₁ b₁ b₂ ∩ D.U₂ b₁ b₂ = b₁.1 ∩ b₂.1 := by
+  sorry
 
 noncomputable def width [Fintype α] (D : TreeDecomposition G) : ℕ∞ := ⨆ b ∈ D.bags, Fintype.card b
-
-lemma diestel_12_3_1 {b₁ b₂ : D.bags} (h : D.T.Adj b₁ b₂) :
-    G.Separates (⋃₀ D.T_tree.left b₁ b₂) (⋃₀ D.T_tree.right b₁ b₂) (b₁ ∩ b₂) := by
-  set T₁ := D.T_tree.left b₁ b₂
-  set T₂ := D.T_tree.right b₁ b₂
-  set U₁ : Set α := ⋃₀ T₁
-  set U₂ : Set α := ⋃₀ T₂
-  have h1 : U₁ ∪ U₂ = univ := by
-    simp only [U₁, U₂, T₁, T₂, sUnion_eq_biUnion, ← biUnion_union, ← image_union]
-    simp only [D.T_tree.left_union_right h, ← sUnion_eq_biUnion]
-    simp only [image_univ, Subtype.range_coe_subtype, setOf_mem_eq, D.union_bags]
-  refine separates_cover h1 |>.2 ⟨?_, ?_⟩
-  · intro v hv
-    obtain ⟨a, ha, hv₁⟩ : ∃ a ∈ T₁, v ∈ a.val := by grind
-    obtain ⟨b, hb, hv₂⟩ : ∃ b ∈ T₂, v ∈ b.val := by grind
-    have h_path : a.val ∩ b.val ⊆ b₂.val := by
-      apply D.bag_inter
-      have := D.T_tree.left_right_ordered h ha hb
-      aesop
-    have h_path' : b₂.val ∩ a.val ⊆ b₁.val := by
-      have h_path' : a.val ∩ b₂.val ⊆ b₁.val := by
-        have h_ordered : D.T_tree.ordered a b₁ b₂ := by
-          exact ((fun a ↦ ha) ∘ T₁) b₁
-        exact D.bag_inter h_ordered;
-      simpa only [ Set.inter_comm ] using h_path'
-    aesop
-  · intros u hu v hv huv
-    obtain ⟨b₃, hb₃⟩ : ∃ b₃ : D.bags, u ∈ b₃.1 ∧ v ∈ b₃.1 := by
-      exact D.edge_mem_bag huv;
-    have hb₃_T₁_or_T₂ : b₃ ∈ T₁ ∨ b₃ ∈ T₂ := by
-      have := D.T_tree.left_union_right h;
-      exact Set.eq_univ_iff_forall.mp this b₃;
-    cases' hb₃_T₁_or_T₂ with hb₃_T₁ hb₃_T₂;
-    · obtain ⟨ b₄, hb₄, hb₄' ⟩ := hv;
-      obtain ⟨ b₅, hb₅, rfl ⟩ := hb₄;
-      have := D.T_tree.left_right_ordered h hb₃_T₁ hb₅;
-      exact Or.inr ⟨ by
-        have := D.bag_inter this.1; aesop;, by
-        have := D.bag_inter this.2; aesop; ⟩;
-    · obtain ⟨ b₄, hb₄, hb₄' ⟩ := hu;
-      obtain ⟨ b₅, hb₅, rfl ⟩ := hb₄;
-      have := D.bag_inter ( show D.T_tree.ordered b₅ b₁ b₃ from ?_ );
-      · have := D.bag_inter ( show D.T_tree.ordered b₁ b₂ b₃ from ?_ );
-        · grind +ring;
-        · exact ((fun a ↦ hb₃_T₂) ∘ T₁) b₁;
-      · apply (D.T_tree.left_right_ordered h hb₅ hb₃_T₂).left
 
 end TreeDecomposition
 
