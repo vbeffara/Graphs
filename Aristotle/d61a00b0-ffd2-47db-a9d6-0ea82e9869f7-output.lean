@@ -1,6 +1,22 @@
+/-
+This file was edited by Aristotle (https://aristotle.harmonic.fun).
+
+Lean version: leanprover/lean4:v4.24.0
+Mathlib version: f897ebcf72cd16f89ab4577d0c826cd14afaafc7
+This project request had uuid: d61a00b0-ffd2-47db-a9d6-0ea82e9869f7
+
+To cite Aristotle, tag @Aristotle-Harmonic on GitHub PRs/issues, and add as co-author to commits:
+Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
+
+The following was proved by Aristotle:
+
+- theorem adhesion (h : D.T.Adj b₁ b₂) : D.U₁ b₁ b₂ ∩ D.U₂ b₁ b₂ = b₁.1 ∩ b₂.1
+-/
+
 import Mathlib
 import Graphs.Separation
 import Graphs.Tree
+
 
 open Classical Set SimpleGraph
 
@@ -55,10 +71,28 @@ lemma diestel_12_3_1 (h : D.T.Adj b₁ b₂) : G.Separates (D.U₁ b₁ b₂) (D
       grind
 
 theorem adhesion (h : D.T.Adj b₁ b₂) : D.U₁ b₁ b₂ ∩ D.U₂ b₁ b₂ = b₁.1 ∩ b₂.1 := by
-  ext x; constructor <;> intro hx
-  · obtain ⟨y, h1, h2⟩ := diestel_12_3_1 h x hx.1 x hx.2 SimpleGraph.Walk.nil ; simp_all
-  · refine ⟨⟨b₁, ?_⟩, ⟨b₂, ?_⟩⟩ <;>
-    simp [SimpleGraph.IsTree.left, SimpleGraph.IsTree.right, SimpleGraph.IsTree.ordered, hx.1, hx.2]
+  ext x;
+  constructor;
+  · intro hx
+    obtain ⟨b₁', hb₁', hx₁⟩ := hx.left
+    obtain ⟨b₂', hb₂', hx₂⟩ := hx.right
+    have h_sep : G.Separates (D.U₁ b₁ b₂) (D.U₂ b₁ b₂) (b₁.1 ∩ b₂.1) := by
+      apply diestel_12_3_1;
+      exact h
+    exact (by
+    specialize h_sep x hx.1 x hx.2 ( SimpleGraph.Walk.nil ) ; aesop);
+  · -- If x is in the intersection of b₁ and b₂, then x is in both b₁ and b₂. Since b₁ and b₂ are bags in the tree decomposition, their intersection is part of the separator.
+    intro hx
+    simp [hx, TreeDecomposition.U₁, TreeDecomposition.U₂];
+    constructor;
+    · use b₁.val;
+      -- Since $x$ is in both $b₁$ and $b₂$, and the path from $b₁$ to $b₂$ is just the edge between them, $x$ is in the support of that path.
+      simp [SimpleGraph.IsTree.left, hx];
+      simp [SimpleGraph.IsTree.ordered];
+      exact hx.1;
+    · use b₂.val;
+      simp_all +decide [ SimpleGraph.IsTree.right ];
+      unfold SimpleGraph.IsTree.ordered; aesop;
 
 noncomputable def width [Fintype α] (D : TreeDecomposition G) : ℕ∞ := ⨆ b ∈ D.bags, Fintype.card b
 
