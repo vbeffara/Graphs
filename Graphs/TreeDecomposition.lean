@@ -71,6 +71,75 @@ theorem adhesion (h : D.T.Adj t₁ t₂) : D.U₁ t₁ t₂ ∩ D.U₂ t₁ t₂
   · refine ⟨⟨_, ⟨t₁, ?_⟩, hx.1⟩, ⟨_, ⟨t₂, ?_⟩, hx.2⟩⟩ <;>
     simp [SimpleGraph.IsTree.left, SimpleGraph.IsTree.right, SimpleGraph.IsTree.ordered]
 
+lemma separates_singletons_of_mem_sides (h : D.T.Adj t₁ t₂) {u v : α}
+    (hu : u ∈ D.U₁ t₁ t₂) (hv : v ∈ D.U₂ t₁ t₂) :
+    G.Separates ({u} : Set α) ({v} : Set α) (D.V t₁ ∩ D.V t₂) := by
+  intro x hx y hy p
+  have hx' : x = u := by simpa using hx
+  have hy' : y = v := by simpa using hy
+  subst x y
+  exact diestel_12_3_1 (D := D) h u hu v hv p
+
+lemma diestel_12_3_4 (h : D.T.Adj t₁ t₂) {W : Set α}
+    (hu : ∃ u ∈ W, u ∈ D.U₁ t₁ t₂) (hv : ∃ v ∈ W, v ∈ D.U₂ t₁ t₂) :
+    ∃ u ∈ W, ∃ v ∈ W, G.Separates ({u} : Set α) ({v} : Set α) (D.V t₁ ∩ D.V t₂) := by
+  rcases hu with ⟨u, huW, huU⟩
+  rcases hv with ⟨v, hvW, hvU⟩
+  exact ⟨u, huW, v, hvW, separates_singletons_of_mem_sides (D := D) h huU hvU⟩
+
+alias diestel_12_3_4_of_split := diestel_12_3_4
+
+private lemma exists_first_step_on_path {a b : D.ι} (hab : a ≠ b) :
+    ∃ c, D.T.Adj a c ∧ D.tree.ordered a c b := by
+  rcases D.tree.path a b with ⟨p, hp⟩
+  cases p with
+  | nil =>
+      exfalso
+      exact hab rfl
+  | @cons a c b hac p =>
+      refine ⟨c, hac, ?_⟩
+      unfold SimpleGraph.IsTree.ordered
+      have hpath : (D.tree.path a b).1 = SimpleGraph.Walk.cons hac p := by
+        exact (D.tree.path_spec' ⟨SimpleGraph.Walk.cons hac p, hp⟩).symm
+      simp [hpath]
+
+lemma diestel_12_3_4_global {W : Set α} (hW : ¬ ∃ t : D.ι, W ⊆ D.V t) :
+    ∃ t₁ t₂, D.T.Adj t₁ t₂ ∧
+      ∃ u ∈ W, ∃ v ∈ W, G.Separates ({u} : Set α) ({v} : Set α) (D.V t₁ ∩ D.V t₂) := by
+  have hWne : W.Nonempty := by
+    by_contra h
+    have hWempty : W = ∅ := Set.not_nonempty_iff_eq_empty.mp h
+    rcases D.tree.1.nonempty with ⟨t⟩
+    exact hW ⟨t, by simp [hWempty]⟩
+  rcases hWne with ⟨u, huW⟩
+  have huUnion : u ∈ ⋃ i, D.V i := by simp [D.union_bags] at huW ⊢
+  rcases mem_iUnion.mp huUnion with ⟨t, hut⟩
+  have hWnotSub : ¬ W ⊆ D.V t := by
+    intro hsub
+    exact hW ⟨t, hsub⟩
+  rcases not_subset.mp hWnotSub with ⟨v, hvW, hvt⟩
+  have hvUnion : v ∈ ⋃ i, D.V i := by simp [D.union_bags] at hvW ⊢
+  rcases mem_iUnion.mp hvUnion with ⟨s, hvs⟩
+  have hts : t ≠ s := by
+    intro hts
+    exact hvt (hts ▸ hvs)
+  obtain ⟨c, htc, hcOrd⟩ := exists_first_step_on_path (D := D) (a := t) (b := s) hts
+  have huSide : u ∈ D.U₁ t c := by
+    unfold U₁
+    refine mem_iUnion.mpr ⟨t, ?_⟩
+    refine mem_iUnion.mpr ⟨?_, hut⟩
+    change t ∈ (D.tree.path t c).1.support
+    simp
+  have hvSide : v ∈ D.U₂ t c := by
+    unfold U₂
+    refine mem_iUnion.mpr ⟨s, ?_⟩
+    refine mem_iUnion.mpr ⟨?_, hvs⟩
+    simpa [SimpleGraph.IsTree.right] using hcOrd
+  obtain ⟨u', hu'W, v', hv'W, hsep⟩ :=
+    diestel_12_3_4 (D := D) (t₁ := t) (t₂ := c) htc
+      ⟨u, huW, huSide⟩ ⟨v, hvW, hvSide⟩
+  exact ⟨t, c, htc, u', hu'W, v', hv'W, hsep⟩
+
 def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.coe where
   ι := D.ι
   V t := {v | v.1 ∈ D.V t}

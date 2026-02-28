@@ -83,9 +83,16 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \end{proof}
 
 \begin{lemma}[Diestel Lemma~12.3.4]
-  \label{lem:td-bag-separation}
-  Every set not contained in a bag has a controlled separation property.
+  \label{lem:td-bag-separation} \lean{TreeDecomposition.diestel_12_3_4_global} \leanok
+  \uses{def:tree-decomposition,lem:td-edge-separator}
+  Any set of vertices not contained in a bag of \((T,V)\) contains two
+  vertices that are separated by an adhesion set of \((T,V)\).
 \end{lemma}
+
+\begin{proof}
+  \uses{lem:td-edge-separator}
+  \leanok
+\end{proof}
 
 \begin{lemma}[Adhesion identity (cf.\ Diestel \S12.3)]
   \label{lem:td-adhesion} \lean{TreeDecomposition.adhesion} \leanok
