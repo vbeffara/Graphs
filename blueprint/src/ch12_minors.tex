@@ -7,12 +7,13 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \section{12.1 Well-quasi-ordering}
 
 \begin{definition}[Diestel \S12.1]
+  \label{def:wqo}
   A quasi-ordering is a \emph{well-quasi-ordering} (WQO) if there is no
   infinite antichain and no infinite strictly descending sequence.
 \end{definition}
 
 \begin{proposition}[WQO criterion in Lean]
-  \label{prop:12.1-criterion} \lean{WQO_iff} \leanok
+  \label{prop:wqo-criterion} \lean{WQO_iff} \leanok
   The Diestel criterion above is equivalent to the standard WQO formulation.
 \end{proposition}
 
@@ -21,7 +22,7 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \end{proof}
 
 \begin{lemma}[Diestel Lemma~12.1.3 (Higman)]
-  \label{lem:12.1.3} \lean{Higman} \leanok
+  \label{lem:higman} \lean{Higman} \leanok
   If \(X\) is WQO, then finite sequences/finite supports over \(X\) are WQO.
 \end{lemma}
 
@@ -32,7 +33,7 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \section{12.2 The Graph Minor Theorem for Trees}
 
 \begin{theorem}[Diestel Theorem~12.2.1 (Kruskal 1960)]
-  \label{thm:12.2.1}
+  \label{thm:kruskal-trees}
   Finite trees are well-quasi-ordered by the relevant embedding/minor order.
 \end{theorem}
 
@@ -43,14 +44,14 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \section{12.3 Tree-decompositions}
 
 \begin{definition}[Tree-decomposition]
-  \label{def:12.3-tree-dec} \lean{TreeDecomposition} \leanok
+  \label{def:tree-decomposition} \lean{TreeDecomposition} \leanok
   A tree-decomposition of \(G\) is a tree \(T\) with bags \(V_t \subseteq V(G)\)
   satisfying cover, edge coverage, and the bag-intersection axiom.
 \end{definition}
 
 \begin{lemma}[Diestel Lemma~12.3.1]
-  \label{lem:12.3.1} \lean{TreeDecomposition.diestel_12_3_1} \leanok
-  \uses{def:12.3-tree-dec}
+  \label{lem:td-edge-separator} \lean{TreeDecomposition.diestel_12_3_1} \leanok
+  \uses{def:tree-decomposition}
   For an edge \(t_1t_2\in E(T)\), \(V_{t_1}\cap V_{t_2}\) separates the two
   induced sides of \(T-t_1t_2\).
 \end{lemma}
@@ -60,8 +61,8 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \end{proof}
 
 \begin{lemma}[Diestel Lemma~12.3.2]
-  \label{lem:12.3.2} \lean{TreeDecomposition.restrict} \leanok
-  \uses{def:12.3-tree-dec}
+  \label{lem:td-restrict} \lean{TreeDecomposition.restrict} \leanok
+  \uses{def:tree-decomposition}
   For every \(H \le G\), \((T,(V_t\cap V(H))_{t\in V(T)})\) is a
   tree-decomposition of \(H\).
 \end{lemma}
@@ -71,8 +72,8 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \end{proof}
 
 \begin{lemma}[Diestel Lemma~12.3.3]
-  \label{lem:12.3.3} \lean{TreeDecomposition.map} \leanok
-  \uses{def:12.3-tree-dec}
+  \label{lem:td-map} \lean{TreeDecomposition.map} \leanok
+  \uses{def:tree-decomposition}
   Transporting bags along contraction maps gives a decomposition of the
   contracted graph.
 \end{lemma}
@@ -82,23 +83,23 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \end{proof}
 
 \begin{lemma}[Diestel Lemma~12.3.4]
-  \label{lem:12.3.4}
+  \label{lem:td-bag-separation}
   Every set not contained in a bag has a controlled separation property.
 \end{lemma}
 
 \begin{lemma}[Adhesion identity (cf.\ Diestel \S12.3)]
-  \label{lem:12.3-adhesion} \lean{TreeDecomposition.adhesion} \leanok
-  \uses{lem:12.3.1}
+  \label{lem:td-adhesion} \lean{TreeDecomposition.adhesion} \leanok
+  \uses{lem:td-edge-separator}
   The two side regions intersect exactly in \(V_{t_1}\cap V_{t_2}\).
 \end{lemma}
 
 \begin{proof}
-  \uses{lem:12.3.1}
+  \uses{lem:td-edge-separator}
   \leanok
 \end{proof}
 
 \begin{theorem}[Diestel Theorem~12.3.7]
-  \label{thm:12.3.7}
+  \label{thm:td-canonical}
   Existence of canonical tree-decompositions with additional adhesion/parts
   properties.
 \end{theorem}
@@ -110,76 +111,78 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \section{12.4 Tree-width}
 
 \begin{definition}[Diestel \S12.4]
-  \label{def:12.4-width} \lean{TreeDecomposition.width} \leanok
-  The width of a decomposition is \(\sup_t (|V_t|-1)\).
+  \label{def:td-width} \uses{def:tree-decomposition }
+  \lean{TreeDecomposition.width} \leanok The width of a decomposition is
+  \(\sup_t (|V_t|-1)\).
 \end{definition}
 
 \begin{definition}[Diestel \S12.4]
-  \label{def:12.4-treewidth} \lean{treeWidth} \leanok
-  \uses{def:12.4-width}
+  \label{def:tree-width} \lean{treeWidth} \leanok
+  \uses{def:td-width}
   \(\mathrm{tw}(G)\) is the infimum of decomposition widths.
 \end{definition}
 
 \begin{lemma}[Diestel Lemma~12.4.1]
-  \label{lem:12.4.1} \lean{treeWidth_minor} \leanok
-  \uses{def:12.4-treewidth,def:minor}
+  \label{lem:treewidth-minor} \lean{treeWidth_minor} \leanok
+  \uses{def:tree-width,def:minor}
   If \(H \preceq G\), then \(\mathrm{tw}(H)\le \mathrm{tw}(G)\).
 \end{lemma}
 
 \begin{proof}
-  \uses{lem:width-restrict,lem:width-map}
+  \uses{lem:td-width-restrict,lem:td-width-map}
+  \uses{thm:treewidth-subgraph-mono,thm:treewidth-contraction-mono}
   \leanok
 \end{proof}
 
 \begin{theorem}[Diestel Theorem~12.4.2 (Robertson--Seymour 1990)]
-  \label{thm:12.4.2}
-  \uses{def:12.4-treewidth}
+  \label{thm:bounded-treewidth-wqo}
+  \uses{def:tree-width}
   For each \(k\), graphs of tree-width at most \(k\) are WQO by minors.
 \end{theorem}
 
 \begin{theorem}[Diestel Theorem~12.4.3 (Seymour--Thomas 1993)]
-  \label{thm:12.4.3}
-  \uses{def:12.4-treewidth}
+  \label{thm:treewidth-duality}
+  \uses{def:tree-width}
   Tree-width duality (brambles/tangles characterization).
 \end{theorem}
 
 \begin{theorem}[Diestel Theorem~12.4.5 (Thomas 1990)]
-  \label{thm:12.4.5}
-  \uses{def:12.4-treewidth}
+  \label{thm:treewidth-separator}
+  \uses{def:tree-width}
   Separator/linked-structure consequence of bounded tree-width.
 \end{theorem}
 
 \begin{theorem}[Diestel Theorem~12.4.6]
-  \label{thm:12.4.6}
-  \uses{thm:12.4.5}
+  \label{thm:treewidth-excluded-minor}
+  \uses{thm:treewidth-separator}
   Excluded-minor consequence for bounded tree-width classes.
 \end{theorem}
 
 \begin{lemma}[Lean auxiliary: width under restriction]
-  \label{lem:width-restrict} \lean{TreeDecomposition.width_restrict_le} \leanok
-  \uses{def:12.4-width}
+  \label{lem:td-width-restrict} \lean{TreeDecomposition.width_restrict_le} \leanok
+  \uses{def:td-width}
   Restricting a decomposition to a subgraph does not increase width.
 \end{lemma}
 
 \begin{proof}
-  \uses{lem:12.3.2}
+  \uses{lem:td-restrict}
   \leanok
 \end{proof}
 
 \begin{lemma}[Lean auxiliary: width under contraction pushforward]
-  \label{lem:width-map} \lean{TreeDecomposition.width_map_le} \leanok
-  \uses{def:12.4-width}
+  \label{lem:td-width-map} \lean{TreeDecomposition.width_map_le} \leanok
+  \uses{def:td-width}
   Pushing a decomposition through an adapted surjection does not increase width.
 \end{lemma}
 
 \begin{proof}
-  \uses{lem:12.3.3}
+  \uses{lem:td-map}
   \leanok
 \end{proof}
 
 \begin{theorem}[Lean: tree case]
-  \label{thm:tree-tw} \lean{tree_treeWidth} \leanok
-  \uses{def:12.4-treewidth}
+  \label{thm:tree-treewidth} \lean{tree_treeWidth} \leanok
+  \uses{def:tree-width}
   If \(G\) is a non-empty tree, then \(\mathrm{tw}(G)=1\).
 \end{theorem}
 
@@ -188,30 +191,30 @@ Lean cross-reference or mark it as not yet formalized in this project.
 \end{proof}
 
 \begin{theorem}[Lean: empty graph case]
-  \label{thm:bot-tw} \lean{bot_treeWidth} \leanok
-  \uses{def:12.4-treewidth}
+  \label{thm:empty-treewidth} \lean{bot_treeWidth} \leanok
+  \uses{def:tree-width}
   \(\mathrm{tw}(\emptyset)=0\).
 \end{theorem}
 
 \begin{proof}
-  \uses{lem:width-restrict}
+  \uses{lem:td-width-restrict}
   \leanok
 \end{proof}
 
 \begin{theorem}[Lean: subgraph monotonicity]
-  \label{thm:tw-mono-subgraph} \lean{treeWidth_mono} \leanok
-  \uses{def:12.4-treewidth}
+  \label{thm:treewidth-subgraph-mono} \lean{treeWidth_mono} \leanok
+  \uses{def:tree-width}
   If \(H \le G\), then \(\mathrm{tw}(H)\le \mathrm{tw}(G)\).
 \end{theorem}
 
 \begin{proof}
-  \uses{lem:width-map}
+  \uses{lem:td-width-map}
   \leanok
 \end{proof}
 
 \begin{theorem}[Lean: contraction monotonicity]
-  \label{thm:tw-mono-contract} \lean{treeWidth_contract} \leanok
-  \uses{def:12.4-treewidth}
+  \label{thm:treewidth-contraction-mono} \lean{treeWidth_contract} \leanok
+  \uses{def:tree-width}
   If \(G \preceq_c H\), then \(\mathrm{tw}(G)\le \mathrm{tw}(H)\).
 \end{theorem}
 
@@ -219,112 +222,94 @@ Lean cross-reference or mark it as not yet formalized in this project.
   \leanok
 \end{proof}
 
-\section{12.5 Tangles}
+% \section{12.5 Tangles}
 
-\begin{theorem}[Diestel Theorem~12.5.1 (Robertson--Seymour 1991)]
-  \label{thm:12.5.1}
-  Fundamental tree-of-tangles decomposition statement.
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.5.1 (Robertson--Seymour 1991)]
+%   Fundamental tree-of-tangles decomposition statement.
+% \end{theorem}
 
-\begin{lemma}[Diestel Lemma~12.5.2 (Fish Lemma)]
-  \label{lem:12.5.2}
-  Local uncrossing/choice property for tangles.
-\end{lemma}
+% \begin{lemma}[Diestel Lemma~12.5.2 (Fish Lemma)]
+%   Local uncrossing/choice property for tangles.
+% \end{lemma}
 
-\begin{lemma}[Diestel Lemma~12.5.3 (Splinter Lemma)]
-  \label{lem:12.5.3}
-  Splinter property for pairwise distinguishability of tangles.
-\end{lemma}
+% \begin{lemma}[Diestel Lemma~12.5.3 (Splinter Lemma)]
+%   Splinter property for pairwise distinguishability of tangles.
+% \end{lemma}
 
-\begin{lemma}[Diestel Lemma~12.5.4]
-  \label{lem:12.5.4}
-  Existence of a unique minimum-order distinguisher for tangle pairs.
-\end{lemma}
+% \begin{lemma}[Diestel Lemma~12.5.4]
+%   Existence of a unique minimum-order distinguisher for tangle pairs.
+% \end{lemma}
 
-\begin{lemma}[Diestel Lemma~12.5.5]
-  \label{lem:12.5.5}
-  Crossing-separation uncrossing relation.
-\end{lemma}
+% \begin{lemma}[Diestel Lemma~12.5.5]
+%   Crossing-separation uncrossing relation.
+% \end{lemma}
 
-\begin{lemma}[Diestel Lemma~12.5.6]
-  \label{lem:12.5.6}
-  Quantitative uncrossing inequality for crossing separations.
-\end{lemma}
+% \begin{lemma}[Diestel Lemma~12.5.6]
+%   Quantitative uncrossing inequality for crossing separations.
+% \end{lemma}
 
-\begin{lemma}[Diestel Lemma~12.5.7]
-  \label{lem:12.5.7}
-  Global minimization consequence of the uncrossing inequalities.
-\end{lemma}
+% \begin{lemma}[Diestel Lemma~12.5.7]
+%   Global minimization consequence of the uncrossing inequalities.
+% \end{lemma}
 
-\begin{theorem}[Diestel Theorem~12.5.8 (Carmesin--Kurkofka 2024)]
-  \label{thm:12.5.8}
-  Canonical decomposition distinguishing all tangles at once.
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.5.8 (Carmesin--Kurkofka 2024)]
+%   Canonical decomposition distinguishing all tangles at once.
+% \end{theorem}
 
-\begin{theorem}[Diestel Theorem~12.5.9 (Robertson--Seymour 1991)]
-  \label{thm:12.5.9}
-  Tangle duality in the finite-order setting.
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.5.9 (Robertson--Seymour 1991)]
+%   Tangle duality in the finite-order setting.
+% \end{theorem}
 
-\begin{lemma}[Diestel Lemma~12.5.10 (Uncrossing Lemma)]
-  \label{lem:12.5.10}
-  Standard uncrossing step used in tangle duality.
-\end{lemma}
+% \begin{lemma}[Diestel Lemma~12.5.10 (Uncrossing Lemma)]
+%   Standard uncrossing step used in tangle duality.
+% \end{lemma}
 
-\begin{theorem}[Diestel Theorem~12.5.11]
-  \label{thm:12.5.11}
-  Equivalent formulations of tangle duality.
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.5.11]
+%   Equivalent formulations of tangle duality.
+% \end{theorem}
 
-\begin{proof}
-  Not yet formalized in this project.
-\end{proof}
+% \begin{proof}
+%   Not yet formalized in this project.
+% \end{proof}
 
-\section{12.6 Tree-decompositions and forbidden minors}
+% \section{12.6 Tree-decompositions and forbidden minors}
 
-\begin{lemma}[Diestel Lemma~12.6.1]
-  \label{lem:12.6.1}
-  Characterization of graph properties by forbidden minors.
-\end{lemma}
+% \begin{lemma}[Diestel Lemma~12.6.1]
+%   Characterization of graph properties by forbidden minors.
+% \end{lemma}
 
-\begin{theorem}[Diestel Theorem~12.6.3 (Robertson--Seymour 1986)]
-  \label{thm:12.6.3}
-  Grid-minor theorem (large tree-width forces large grid minors).
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.6.3 (Robertson--Seymour 1986)]
+%   Grid-minor theorem (large tree-width forces large grid minors).
+% \end{theorem}
 
-\begin{theorem}[Diestel Theorem~12.6.5 (Robertson--Seymour 1986)]
-  \label{thm:12.6.5}
-  Erdős--Pósa-type consequence for minors.
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.6.5 (Robertson--Seymour 1986)]
+%   Erdős--Pósa-type consequence for minors.
+% \end{theorem}
 
-\begin{theorem}[Diestel Theorem~12.6.6 (Robertson--Seymour 2003)]
-  \label{thm:12.6.6}
-  Structure theorem for graphs excluding a fixed complete-graph minor.
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.6.6 (Robertson--Seymour 2003)]
+%   Structure theorem for graphs excluding a fixed complete-graph minor.
+% \end{theorem}
 
-\begin{theorem}[Diestel Theorem~12.6.7 (Grohe--Marx 2012)]
-  \label{thm:12.6.7}
-  Converse/qualitative sharpening of Theorem~\ref{thm:12.6.6}.
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.6.7 (Grohe--Marx 2012)]
+%   Converse/qualitative sharpening of the previous structure theorem.
+% \end{theorem}
 
-\begin{theorem}[Diestel Theorem~12.6.8]
-  \label{thm:12.6.8}
-  Characterization of graphs with no \(K_{\aleph_0}\)-minor.
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.6.8]
+%   Characterization of graphs with no \(K_{\aleph_0}\)-minor.
+% \end{theorem}
 
-\begin{theorem}[Diestel Theorem~12.6.9]
-  \label{thm:12.6.9}
-  Equivalent formulations for connected graphs in the infinite setting.
-\end{theorem}
+% \begin{theorem}[Diestel Theorem~12.6.9]
+%   Equivalent formulations for connected graphs in the infinite setting.
+% \end{theorem}
 
-\begin{proof}
-  Not yet formalized in this project.
-\end{proof}
+% \begin{proof}
+%   Not yet formalized in this project.
+% \end{proof}
 
 \section{12.7 The graph minor theorem}
 
 \begin{theorem}[Diestel Theorem~12.7.1 (Robertson--Seymour 1986--2004)]
-  \label{thm:12.7.1} \lean{GraphMinorTheorem} \leanok
+  \label{thm:graph-minor-theorem} \lean{GraphMinorTheorem} \leanok
   \uses{def:minor}
   Finite graphs are well-quasi-ordered by the minor relation.
 \end{theorem}
@@ -333,14 +318,13 @@ Lean cross-reference or mark it as not yet formalized in this project.
   Not yet formalized in this project.
 \end{proof}
 
-\begin{lemma}[Diestel Lemma~12.7.4]
-  \label{lem:12.7.4}
-  Surface-dependent radius bound used in the chapter's algorithmic/structural
-  corollaries.
-\end{lemma}
+% \begin{lemma}[Diestel Lemma~12.7.4]
+%   Surface-dependent radius bound used in the chapter's algorithmic/structural
+%   corollaries.
+% \end{lemma}
 
 \begin{theorem}[Planar forbidden-minor pointer]
-  \label{thm:wagner} \lean{Wagner} \leanok
+  \label{thm:wagner-theorem} \lean{Wagner} \leanok
   \uses{def:minor}
   \(G \preceq \mathrm{Plane} \iff K_5 \not\preceq G \land K_{3,3} \not\preceq G\).
 \end{theorem}
