@@ -174,25 +174,12 @@ noncomputable def map (D : TreeDecomposition H) (φ : β → α) (hφs : Functio
     exact ⟨x₂, hx₂, hx₂φ.trans hx₃₁⟩ }
 
 lemma width_map_le [Fintype α] [Fintype β] (D : TreeDecomposition H) (φ : β → α)
-    (hφs : Function.Surjective φ) (hφa : H.Adapted φ) :
-    (D.map φ hφs hφa).width ≤ D.width := by
-  unfold TreeDecomposition.width
-  refine iSup_le ?_
-  intro t
-  letI : Fintype ((D.map φ hφs hφa).V t) := Subtype.fintype (Membership.mem ((D.map φ hφs hφa).V t))
-  have hcard :
-      @Fintype.card ((D.map φ hφs hφa).V t)
-          (Subtype.fintype (Membership.mem ((D.map φ hφs hφa).V t))) ≤ Fintype.card (D.V t) := by
-    let f : D.V t → (D.map φ hφs hφa).V t := fun x => ⟨φ x, ⟨x, x.2, rfl⟩⟩
-    have hf : Function.Surjective f := by
-      rintro ⟨y, ⟨x, hx, rfl⟩⟩
-      exact ⟨⟨x, hx⟩, rfl⟩
-    exact Fintype.card_le_of_surjective f hf
-  have hcast :
-      ((@Fintype.card ((D.map φ hφs hφa).V t)
-          (Subtype.fintype (Membership.mem ((D.map φ hφs hφa).V t))) : ℕ∞)) ≤
-        (Fintype.card (D.V t) : ℕ∞) := Nat.cast_le.mpr hcard
-  exact le_iSup_of_le t (tsub_le_tsub_right hcast 1)
+    (hφs : Function.Surjective φ) (hφa : H.Adapted φ) : (D.map φ hφs hφa).width ≤ D.width := by
+  apply iSup_mono
+  intro i
+  norm_cast
+  simp only [TreeDecomposition.map, ← Nat.card_eq_fintype_card]
+  exact Nat.sub_le_sub_right (Nat.card_image_le $ toFinite (D.V i)) 1
 
 end Map
 
