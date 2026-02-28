@@ -50,6 +50,7 @@ Lean cross-reference or mark it as not yet formalized in this project.
 
 \begin{lemma}[Diestel Lemma~12.3.1]
   \label{lem:12.3.1} \lean{TreeDecomposition.diestel_12_3_1} \leanok
+  \uses{def:12.3-tree-dec}
   For an edge \(t_1t_2\in E(T)\), \(V_{t_1}\cap V_{t_2}\) separates the two
   induced sides of \(T-t_1t_2\).
 \end{lemma}
@@ -60,6 +61,7 @@ Lean cross-reference or mark it as not yet formalized in this project.
 
 \begin{lemma}[Diestel Lemma~12.3.2]
   \label{lem:12.3.2} \lean{TreeDecomposition.restrict} \leanok
+  \uses{def:12.3-tree-dec}
   For every \(H \le G\), \((T,(V_t\cap V(H))_{t\in V(T)})\) is a
   tree-decomposition of \(H\).
 \end{lemma}
@@ -70,6 +72,7 @@ Lean cross-reference or mark it as not yet formalized in this project.
 
 \begin{lemma}[Diestel Lemma~12.3.3]
   \label{lem:12.3.3} \lean{TreeDecomposition.map} \leanok
+  \uses{def:12.3-tree-dec}
   Transporting bags along contraction maps gives a decomposition of the
   contracted graph.
 \end{lemma}
@@ -85,10 +88,12 @@ Lean cross-reference or mark it as not yet formalized in this project.
 
 \begin{lemma}[Adhesion identity (cf.\ Diestel \S12.3)]
   \label{lem:12.3-adhesion} \lean{TreeDecomposition.adhesion} \leanok
+  \uses{lem:12.3.1}
   The two side regions intersect exactly in \(V_{t_1}\cap V_{t_2}\).
 \end{lemma}
 
 \begin{proof}
+  \uses{lem:12.3.1}
   \leanok
 \end{proof}
 
@@ -111,58 +116,70 @@ Lean cross-reference or mark it as not yet formalized in this project.
 
 \begin{definition}[Diestel \S12.4]
   \label{def:12.4-treewidth} \lean{treeWidth} \leanok
+  \uses{def:12.4-width}
   \(\mathrm{tw}(G)\) is the infimum of decomposition widths.
 \end{definition}
 
 \begin{lemma}[Diestel Lemma~12.4.1]
-  \label{lem:12.4.1} \lean{treeWidth_minor} \leanok \uses{def:minor}
+  \label{lem:12.4.1} \lean{treeWidth_minor} \leanok
+  \uses{def:12.4-treewidth,def:minor}
   If \(H \preceq G\), then \(\mathrm{tw}(H)\le \mathrm{tw}(G)\).
 \end{lemma}
 
 \begin{proof}
+  \uses{lem:width-restrict,lem:width-map}
   \leanok
 \end{proof}
 
 \begin{theorem}[Diestel Theorem~12.4.2 (Robertson--Seymour 1990)]
   \label{thm:12.4.2}
+  \uses{def:12.4-treewidth}
   For each \(k\), graphs of tree-width at most \(k\) are WQO by minors.
 \end{theorem}
 
 \begin{theorem}[Diestel Theorem~12.4.3 (Seymour--Thomas 1993)]
   \label{thm:12.4.3}
+  \uses{def:12.4-treewidth}
   Tree-width duality (brambles/tangles characterization).
 \end{theorem}
 
 \begin{theorem}[Diestel Theorem~12.4.5 (Thomas 1990)]
   \label{thm:12.4.5}
+  \uses{def:12.4-treewidth}
   Separator/linked-structure consequence of bounded tree-width.
 \end{theorem}
 
 \begin{theorem}[Diestel Theorem~12.4.6]
   \label{thm:12.4.6}
+  \uses{thm:12.4.5}
   Excluded-minor consequence for bounded tree-width classes.
 \end{theorem}
 
 \begin{lemma}[Lean auxiliary: width under restriction]
   \label{lem:width-restrict} \lean{TreeDecomposition.width_restrict_le} \leanok
+  \uses{def:12.4-width}
   Restricting a decomposition to a subgraph does not increase width.
 \end{lemma}
 
 \begin{proof}
+  \uses{lem:12.3.2}
   \leanok
 \end{proof}
 
 \begin{lemma}[Lean auxiliary: width under contraction pushforward]
   \label{lem:width-map} \lean{TreeDecomposition.width_map_le} \leanok
+  \uses{def:12.4-width}
   Pushing a decomposition through an adapted surjection does not increase width.
 \end{lemma}
 
 \begin{proof}
+  \uses{lem:12.3.3}
   \leanok
 \end{proof}
 
 \begin{theorem}[Lean: tree case]
   \label{thm:tree-tw} \lean{tree_treeWidth} \leanok
+  \uses{def:12.4-treewidth}
   If \(G\) is a non-empty tree, then \(\mathrm{tw}(G)=1\).
 \end{theorem}
 
@@ -172,24 +189,29 @@ Lean cross-reference or mark it as not yet formalized in this project.
 
 \begin{theorem}[Lean: empty graph case]
   \label{thm:bot-tw} \lean{bot_treeWidth} \leanok
+  \uses{def:12.4-treewidth}
   \(\mathrm{tw}(\emptyset)=0\).
 \end{theorem}
 
 \begin{proof}
+  \uses{lem:width-restrict}
   \leanok
 \end{proof}
 
 \begin{theorem}[Lean: subgraph monotonicity]
   \label{thm:tw-mono-subgraph} \lean{treeWidth_mono} \leanok
+  \uses{def:12.4-treewidth}
   If \(H \le G\), then \(\mathrm{tw}(H)\le \mathrm{tw}(G)\).
 \end{theorem}
 
 \begin{proof}
+  \uses{lem:width-map}
   \leanok
 \end{proof}
 
 \begin{theorem}[Lean: contraction monotonicity]
   \label{thm:tw-mono-contract} \lean{treeWidth_contract} \leanok
+  \uses{def:12.4-treewidth}
   If \(G \preceq_c H\), then \(\mathrm{tw}(G)\le \mathrm{tw}(H)\).
 \end{theorem}
 
@@ -303,6 +325,7 @@ Lean cross-reference or mark it as not yet formalized in this project.
 
 \begin{theorem}[Diestel Theorem~12.7.1 (Robertson--Seymour 1986--2004)]
   \label{thm:12.7.1} \lean{GraphMinorTheorem} \leanok
+  \uses{def:minor}
   Finite graphs are well-quasi-ordered by the minor relation.
 \end{theorem}
 
@@ -318,6 +341,7 @@ Lean cross-reference or mark it as not yet formalized in this project.
 
 \begin{theorem}[Planar forbidden-minor pointer]
   \label{thm:wagner} \lean{Wagner} \leanok
+  \uses{def:minor}
   \(G \preceq \mathrm{Plane} \iff K_5 \not\preceq G \land K_{3,3} \not\preceq G\).
 \end{theorem}
 
