@@ -326,3 +326,10 @@ lemma ordered_antisymm (hG : G.IsTree) (root : α) {a b : α}
   cases h : (hG.path a b : G.Walk a b) <;> aesop
 
 end SimpleGraph.IsTree
+
+def isParent {T : RootedTree} (u v : T) : Prop := v ≠ ⊥ ∧ u = Order.pred v
+
+def rt_to_t (T : RootedTree) : SimpleGraph T where
+  Adj u v := isParent u v ∨ isParent v u
+  loopless x := by
+    simp [isParent] ; change _ ≠ _ → _ ; rw [← Order.pred_lt_iff_ne_bot] ; grind
