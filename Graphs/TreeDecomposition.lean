@@ -374,7 +374,9 @@ def td_cycle (n : ℕ) : TreeDecomposition (cycleGraph (n + 3)) where
       simp [h2] ; right ; ext ; rw [add_comm 1, Fin.val_add_one] ; simp [Fin.last]
     use ⟨u, by omega⟩
     simp ; left ; ext ; rw [add_comm 1, Fin.val_add_one] ; simp [Fin.last, h1]
-  bag_inter {t₁ t₂ t₃} h := sorry
+  bag_inter := by
+    rintro ⟨t₁, ht₁⟩ ⟨t₂, ht₂⟩ ⟨t₃, ht₃⟩ h ⟨x, hx⟩
+    sorry
 
 theorem td_cycle_width {n : ℕ} : (td_cycle n).width = 2 := by
   sorry

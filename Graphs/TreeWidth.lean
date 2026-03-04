@@ -93,7 +93,7 @@ theorem treeWidth_minor [Fintype α] [Fintype β] (h : G ≼ H) : treeWidth G �
 theorem treeWidth_le_one [Fintype α] : treeWidth G ≤ 1 ↔ G.IsAcyclic := by
   sorry
 
-theorem treeWidth_loop_le_two (h : 2 < n) : treeWidth (Cycle n) ≤ 2 := by
+theorem treeWidth_loop_le_two (h : 2 < n) : treeWidth (cycleGraph n) ≤ 2 := by
   sorry
 
 #print axioms treeWidth_minor
