@@ -1,4 +1,5 @@
 import Mathlib
+import Graphs.Basic
 import Graphs.Minor
 import Graphs.TreeDecomposition
 
@@ -6,7 +7,7 @@ open Classical Set SimpleGraph
 
 universe u
 
-variable {α β : Type u} {G : SimpleGraph α} {H : SimpleGraph β}
+variable {α β : Type u} {G : SimpleGraph α} {H : SimpleGraph β} {n : ℕ}
 
 noncomputable def treeWidth [Fintype α] (G : SimpleGraph α) : ℕ∞ :=
   sInf {w | ∃ D : TreeDecomposition G, D.width = w}
@@ -88,5 +89,11 @@ theorem treeWidth_contract [Fintype α] [Fintype β] (h : G ≼c H) : treeWidth 
 theorem treeWidth_minor [Fintype α] [Fintype β] (h : G ≼ H) : treeWidth G ≤ treeWidth H := by
   rcases h with ⟨K, hK⟩
   exact le_trans (treeWidth_contract hK) (treeWidth_mono (H := K))
+
+theorem treeWidth_le_one [Fintype α] : treeWidth G ≤ 1 ↔ G.IsAcyclic := by
+  sorry
+
+theorem treeWidth_loop_le_two (h : 2 < n) : treeWidth (Cycle n) ≤ 2 := by
+  sorry
 
 #print axioms treeWidth_minor

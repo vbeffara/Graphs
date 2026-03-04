@@ -1,4 +1,5 @@
 import Mathlib
+import Graphs.Basic
 import Graphs.Contraction
 import Graphs.Separation
 import Graphs.Tree
@@ -331,3 +332,17 @@ lemma treeDecompositionOfTree_width [Fintype α] (hG : G.IsTree) (root : α) :
       · infer_instance;
       · exact fun _ => inferInstance;
       · infer_instance
+
+def td_cycle (n : ℕ) : TreeDecomposition (SimpleGraph.Cycle (n + 3)) where
+  ι := Fin (n + 1)
+  V t := {⟨t.1, by omega⟩, ⟨t.1 + 1, by omega⟩, ⟨n + 2, by omega⟩}
+  T := SimpleGraph.Segment (n + 1)
+  tree := Segment.isTree
+  union_bags := by
+    simp [Set.eq_univ_iff_forall]
+    rintro ⟨x, hx⟩
+    by_cases h1 : x = n + 2 ; simp [h1]
+    by_cases h2 : x = n + 1 ; exact ⟨⟨n, by omega⟩, by simp [h2]⟩
+    exact ⟨⟨x, by omega⟩, by simp⟩
+  edge_mem_bag := sorry
+  bag_inter := sorry
