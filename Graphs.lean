@@ -3,6 +3,7 @@ import Graphs.Cayley
 import Graphs.Contraction
 import Graphs.Expander
 import Graphs.Farkas
+import Graphs.GMT_bounded_tw
 import Graphs.GraphMinorTheorem
 import Graphs.Map
 import Graphs.Menger
