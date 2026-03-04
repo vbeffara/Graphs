@@ -342,16 +342,22 @@ lemma pathGraph_edgeSet (n : ℕ) : (pathGraph (n + 1)).edgeSet =
     · use ⟨y, by omega⟩ ; simp
   · grind
 
+lemma pathGraph_isTree (n : ℕ) : (pathGraph (n + 1)).IsTree := by
+  have : (fun (i : Fin n) => s(i.castSucc, i.succ)).Injective := by
+    rintro ⟨i, hi⟩ ⟨j, hj⟩ ; grind
+  refine isTree_iff_connected_and_card.2 ⟨pathGraph_connected _, ?_⟩
+  rw [pathGraph_edgeSet, Nat.card_image_of_injective this]
+  simp
+
+lemma pathGraph_ordered (n : ℕ) (i j k : Fin (n + 1)) :
+    (pathGraph_isTree n).ordered i j k ↔ j.1 ∈ uIcc i.1 k.1 := by
+  sorry
+
 def td_cycle (n : ℕ) : TreeDecomposition (cycleGraph (n + 3)) where
   ι := Fin (n + 1)
   V t := {⟨t.1, by omega⟩, ⟨t.1 + 1, by omega⟩, ⟨n + 2, by omega⟩}
   T := pathGraph (n + 1)
-  tree := by
-    have : (fun (i : Fin n) => s(i.castSucc, i.succ)).Injective := by
-      rintro ⟨i, hi⟩ ⟨j, hj⟩ ; grind
-    refine isTree_iff_connected_and_card.2 ⟨pathGraph_connected _, ?_⟩
-    rw [pathGraph_edgeSet, Nat.card_image_of_injective this]
-    simp
+  tree := pathGraph_isTree _
   union_bags := by
     simp [Set.eq_univ_iff_forall]
     rintro ⟨x, hx⟩
@@ -376,7 +382,8 @@ def td_cycle (n : ℕ) : TreeDecomposition (cycleGraph (n + 3)) where
     simp ; left ; ext ; rw [add_comm 1, Fin.val_add_one] ; simp [Fin.last, h1]
   bag_inter := by
     rintro ⟨t₁, ht₁⟩ ⟨t₂, ht₂⟩ ⟨t₃, ht₃⟩ h ⟨x, hx⟩
-    sorry
+    simp [pathGraph_ordered, uIcc] at h
+    grind
 
 theorem td_cycle_width {n : ℕ} : (td_cycle n).width = 2 := by
   sorry
