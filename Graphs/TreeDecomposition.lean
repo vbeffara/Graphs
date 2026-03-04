@@ -333,19 +333,48 @@ lemma treeDecompositionOfTree_width [Fintype α] (hG : G.IsTree) (root : α) :
       · exact fun _ => inferInstance;
       · infer_instance
 
-def td_cycle (n : ℕ) : TreeDecomposition (SimpleGraph.Cycle (n + 3)) where
+lemma pathGraph_edgeSet (n : ℕ) : (pathGraph (n + 1)).edgeSet =
+    (fun (i : Fin n) => s(i.castSucc, i.succ)) '' univ := by
+  ext e ; induction' e with x y ; obtain ⟨x, hx⟩ := x ; obtain ⟨y, hy⟩ := y
+  simp [mem_edgeSet, pathGraph_adj, Fin.ext_iff] ; constructor
+  · rintro (rfl | rfl)
+    · use ⟨x, by omega⟩ ; simp
+    · use ⟨y, by omega⟩ ; simp
+  · grind
+
+def td_cycle (n : ℕ) : TreeDecomposition (cycleGraph (n + 3)) where
   ι := Fin (n + 1)
   V t := {⟨t.1, by omega⟩, ⟨t.1 + 1, by omega⟩, ⟨n + 2, by omega⟩}
-  T := SimpleGraph.Segment (n + 1)
-  tree := Segment.isTree
+  T := pathGraph (n + 1)
+  tree := by
+    have : (fun (i : Fin n) => s(i.castSucc, i.succ)).Injective := by
+      rintro ⟨i, hi⟩ ⟨j, hj⟩ ; grind
+    refine isTree_iff_connected_and_card.2 ⟨pathGraph_connected _, ?_⟩
+    rw [pathGraph_edgeSet, Nat.card_image_of_injective this]
+    simp
   union_bags := by
     simp [Set.eq_univ_iff_forall]
     rintro ⟨x, hx⟩
     by_cases h1 : x = n + 2 ; simp [h1]
     by_cases h2 : x = n + 1 ; exact ⟨⟨n, by omega⟩, by simp [h2]⟩
     exact ⟨⟨x, by omega⟩, by simp⟩
-  edge_mem_bag := sorry
-  bag_inter := sorry
+  edge_mem_bag := by
+    clear G α
+    rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
+    have hne : u ≠ v := by simpa using huv.ne
+    simp [cycleGraph_adj] at huv
+    wlog h : (⟨v, hv⟩ : Fin (n + 3)) - ⟨u, hu⟩ = 1 ; grind ; clear huv
+    rw [sub_eq_iff_eq_add] at h ; simp [h] ; clear h
+    by_cases h1 : u = n + 2
+    · use 0
+      simp [h1, add_comm (1 : Fin _)]
+      exact Fin.last_add_one (n + 2)
+    by_cases h2 : u = n + 1
+    · use ⟨n, by omega⟩
+      simp [h2] ; right ; ext ; rw [add_comm 1, Fin.val_add_one] ; simp [Fin.last]
+    use ⟨u, by omega⟩
+    simp ; left ; ext ; rw [add_comm 1, Fin.val_add_one] ; simp [Fin.last, h1]
+  bag_inter {t₁ t₂ t₃} h := sorry
 
-  theorem td_cycle_width {n : ℕ} : (td_cycle n).width = 2 := by
-    sorry
+theorem td_cycle_width {n : ℕ} : (td_cycle n).width = 2 := by
+  sorry
