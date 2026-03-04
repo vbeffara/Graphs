@@ -346,3 +346,6 @@ def td_cycle (n : ℕ) : TreeDecomposition (SimpleGraph.Cycle (n + 3)) where
     exact ⟨⟨x, by omega⟩, by simp⟩
   edge_mem_bag := sorry
   bag_inter := sorry
+
+  theorem td_cycle_width {n : ℕ} : (td_cycle n).width = 2 := by
+    sorry
