@@ -349,6 +349,39 @@ lemma pathGraph_isTree (n : ℕ) : (pathGraph (n + 1)).IsTree := by
   rw [pathGraph_edgeSet, Nat.card_image_of_injective this]
   simp
 
+def pathPath_aux (n : ℕ) : ∀ (i : Fin (n + 1)) (k : ℕ) (hk : i + k < n + 1),
+    { p : (pathGraph (n + 1)).Path i ⟨i + k, hk⟩ // ∀ x ∈ p.1.support, x ∈ uIcc i ⟨i + k, hk⟩ }
+  | i, 0, hk => ⟨Path.nil, by simp⟩
+  | i, k + 1, hk => by
+    have : (pathGraph (n + 1)).Adj i ⟨i + 1, by omega⟩ := by simp [pathGraph_adj]
+    obtain ⟨⟨p, hp1⟩, hp2⟩ := pathPath_aux n ⟨i + 1, by omega⟩ k (by { simp ; omega })
+    refine ⟨⟨Walk.cons this ?_, ?_⟩, ?_⟩
+    · refine Walk.copy p rfl (by ring_nf)
+    · apply Walk.IsPath.cons
+      · simpa only [Walk.isPath_copy]
+      · intro h
+        simp at h hp2
+        grind
+    · obtain ⟨i, hi⟩ := i
+      simp [uIcc] at hp2 ⊢
+      rintro ⟨x, hx1⟩ hx2
+      specialize hp2 _ hx2
+      simp at hp2 ⊢
+      grind
+
+def pathPath (n : ℕ) (i j : Fin (n + 1)) :
+    { p : (pathGraph (n + 1)).Path i j // ∀ x ∈ p.1.support, x ∈ uIcc i j } := by
+  clear G α
+  by_cases h : i ≤ j
+  · have : i.1 + (j.1 - i.1) = j.1 := by simp only [Nat.add_sub_of_le h]
+    let q := pathPath_aux n i (j - i) (by { rw [this] ; exact j.2 })
+    convert q <;> simp [this]
+  · have h' : j < i := by exact Fin.not_le.mp h
+    have : j.1 + (i.1 - j.1) = i.1 := by simp only [Nat.add_sub_of_le h'.le]
+    obtain ⟨⟨q, hq1⟩, hq2⟩ := pathPath_aux n j (i - j) (by { rw [this] ; exact i.2 })
+    refine ⟨⟨(q.copy rfl (by ext ; simpa)).reverse, by simpa⟩, ?_⟩
+    simpa [this, uIcc_comm] using hq2
+
 lemma pathGraph_ordered (n : ℕ) (i j k : Fin (n + 1)) :
     (pathGraph_isTree n).ordered i j k ↔ j.1 ∈ uIcc i.1 k.1 := by
   sorry
