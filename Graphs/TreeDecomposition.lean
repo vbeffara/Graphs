@@ -150,27 +150,23 @@ def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.co
   edge_mem_bag {u v} huv := D.edge_mem_bag (H.coe_adj_sub u v huv)
   bag_inter {b₁ b₂ b₃} hordered x hx := D.bag_inter hordered ⟨hx.1, hx.2⟩
 
-noncomputable def width [Fintype α] (D : TreeDecomposition G) : ℕ∞ := ⨆ b, Fintype.card (D.V b) - 1
+noncomputable def width (D : TreeDecomposition G) := ⨆ b, (D.V b).encard - 1
 
-lemma width_restrict_le [Fintype α] (D : TreeDecomposition G) (H : G.Subgraph) :
+lemma width_restrict_le (D : TreeDecomposition G) (H : G.Subgraph) :
     (D.restrict H).width ≤ D.width := by
   classical
   unfold width
   refine iSup_le ?_
   intro t
-  have hcard : Fintype.card ((D.restrict H).V t) ≤ Fintype.card (D.V t) := by
-    let f : ((D.restrict H).V t) → (D.V t) := fun x => ⟨x.1.1, x.2⟩
-    have hf : Function.Injective f := by
-      intro x y hxy
-      have hval : (x.1.1 : α) = y.1.1 := by
-        exact congrArg (fun z : D.V t => (z : α)) hxy
-      apply Subtype.ext
-      apply Subtype.ext
-      exact hval
-    exact Fintype.card_le_of_injective f hf
-  have hcard' : (Fintype.card ((D.restrict H).V t) : ℕ∞) ≤ (Fintype.card (D.V t) : ℕ∞) := by
-    exact Nat.cast_le.mpr hcard
-  exact le_iSup_of_le t (tsub_le_tsub_right hcard' 1)
+  have hcard : ((D.restrict H).V t).encard ≤ (D.V t).encard := by
+    let ff : H.verts → α := fun x => x.1
+    have hff : Function.Injective ff := Subtype.val_injective
+    have := Function.Injective.encard_image hff ((D.restrict H).V t)
+    rw [← this]
+    apply encard_mono
+    intro x
+    simp [restrict, ff] ; tauto
+  exact le_iSup_of_le t (tsub_le_tsub_right hcard 1)
 
 section Map
 
@@ -243,22 +239,20 @@ noncomputable def map (D : TreeDecomposition H) (φ : β → α) (hφs : Functio
     rcases hq t₂ ht₂ with ⟨x₂, hx₂, hx₂φ⟩
     exact ⟨x₂, hx₂, hx₂φ.trans hx₃₁⟩ }
 
-lemma width_map_le [Fintype α] [Fintype β] (D : TreeDecomposition H) (φ : β → α)
+lemma width_map_le (D : TreeDecomposition H) (φ : β → α)
     (hφs : Function.Surjective φ) (hφa : H.Adapted φ) : (D.map φ hφs hφa).width ≤ D.width := by
   apply iSup_mono
   intro i
-  norm_cast
-  simp only [TreeDecomposition.map, ← Nat.card_eq_fintype_card]
-  exact Nat.sub_le_sub_right (Nat.card_image_le $ toFinite (D.V i)) 1
+  apply tsub_le_tsub_right $ encard_image_le φ (D.V i)
 
 end Map
 
 end TreeDecomposition
 
-def tree_bag [Fintype α] (hG : G.IsTree) (root : α) (t : α) : Set α :=
+def tree_bag (hG : G.IsTree) (root : α) (t : α) : Set α :=
   insert t {p | G.Adj t p ∧ hG.ordered root p t}
 
-lemma tree_bag_inter [Fintype α] (hG : G.IsTree) (root : α) {t₁ t₂ t₃ : α}
+lemma tree_bag_inter (hG : G.IsTree) (root : α) {t₁ t₂ t₃ : α}
     (h_ordered : hG.ordered t₁ t₂ t₃) :
     tree_bag hG root t₁ ∩ tree_bag hG root t₃ ⊆ tree_bag hG root t₂ := by
       intro x hx
@@ -293,7 +287,7 @@ lemma tree_bag_inter [Fintype α] (hG : G.IsTree) (root : α) {t₁ t₂ t₃ : 
 /-
 Constructs a tree decomposition of a tree `G` where the decomposition tree is `G` itself and bags are `{node, parent}`.
 -/
-noncomputable def treeDecompositionOfTree [Fintype α] (hG : G.IsTree) (root : α) : TreeDecomposition G where
+noncomputable def treeDecompositionOfTree (hG : G.IsTree) (root : α) : TreeDecomposition G where
   ι := α
   V := tree_bag hG root
   T := G
@@ -313,25 +307,19 @@ noncomputable def treeDecompositionOfTree [Fintype α] (hG : G.IsTree) (root : �
 /-
 The width of the canonical tree decomposition of a tree is at most 1.
 -/
-lemma treeDecompositionOfTree_width [Fintype α] (hG : G.IsTree) (root : α) :
+lemma treeDecompositionOfTree_width (hG : G.IsTree) (root : α) :
     (treeDecompositionOfTree hG root).width ≤ 1 := by
-      -- Each bag in the tree decomposition contains at most 2 vertices, so the width is at most 1.
-      have h_card : ∀ t : α, (Fintype.card (tree_bag hG root t)) ≤ 2 := by
-        intros t
-        set parents := {p | G.Adj t p ∧ hG.ordered root p t}
-        have h_parents_card : parents.ncard ≤ 1 := by
-          have h_parents_card : ∀ p₁ p₂ : α, p₁ ∈ parents → p₂ ∈ parents → p₁ = p₂ := by
-            intro p₁ p₂ hp₁ hp₂; have := SimpleGraph.IsTree.parent_unique hG root t p₁ p₂; aesop;
-          exact ncard_le_one_iff_subsingleton.mpr fun ⦃x⦄ x_1 ⦃y⦄ ↦ h_parents_card x y x_1;
-        have h_card : (tree_bag hG root t).ncard ≤ 1 + parents.ncard := by
-          convert Set.ncard_union_le { t } parents using 1 ; aesop;
-        simp only [Set.ncard_eq_toFinset_card', toFinset_card] at h_card h_parents_card
-        linarith
-      convert ciSup_le fun t => Nat.cast_le.mpr ( Nat.sub_le_sub_right ( h_card t ) 1 ) using 1;
-      · exact ⟨ root ⟩;
-      · infer_instance;
-      · exact fun _ => inferInstance;
-      · infer_instance
+  have : Nonempty (treeDecompositionOfTree hG root).ι := ⟨root⟩
+  apply ciSup_le
+  intro t
+  simp [treeDecompositionOfTree, tree_bag]
+  refine (encard_insert_le _ _).trans ?_
+  set parents := {p | G.Adj t p ∧ hG.ordered root p t}
+  have h_parents_card : parents.encard ≤ 1 := by
+    have h_parents_card : ∀ p₁ p₂ : α, p₁ ∈ parents → p₂ ∈ parents → p₁ = p₂ := by
+      intro p₁ p₂ hp₁ hp₂; have := SimpleGraph.IsTree.parent_unique hG root t p₁ p₂; aesop;
+    exact encard_le_one_iff_subsingleton.mpr fun ⦃x⦄ x_1 ⦃y⦄ ↦ h_parents_card x y x_1;
+  simpa
 
 lemma pathGraph_edgeSet (n : ℕ) : (pathGraph (n + 1)).edgeSet =
     (fun (i : Fin n) => s(i.castSucc, i.succ)) '' univ := by
@@ -350,7 +338,7 @@ lemma pathGraph_isTree (n : ℕ) : (pathGraph (n + 1)).IsTree := by
   simp
 
 def pathPath_aux (n : ℕ) : ∀ (i : Fin (n + 1)) (k : ℕ) (hk : i + k < n + 1),
-    { p : (pathGraph (n + 1)).Path i ⟨i + k, hk⟩ // ∀ x ∈ p.1.support, x ∈ uIcc i ⟨i + k, hk⟩ }
+    { p : (pathGraph (n + 1)).Path i ⟨i + k, hk⟩ // ∀ x, x ∈ p.1.support ↔ x ∈ uIcc i ⟨i + k, hk⟩ }
   | i, 0, hk => ⟨Path.nil, by simp⟩
   | i, k + 1, hk => by
     have : (pathGraph (n + 1)).Adj i ⟨i + 1, by omega⟩ := by simp [pathGraph_adj]
@@ -364,14 +352,12 @@ def pathPath_aux (n : ℕ) : ∀ (i : Fin (n + 1)) (k : ℕ) (hk : i + k < n + 1
         grind
     · obtain ⟨i, hi⟩ := i
       simp [uIcc] at hp2 ⊢
-      rintro ⟨x, hx1⟩ hx2
-      specialize hp2 _ hx2
-      simp at hp2 ⊢
-      grind
+      rintro ⟨x, hx1⟩
+      simp [hp2 ⟨x, hx1⟩]
+      omega
 
 def pathPath (n : ℕ) (i j : Fin (n + 1)) :
-    { p : (pathGraph (n + 1)).Path i j // ∀ x ∈ p.1.support, x ∈ uIcc i j } := by
-  clear G α
+    { p : (pathGraph (n + 1)).Path i j // ∀ x, x ∈ p.1.support ↔ x ∈ uIcc i j } := by
   by_cases h : i ≤ j
   · have : i.1 + (j.1 - i.1) = j.1 := by simp only [Nat.add_sub_of_le h]
     let q := pathPath_aux n i (j - i) (by { rw [this] ; exact j.2 })
@@ -383,8 +369,11 @@ def pathPath (n : ℕ) (i j : Fin (n + 1)) :
     simpa [this, uIcc_comm] using hq2
 
 lemma pathGraph_ordered (n : ℕ) (i j k : Fin (n + 1)) :
-    (pathGraph_isTree n).ordered i j k ↔ j.1 ∈ uIcc i.1 k.1 := by
-  sorry
+    (pathGraph_isTree n).ordered i j k ↔ j ∈ uIcc i k := by
+  simp [SimpleGraph.IsTree.ordered]
+  obtain ⟨p, hp⟩ := pathPath _ i k
+  rw [(pathGraph_isTree n).path_spec' p] at hp
+  exact hp j
 
 def td_cycle (n : ℕ) : TreeDecomposition (cycleGraph (n + 3)) where
   ι := Fin (n + 1)
