@@ -31,6 +31,15 @@ def trivial : TreeDecomposition G where
   edge_mem_bag := by tauto
   bag_inter := by tauto
 
+def botAt (a : α) : TreeDecomposition (⊥ : SimpleGraph α) where
+  ι := α
+  V b := {b}
+  T := Star a
+  tree := sorry
+  union_bags := by ext x ; simp
+  edge_mem_bag := by tauto
+  bag_inter := sorry
+
 variable {D : TreeDecomposition G} {t₁ t₂ : D.ι}
 
 def U₁ (D : TreeDecomposition G) (t₁ t₂ : D.ι) : Set α := ⋃ t ∈ D.tree.left t₁ t₂, D.V t

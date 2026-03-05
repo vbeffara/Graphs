@@ -38,45 +38,16 @@ theorem tree_treeWidth (hG : G.IsTree) (hG' : G ≠ ⊥) : treeWidth G = 1 := by
     · (expose_names; exact treeDecompositionOfTree_width hG (choose pf))
   · exact treeWidth_ge_one hG'
 
-theorem bot_treeWidth [Fintype α] : treeWidth (⊥ : SimpleGraph α) = 0 := by
-  classical
+theorem bot_treeWidth : treeWidth (⊥ : SimpleGraph α) = 0 := by
+  refine le_antisymm ?_ bot_le
+  suffices : ∃ D : TreeDecomposition (⊥ : SimpleGraph α), D.width = 0
+  · obtain ⟨D, hD⟩ := this ; exact sInf_le ⟨D, hD⟩
   by_cases hne : Nonempty α
-  · letI : Nonempty α := hne
-    obtain ⟨T, _, hTtree⟩ : ∃ T : SimpleGraph α, T ≤ (⊤ : SimpleGraph α) ∧ T.IsTree :=
-      (SimpleGraph.connected_top (V := α)).exists_isTree_le
-    let D : TreeDecomposition (⊥ : SimpleGraph α) := {
-      ι := α
-      V := fun t ↦ {t}
-      T := T
-      tree := hTtree
-      union_bags := by ext x; simp
-      edge_mem_bag := by intro u v huv; cases huv
-      bag_inter := by
-        intro t₁ t₂ t₃ h x hx
-        rcases hx with ⟨hx1, hx3⟩
-        have hx1' : x = t₁ := by simpa using hx1
-        have hx3' : x = t₃ := by simpa using hx3
-        have ht13 : t₁ = t₃ := hx1'.symm.trans hx3'
-        have h' : hTtree.ordered t₁ t₂ t₁ := by simpa [ht13] using h
-        have ht2 : t₂ = t₁ := by
-          have : t₂ ∈ (hTtree.path t₁ t₁).1.support := by
-            simpa [SimpleGraph.IsTree.ordered] using h'
-          have hnil : (hTtree.path t₁ t₁).1 = (SimpleGraph.Walk.nil : T.Walk t₁ t₁) := by
-            simpa using (hTtree.path_spec' (u := t₁) (v := t₁) ⟨SimpleGraph.Walk.nil, by simp⟩).symm
-          simpa [hnil] using this
-        simp [hx1', ht2] }
-    have hD : D.width = 0 := by
-      simp [TreeDecomposition.width, D]
-    refine le_antisymm ?_ bot_le
-    unfold treeWidth
-    exact sInf_le ⟨D, hD⟩
-  · letI : IsEmpty α := not_nonempty_iff.mp hne
-    let D : TreeDecomposition (⊥ : SimpleGraph α) := TreeDecomposition.trivial
-    have hD : D.width = 0 := by
-      simp [TreeDecomposition.width, TreeDecomposition.trivial, D]
-    refine le_antisymm ?_ bot_le
-    unfold treeWidth
-    exact sInf_le ⟨D, hD⟩
+  · obtain ⟨a⟩ := hne ; use .botAt a
+    simp [TreeDecomposition.botAt, TreeDecomposition.width]
+  · letI : IsEmpty α := not_nonempty_iff.mp hne ; use .trivial
+    have := ENat.card_eq_zero_iff_empty α |>.2 this
+    simp [TreeDecomposition.width, TreeDecomposition.trivial, this]
 
 theorem treeWidth_mono {H : G.Subgraph} : treeWidth H.coe ≤ treeWidth G := by
   unfold treeWidth

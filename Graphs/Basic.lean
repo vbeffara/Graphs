@@ -14,4 +14,7 @@ def K5 := completeGraph (Fin 5)
 
 def K33 := completeBipartiteGraph (Fin 3) (Fin 3)
 
+def Star {α : Type*} (a : α) : SimpleGraph α where
+  Adj x y := x ≠ y ∧ (x = a ∨ y = a)
+
 end SimpleGraph
