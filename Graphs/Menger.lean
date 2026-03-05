@@ -20,7 +20,7 @@ import Graphs.Separation
 
 set_option maxHeartbeats 0
 
-open scoped Classical
+open Classical
 
 variable {V : Type*} {G : SimpleGraph V} {x y u v : V} {A B X : Finset V} {n : ℕ}
 
@@ -306,7 +306,11 @@ lemma lift_walk_avoiding_contraction {u v : Quotient (contractEdgeSetoid x y)}
   induction' p with u v p ih;
   · obtain ⟨ u', rfl ⟩ := Quotient.exists_rep u;
     by_cases hu : u' = x ∨ u' = y;
-    · cases hu <;> simp_all [ Quotient.eq, contractEdge_vertex, contractEdgeSetoid ];
+    · cases hu <;> simp_all [ Quotient.eq, contractEdge_vertex, contractEdgeSetoid, contractEdgeProj ];
+      · grind
+      · apply hp
+        erw [List.mem_cons]
+        simp [Quotient.eq]
     · refine' ⟨ u', u', Walk.nil, _, _, _, _ ⟩ <;> simp_all [ contractEdgeProj ];
       tauto;
   · rename_i h₁ h₂;
@@ -331,7 +335,7 @@ lemma lift_walk_avoiding_contraction {u v : Quotient (contractEdgeSetoid x y)}
 Define deleting a single edge and prove it reduces edge count if the edge exists.
 -/
 def deleteEdge (G : SimpleGraph V) (x y : V) : SimpleGraph V :=
-  G.deleteEdges {Sym2.mk (x, y)}
+  G.deleteEdges {s(x, y)}
 
 lemma deleteEdge_card_edges_lt [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (x y : V) (h : G.Adj x y) :
   (G.deleteEdge x y).edgeFinset.card < G.edgeFinset.card := by
@@ -397,11 +401,11 @@ The number of edges in the contracted graph is strictly less than in the origina
 -/
 lemma SimpleGraph.contractEdge_edge_card_lt [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (x y : V) (h : G.Adj x y) :
   (G.contractEdge x y).edgeFinset.card < G.edgeFinset.card := by
-    have h_inter : Finset.card (G.contractEdge x y).edgeFinset ≤ Finset.card (G.edgeFinset \ {Sym2.mk (x, y)}) := by
-      have h_inter : (G.contractEdge x y).edgeFinset ⊆ Finset.image (fun e => Sym2.map (SimpleGraph.contractEdgeProj x y) e) (G.edgeFinset \ {Sym2.mk (x, y)}) := by
+    have h_inter : Finset.card (G.contractEdge x y).edgeFinset ≤ Finset.card (G.edgeFinset \ {s(x, y)}) := by
+      have h_inter : (G.contractEdge x y).edgeFinset ⊆ Finset.image (fun e => Sym2.map (SimpleGraph.contractEdgeProj x y) e) (G.edgeFinset \ {s(x, y)}) := by
         intro e he; simp_all [ SimpleGraph.contractEdge ] ;
         rcases e with ⟨ a, b ⟩ ; simp_all [ fromRel ] ;
-        rcases he.2 with ( ⟨ a', rfl, b', rfl, hab ⟩ | ⟨ a', rfl, b', rfl, hab ⟩ ) <;> use Sym2.mk ( a', b' ) <;> simp_all [ Sym2.eq_swap ];
+        rcases he.2 with ( ⟨ a', rfl, b', rfl, hab ⟩ | ⟨ a', rfl, b', rfl, hab ⟩ ) <;> use s(a', b') <;> simp_all [ Sym2.eq_swap ];
         · simp_all [Quotient.eq, contractEdgeSetoid] ; aesop
         · simp_all [Quotient.eq, contractEdgeSetoid] ; aesop
       exact le_trans ( Finset.card_le_card h_inter ) ( Finset.card_image_le );
@@ -413,7 +417,7 @@ If a walk's support intersects {x, y} only at v (or not at all), then the walk d
 lemma SimpleGraph.Walk.edges_no_xy_of_support_inter_subset_one {G : SimpleGraph V}
   {u v : V} (p : G.Walk u v) (x y : V) (hxy : x ≠ y)
   (h : p.support.toFinset ∩ {x, y} ⊆ {v}) :
-  Sym2.mk (x, y) ∉ p.edges := by
+  s(x, y) ∉ p.edges := by
     contrapose! h;
     simp_all [ Finset.eq_singleton_iff_unique_mem ];
     -- If the edge {x, y} is in the walk's edges, then both x and y must be in the walk's support.
@@ -473,12 +477,12 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph 
       simpa
 
     -- Since x, y ∈ X, q avoids {x, y} internally.
-    have hq_avoid_xy : Sym2.mk (x, y) ∉ q.edges := by
+    have hq_avoid_xy : s(x, y) ∉ q.edges := by
       apply SimpleGraph.Walk.edges_no_xy_of_support_inter_subset_one q x y hxy;
       intro z hz; specialize hq_avoid z; aesop;
     -- Since q is a path in G-xy, it follows that q is a path in G-xy.
     have hq_path_G_minus_xy : ∃ q' : (G.deleteEdge x y).Walk u w, q'.IsPath ∧ q'.support.toFinset ⊆ q.support.toFinset := by
-      have hq_path_G_minus_xy : ∀ {u v : V} (q : G.Walk u v), q.IsPath → Sym2.mk (x, y) ∉ q.edges → ∃ q' : (G.deleteEdge x y).Walk u v, q'.IsPath ∧ q'.support.toFinset ⊆ q.support.toFinset := by
+      have hq_path_G_minus_xy : ∀ {u v : V} (q : G.Walk u v), q.IsPath → s(x, y) ∉ q.edges → ∃ q' : (G.deleteEdge x y).Walk u v, q'.IsPath ∧ q'.support.toFinset ⊆ q.support.toFinset := by
         intro u v q hq hq_avoid_xy
         induction' q with u v q ih;
         · exact ⟨ SimpleGraph.Walk.nil, by simp ⟩;
@@ -1539,21 +1543,33 @@ If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to 
 lemma SimpleGraph.lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (A B : Finset V)
     (P : G'.Joiner A B) : ∃ Q : G.Joiner A B, Q.1.card = P.1.card := by
   obtain ⟨P, hP⟩ := P
-  refine' ⟨⟨P.image _, _⟩, _ ⟩;
-  refine' fun p => ⟨ p.u, p.v, _, _ ⟩;
-  exact p.walk.map ( SimpleGraph.Hom.ofLE h );
-  all_goals simp_all [ Finset.disjoint_left, disjointPaths ];
-  exact p.isPath;
-  · bound;
-  · apply Finset.card_image_of_injOn;
-    intro p hp q hq h_eq;
-    -- Since the walks are equal, their supports must be the same. Therefore, p and q must be the same path.
+  let f : G'.ABPath A B → G.ABPath A B := fun p =>
+    ⟨p.u, p.v, p.walk.mapLe h, p.isPath.mapLe h⟩
+  refine ⟨⟨P.image f, ?_⟩, ?_⟩
+  · intro p hp q hq hpq
+    rcases Finset.mem_image.mp hp with ⟨p', hp', rfl⟩
+    rcases Finset.mem_image.mp hq with ⟨q', hq', rfl⟩
+    have hpq' : p' ≠ q' := by
+      intro h'
+      apply hpq
+      simp [f, h']
+    have hdisj0 : Disjoint (p'.walk.support.toFinset) (q'.walk.support.toFinset) := hP p' hp' q' hq' hpq'
+    have hdisj : Disjoint ((p'.walk.mapLe h).support.toFinset) ((q'.walk.mapLe h).support.toFinset) := by
+      simpa [SimpleGraph.Walk.support_mapLe_eq_support] using hdisj0
+    exact hdisj
+  · apply Finset.card_image_of_injOn
+    intro p hp q hq hpq
+    by_contra hneq
+    have hdisj : Disjoint p.walk.support.toFinset q.walk.support.toFinset := hP p hp q hq hneq
     have h_support_eq : p.walk.support = q.walk.support := by
-      replace h_eq := congr_arg ( fun f => f.walk.support ) h_eq ; aesop;
-    contrapose hP
-    intro hh
-    specialize hh p hp q hq hP
-    simp [← h_support_eq] at hh
+      have h_support_eq_map : (p.walk.mapLe h).support = (q.walk.mapLe h).support := by
+        simpa [f] using congrArg (fun r => r.walk.support) hpq
+      simpa [SimpleGraph.Walk.support_mapLe_eq_support] using h_support_eq_map
+    have hp_mem : (p.u : V) ∈ p.walk.support.toFinset := by
+      simp [p.walk.start_mem_support]
+    have hq_mem : (p.u : V) ∈ q.walk.support.toFinset := by
+      simpa [h_support_eq] using hp_mem
+    exact (Finset.disjoint_left.mp hdisj hp_mem) hq_mem
 
 /-
 If there exists a separator X of size k containing x and y, then G has k disjoint A-B paths.

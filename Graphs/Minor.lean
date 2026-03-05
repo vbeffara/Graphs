@@ -50,6 +50,8 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
   obtain ⟨L', hL'⟩ := subgraph_left L₁ h2
   exact ⟨L', hL₁.trans hL'⟩
 
+#print axioms trans
+
 end IsMinor
 
 -- universe u

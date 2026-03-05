@@ -31,9 +31,8 @@ theorem HB (K : Set (Fin n → ℝ)) (b : Fin n → ℝ) (hK1 : Convex ℝ K) (h
   have h3 : (φ '' K).Nonempty := sorry
   obtain ⟨q, ⟨p, hp, rfl⟩, hq₂⟩ := HB₀ (φ '' K) (φ b) h1 h2 h3
   refine ⟨p, hp, fun x hx => ?_⟩
-  specialize hq₂ (φ x) ⟨x, hx, rfl⟩
-  rw [EuclideanSpace.inner_toLp_toLp] at hq₂
-  simpa only [WithLp.ofLp_sub, star_trivial, φ, dotProduct_comm] using hq₂
+  rw [dotProduct_comm]
+  exact hq₂ (φ x) ⟨x, hx, rfl⟩
 
 theorem FarkasLemma (A : Matrix (Fin m) (Fin n) ℝ) (b : Fin m → ℝ) : ExactlyOneOf
     (∃ x : Fin n → ℝ, (A *ᵥ x = b) ∧ (0 ≤ x))
@@ -127,7 +126,7 @@ theorem isClosed_cone_of_ball (C : PointedCone ℝ E) (hC : IsClosed (closedBall
 theorem coneclosed [ContinuousAdd E] (S : Finset E) :
     IsClosed (PointedCone.span ℝ (S : Set E) : Set E) := by
   let K1 := stdSimplex ℝ S
-  have h1 : IsCompact K1 := isCompact_stdSimplex _
+  have h1 : IsCompact K1 := isCompact_stdSimplex _ _
   let φ (f : S → ℝ) : E := ∑ s : S, f s • s
   have h2 : Continuous φ := by continuity
   let K2 : Set E := φ '' K1

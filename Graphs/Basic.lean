@@ -6,7 +6,7 @@ variable {n : ℕ}
 
 def Line : SimpleGraph ℤ where
   Adj x y := y = x + 1 ∨ y = x - 1
-  loopless x := by grind
+  loopless := ⟨fun x => by grind⟩
 
 def Plane : SimpleGraph (ℤ × ℤ) := Line □ Line
 

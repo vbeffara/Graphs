@@ -113,6 +113,7 @@ def trans (φ : PathEmbedding G₁ G₂) (ψ : PathEmbedding G₂ G₃) : PathEm
   symm e := by congr ; simp [φ.symm]
   ends := by simp [mem_follow df_length_pos, ψ.ends, ← toto df_length_pos, φ.ends]
   disj {e₁ e₂ a ha₁ ha₂} := by
+    simp only [Embedding.trans_apply] at ha₁ ha₂
     rw [mem_follow df_length_pos] at ha₁ ha₂
     obtain ⟨e'₁, he'₁, h'e'₁⟩ := ha₁
     obtain ⟨e'₂, he'₂, h'e'₂⟩ := ha₂

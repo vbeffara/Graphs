@@ -1,5 +1,4 @@
--- import Mathlib
-import Mathlib.Combinatorics.SimpleGraph.Connectivity.Connected
+import Mathlib
 import Graphs.Map
 
 open Function Set
@@ -31,22 +30,22 @@ noncomputable def Subgraph.attach (H : G.Subgraph) (p : G.Walk x y)
 def Adapted (G : SimpleGraph α) (f : α → β) : Prop :=
   ∀ ⦃x y : α⦄, f x = f y → ∃ p : Walk G x y, ∀ z ∈ p.support, f z = f y
 
-def Adapted' (G : SimpleGraph α) (f : α → β) : Prop :=
-  ∀ v, Preconnected (G.induce (f ⁻¹' {v}))
+-- def Adapted' (G : SimpleGraph α) (f : α → β) : Prop :=
+--   ∀ v, Preconnected (G.induce (f ⁻¹' {v}))
 
-theorem adapted_iff_adapted' : Adapted' G f ↔ Adapted G f := by
-  constructor
-  · intro h x y hxy
-    obtain ⟨p⟩ := h (f y) ⟨x, hxy⟩ ⟨y, rfl⟩
-    use Walk.map (Embedding.induce _).toHom p
-    simp only [Walk.support_map, List.mem_map]
-    rintro z ⟨a, ha1, rfl⟩
-    exact a.2
-  · intro h x' ⟨x, hx⟩ ⟨y, hy⟩
-    simp only [mem_preimage, mem_singleton_iff] at hx hy
-    subst hy
-    obtain ⟨p, hp⟩ := h hx
-    use p.induce (f ⁻¹' {f y}) hp
+-- theorem adapted_iff_adapted' : Adapted' G f ↔ Adapted G f := by
+--   constructor
+--   · intro h x y hxy
+--     obtain ⟨p⟩ := h (f y) ⟨x, hxy⟩ ⟨y, rfl⟩
+--     use Walk.map (Embedding.induce _).toHom p
+--     simp only [Walk.support_map, List.mem_map]
+--     rintro z ⟨a, ha1, rfl⟩
+--     exact a.2
+--   · intro h x' ⟨x, hx⟩ ⟨y, hy⟩
+--     simp only [mem_preimage, mem_singleton_iff] at hx hy
+--     subst hy
+--     obtain ⟨p, hp⟩ := h hx
+--     use p.induce (f ⁻¹' {f y}) hp
 
 -- lemma merge_edge_adapted [DecidableEq V] {e : G.Dart} : G.Adapted (merge_edge e) := by
 --   rintro x y hxy
@@ -63,12 +62,12 @@ lemma of_injective (h : Injective f) : Adapted G f := by
   rintro x y hxy ; rw [h hxy] ;
   exact ⟨.nil, by simp only [Walk.support_nil, List.mem_cons, List.not_mem_nil, or_false, forall_eq]⟩
 
-lemma of_injective' (h : Injective f) : Adapted' G f := by
-  rintro v ⟨x, hx⟩ ⟨y, hy⟩ ; simp only [h $ Eq.trans hx hy.symm, Reachable.rfl]
+-- lemma of_injective' (h : Injective f) : Adapted' G f := by
+--   rintro v ⟨x, hx⟩ ⟨y, hy⟩ ; simp only [h $ Eq.trans hx hy.symm, Reachable.rfl]
 
 lemma id : Adapted G id := of_injective injective_id
 
-noncomputable def lift_path (hf : Adapted G f) (p : Walk (map' f G) x' y') :
+noncomputable def lift_path (hf : Adapted G f) (p : Walk (G.map f) x' y') :
     ∀ x y, f x = x' → f y = y' → { q : Walk G x y // ∀ z ∈ q.support, f z ∈ p.support } := by
   induction p with
   | nil =>
@@ -87,11 +86,11 @@ noncomputable def lift_path (hf : Adapted G f) (p : Walk (map' f G) x' y') :
     simp only [Walk.mem_support_append_iff, Walk.support_cons, List.mem_cons] at hz
     obtain h | h | h := hz <;> simp_all
 
-noncomputable def lift_path' (hf : Adapted G f) (p : Walk (map' f G) (f x) (f y)) :
+noncomputable def lift_path' (hf : Adapted G f) (p : Walk (G.map f) (f x) (f y)) :
     { q : Walk G x y // ∀ z ∈ q.support, f z ∈ p.support } :=
   lift_path hf p x y rfl rfl
 
-theorem comp (hf : Adapted G f) (hg : Adapted (map' f G) g) : Adapted G (g ∘ f) := by
+theorem comp (hf : Adapted G f) (hg : Adapted (G.map f) g) : Adapted G (g ∘ f) := by
   intro x y hxy
   obtain ⟨p, hp⟩ := hg hxy
   exact ⟨lift_path' hf p, by grind⟩
@@ -114,30 +113,30 @@ theorem comp (hf : Adapted G f) (hg : Adapted (map' f G) g) : Adapted G (g ∘ f
     (comap'_subgraph φ K).verts = φ ⁻¹' K.verts := by
   rfl
 
-@[simp] theorem key₀' {φ : β → α} {K : (map' φ H').Subgraph} :
+@[simp] theorem key₀' {φ : β → α} {K : (H'.map φ).Subgraph} :
     (comap'_subgraph' K).verts = φ ⁻¹' K.verts := by
   rfl
 
-theorem key {φ : β → α} (K : (map' φ H').Subgraph) {b : β} :
+theorem key {φ : β → α} (K : (H'.map φ).Subgraph) {b : β} :
     b ∈ (comap'_subgraph' K).verts ↔ φ b ∈ K.verts := by
   simp
 
-def L' {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) : H'.Subgraph :=
+def L' {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (L.coe.map φ).Subgraph) : H'.Subgraph :=
     Subgraph.coeSubgraph (comap'_subgraph' K)
 
-theorem hL' {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) :
+theorem hL' {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (L.coe.map φ).Subgraph) :
     (L' φ K).verts ⊆ L.verts := by
   simp [L']
 
-theorem key' {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) ⦃b : β⦄ :
+theorem key' {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (L.coe.map φ).Subgraph) ⦃b : β⦄ :
     b ∈ (L' φ K).verts ↔ ∃ (h : b ∈ L.verts), φ ⟨b, h⟩ ∈ K.verts := by
   simp [L']
 
-def ψ {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (map' φ L.coe).Subgraph) :
+def ψ {L : H'.Subgraph} (φ : ↑L.verts → α) (K : (L.coe.map φ).Subgraph) :
     (L' φ K).verts → K.verts :=
   fun x ↦ ⟨φ ⟨x, hL' φ K x.2⟩, (key' φ K).1 x.2 |>.2⟩
 
-theorem restrict₀ {φ : β → α} (hφ₂ : H'.Adapted φ) (K : (map' φ H').Subgraph) :
+theorem restrict₀ {φ : β → α} (hφ₂ : H'.Adapted φ) (K : (H'.map φ).Subgraph) :
     (comap'_subgraph' K).coe.Adapted (fun x ↦ (⟨φ x, x.2⟩ : K.verts)) := by
   rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
   simp at huv
@@ -152,34 +151,45 @@ theorem restrict₀ {φ : β → α} (hφ₂ : H'.Adapted φ) (K : (map' φ H').
 
 -- This looks too similar to the previous one, should merge?
 theorem restrict {L : H'.Subgraph} (φ : ↑L.verts → α) (hφ₂ : L.coe.Adapted φ)
-    (K : (map' φ L.coe).Subgraph) :
+    (K : (L.coe.map φ).Subgraph) :
     (L' φ K).coe.Adapted (ψ φ K) := by
   rintro ⟨u, hu⟩ ⟨v, hv⟩ huv
   simp [ψ] at huv
   obtain ⟨p, hp⟩ := hφ₂ huv
   refine ⟨Subgraph.attach _ (p.map L.hom) ?_ ?_, ?_⟩
-  · simp [L'] at hv ⊢ ; grind
+  · have := Walk.support_map L.hom p
+    simp at this
+    simp [L', this] at hv ⊢
+    grind
   · simp [L'] at hv ⊢
     rintro e he
+    have := Walk.darts_map L.hom p
+    simp at this
+    simp [this] at he
+    obtain ⟨e, he, rfl⟩ := he
     have h1 := hp _ $ SimpleGraph.Walk.dart_fst_mem_support_of_mem_darts p he
     have h2 := hp _ $ SimpleGraph.Walk.dart_snd_mem_support_of_mem_darts p he
     simpa [comap'_subgraph', comap'_subgraph, subgraph_inter, h1, hv.2, h2] using e.adj
-  · simp [ψ] ; grind
+  · simp [ψ]
+    have := Walk.support_map L.hom p
+    simp at this
+    simp [this]
+    grind
 
 end Adapted
 
 def IsContraction (G : SimpleGraph α) (G' : SimpleGraph β) : Prop :=
-∃ φ : β → α, Surjective φ ∧ Adapted G' φ ∧ G = G'.map' φ
+∃ φ : β → α, Surjective φ ∧ Adapted G' φ ∧ G = G'.map φ
 
 infix:50 " ≼c " => IsContraction
 
 namespace IsContraction
 
-@[refl] theorem refl : G ≼c G := ⟨id, surjective_id, Adapted.id, map'_id.symm⟩
+@[refl] theorem refl : G ≼c G := ⟨id, surjective_id, Adapted.id, by simp⟩
 
 @[trans] theorem trans : G ≼c G' → G' ≼c G'' → G ≼c G'' := by
   rintro ⟨φ1, h1s, h1a, rfl⟩ ⟨φ2, h2s, h2a, rfl⟩
-  exact ⟨φ1 ∘ φ2, h1s.comp h2s, h2a.comp h1a, map'_map'⟩
+  exact ⟨φ1 ∘ φ2, h1s.comp h2s, h2a.comp h1a, map_map _ _ _⟩
 
 theorem ofIso (φ : G ≃g G') : G ≼c G' := by
   refine ⟨φ.symm, φ.symm.surjective, .of_injective φ.symm.injective, ?_⟩

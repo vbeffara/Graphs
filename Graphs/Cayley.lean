@@ -36,7 +36,7 @@ namespace SimpleGraph
 def CayleyGraph (S : Group.GenSet G) : SimpleGraph G where
   Adj := S.Adj
   symm x y h := h.symm
-  loopless x h := S.irr (by simpa [Group.GenSet.Adj] using h)
+  loopless := ⟨fun x h => S.irr (by simpa [Group.GenSet.Adj] using h)⟩
 
 namespace CayleyGraph
 

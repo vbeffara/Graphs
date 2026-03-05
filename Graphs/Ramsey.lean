@@ -59,13 +59,18 @@ theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Inf
         have hs' : (s.1 : Set _) ⊆ X := by grind
         let ss : parts.of k X S := by
           refine ⟨⟨Finset.subtype _ s.1, ?_⟩, ?_⟩
-          · simpa [← s.2, Finset.card_filter_eq_iff] using hs'
+          · simp at hs' ⊢
+            convert s.2
+            grind
           · intro a ha
             simp only [SetLike.mem_coe, mem_subtype] at ha
             grind [hs ha]
         specialize h2 ss
         simp [parts.cons, ψ, ss] at h2 ⊢
-        convert h2 ; grind
+        convert h2
+        simp at hs'
+        congr
+        grind
 
     have next (F : Fan φ) : ∃ G : Fan φ, G.x ∈ F.X ∧ G.X ⊂ F.X := by
       obtain ⟨y, hy⟩ := F.hX.nonempty

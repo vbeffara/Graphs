@@ -214,7 +214,7 @@ private lemma map_build_walk (D : TreeDecomposition H) (φ : β → α) :
       · exact hq₂ r (List.mem_of_mem_tail hr)
 
 noncomputable def map (D : TreeDecomposition H) (φ : β → α) (hφs : Function.Surjective φ)
-    (hφa : H.Adapted φ) : TreeDecomposition (H.map' φ) := {
+    (hφa : H.Adapted φ) : TreeDecomposition (H.map φ) := {
   ι := D.ι
   V := fun t => φ '' D.V t
   T := D.T
