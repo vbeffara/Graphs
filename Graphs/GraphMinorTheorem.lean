@@ -1,7 +1,7 @@
 import Mathlib.Order.WellQuasiOrder
 import Graphs.Minor
 
-variable {α : Type*} [Fintype α] {G : SimpleGraph α}
+variable {α : Type*} {G : SimpleGraph α}
 
 open SimpleGraph
 
