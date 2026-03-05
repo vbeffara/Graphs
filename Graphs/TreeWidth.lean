@@ -17,10 +17,12 @@ theorem treeWidth_ge_one [Fintype α] (h : G ≠ ⊥) : 1 ≤ treeWidth G := by
   rintro w ⟨D, rfl⟩
   obtain ⟨u, v, huv⟩ : ∃ u v : α, G.Adj u v := by contrapose! h; aesop
   obtain ⟨t, ht⟩ := D.edge_mem_bag huv
-  refine' le_trans _ ( le_ciSup _ t )
-  · refine' Nat.cast_le.mpr ( Nat.le_sub_one_of_lt _ )
-    exact Fintype.one_lt_card_iff_nontrivial.mpr ⟨ ⟨ u, ht.1 ⟩, ⟨ v, ht.2 ⟩, by aesop ⟩
-  · simp
+  refine' le_trans _ ( le_iSup _ t )
+  have h1 : {u, v} ⊆ D.V t := by grind
+  have h2 := encard_mono h1
+  have h3 : ({u, v} : Set _).encard = 2 := sorry
+  convert tsub_le_tsub_right h2 1
+  simp +decide [h3]
 
 theorem tree_treeWidth [Fintype α] (hG : G.IsTree) (hG' : G ≠ ⊥) : treeWidth G = 1 := by
   refine' le_antisymm _ _
@@ -68,7 +70,7 @@ theorem bot_treeWidth [Fintype α] : treeWidth (⊥ : SimpleGraph α) = 0 := by
   · letI : IsEmpty α := not_nonempty_iff.mp hne
     let D : TreeDecomposition (⊥ : SimpleGraph α) := TreeDecomposition.trivial
     have hD : D.width = 0 := by
-      simp [TreeDecomposition.width, D]
+      simp [TreeDecomposition.width, TreeDecomposition.trivial, D]
     refine le_antisymm ?_ bot_le
     unfold treeWidth
     exact sInf_le ⟨D, hD⟩

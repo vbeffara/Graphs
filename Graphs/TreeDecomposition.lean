@@ -408,4 +408,11 @@ def td_cycle (n : ℕ) : TreeDecomposition (cycleGraph (n + 3)) where
     grind
 
 theorem td_cycle_width {n : ℕ} : (td_cycle n).width = 2 := by
-  sorry
+  suffices : ∀ b, ((td_cycle n).V b).encard = 3
+  · simp only [TreeDecomposition.width, this]
+    simp +decide [td_cycle]
+  intro ⟨b, hb⟩
+  simp [td_cycle]
+  rw [encard_insert_of_notMem] ; swap ; simp ; linarith
+  rw [encard_insert_of_notMem] ; swap ; simp ; linarith
+  simp +decide
