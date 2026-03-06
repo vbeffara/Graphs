@@ -1,4 +1,7 @@
-import Mathlib
+import Mathlib.Combinatorics.SimpleGraph.EdgeLabeling
+import Mathlib.Data.Fintype.Pigeonhole
+import Mathlib.Data.Set.PowersetCard
+import Mathlib.Order.BourbakiWitt
 
 open Set Function Finset Classical
 

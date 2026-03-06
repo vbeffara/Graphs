@@ -1,4 +1,7 @@
-import Mathlib
+import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Data.Real.StarOrdered
+import Mathlib.Geometry.Convex.Cone.Pointed
+import Mathlib.LinearAlgebra.Matrix.DotProduct
 
 open Matrix Metric
 

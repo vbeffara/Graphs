@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Combinatorics.SimpleGraph.Prod
 
 namespace SimpleGraph
 

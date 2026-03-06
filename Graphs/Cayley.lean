@@ -1,4 +1,6 @@
-import Mathlib
+import Mathlib.Algebra.Group.Subgroup.Lattice
+import Mathlib.Combinatorics.SimpleGraph.Maps
+import Mathlib.Tactic.Group
 
 variable {G : Type*} [Group G]
 

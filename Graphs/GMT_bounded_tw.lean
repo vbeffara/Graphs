@@ -1,4 +1,3 @@
-import Mathlib
 import Graphs.TreeWidth
 
 universe u

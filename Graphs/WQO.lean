@@ -1,4 +1,6 @@
-import Mathlib
+import Mathlib.Algebra.Order.Group.Nat
+import Mathlib.Algebra.Order.Monoid.NatCast
+import Mathlib.Order.WellQuasiOrder
 
 variable {α : Type*} [PartialOrder α]
 

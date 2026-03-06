@@ -1,8 +1,12 @@
-import Mathlib
 import Graphs.Basic
 import Graphs.Contraction
 import Graphs.Separation
 import Graphs.Tree
+import Mathlib.Algebra.Order.Ring.Star
+import Mathlib.Combinatorics.SimpleGraph.Circulant
+import Mathlib.Data.Int.Star
+import Mathlib.Order.BourbakiWitt
+import Mathlib.Order.CompletePartialOrder
 
 open Classical Set SimpleGraph
 

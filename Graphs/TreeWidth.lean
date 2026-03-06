@@ -1,4 +1,3 @@
-import Mathlib
 import Graphs.Basic
 import Graphs.Minor
 import Graphs.TreeDecomposition

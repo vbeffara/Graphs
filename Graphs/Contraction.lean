@@ -1,5 +1,5 @@
-import Mathlib
 import Graphs.Map
+import Mathlib.Combinatorics.SimpleGraph.Walks.Maps
 
 open Function Set
 

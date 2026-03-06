@@ -14,9 +14,11 @@ This project request had uuid: 2c55add2-c06e-41e4-aaeb-0a9fe8d399a9
 This project request had uuid: af8cdac2-86a8-4c71-b303-ccb6ba9df119
 -/
 
-import Mathlib
 import Graphs.Util
 import Graphs.Separation
+import Mathlib.Algebra.Order.Ring.Star
+import Mathlib.Combinatorics.SimpleGraph.Paths
+import Mathlib.Data.Int.Star
 
 set_option maxHeartbeats 0
 

@@ -1,4 +1,5 @@
-import Mathlib
+import Mathlib.Combinatorics.SimpleGraph.Walks.Basic
+import Mathlib.Tactic
 
 open SimpleGraph Set
 

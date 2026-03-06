@@ -1,5 +1,6 @@
-import Mathlib
 import Graphs.Separation
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Order.SuccPred.Tree
 
 open Classical Set SimpleGraph
 

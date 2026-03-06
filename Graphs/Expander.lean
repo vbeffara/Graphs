@@ -1,4 +1,5 @@
-import Mathlib
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
 import Graphs.Basic
 
 open SimpleGraph Matrix Classical Filter

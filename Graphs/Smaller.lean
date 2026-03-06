@@ -1,4 +1,4 @@
-import Mathlib.Combinatorics.SimpleGraph.Subgraph
+import Mathlib.Combinatorics.SimpleGraph.Maps
 
 open Function Classical Set Finset SimpleGraph
 

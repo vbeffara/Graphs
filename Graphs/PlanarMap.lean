@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.GroupTheory.Perm.Cycle.Type
 
 open Equiv Classical Function MulAction Set
 
