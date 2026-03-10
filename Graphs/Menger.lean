@@ -882,14 +882,10 @@ lemma SimpleGraph.support_subset_preimage_extension [Fintype V] (x y : V)
   (hv : v = x ∨ v = y) :
   (q_support ∪ {v}) ⊆ SimpleGraph.contractEdge_preimage x y p'_support := by
     refine Finset.union_subset ( fun u hu => ?_ ) ( ?_ );
-    · exact (mem_contractEdge_preimage (x := x) (y := y) (Y := p'_support)).2
-        (h_subset (Finset.mem_image_of_mem _ hu))
-    · rcases hv with rfl | rfl
-      · exact (mem_contractEdge_preimage (x := x) (y := y) (Y := p'_support)).2
-          (by simpa [contractEdgeProj, contractEdge_vertex] using h_ve)
-      · have hy : contractEdgeProj x y y = contractEdge_vertex x y := by
-          simpa [contractEdgeProj] using (contractEdge_vertex_eq x y).symm
-        exact (mem_contractEdge_preimage (x := x) (y := y) (Y := p'_support)).2 (by simpa [hy] using h_ve)
+    · exact Finset.mem_filter.mpr ⟨ Finset.mem_univ _, h_subset ( Finset.mem_image_of_mem _ hu ) ⟩
+    · simp_all [ contractEdge_preimage ]
+      convert h_ve using 1
+      exact Quot.sound (by tauto)
 
 /-
 If a path ends at a vertex whose projection is adjacent to the contracted vertex, and the path avoids the contracted edge's endpoints, it can be extended to one of the endpoints.
