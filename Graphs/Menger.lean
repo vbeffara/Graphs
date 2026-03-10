@@ -31,7 +31,7 @@ namespace SimpleGraph
 /-
 The set of all vertex sets that separate A from B.
 -/
-def Separator (G : SimpleGraph V) (A B : Finset V) := { S : Finset V // G.Separates A B S }
+def Separator (G : SimpleGraph V) (A B : Set V) := { S : Finset V // G.Separates A B S }
 
 /-
 The set of separators is nonempty (e.g., the set of all vertices is a separator).
@@ -42,7 +42,7 @@ instance Separator.nonempty (G : SimpleGraph V) (A B : Finset V) : Nonempty (G.S
 /-
 An A-B path is a path in G starting in A and ending in B.
 -/
-structure ABPath (G : SimpleGraph V) (A B : Finset V) where
+structure ABPath (G : SimpleGraph V) (A B : Set V) where
   u : A
   v : B
   walk : G.Walk u v
