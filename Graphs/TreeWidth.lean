@@ -26,17 +26,6 @@ theorem treeWidth_ge_one (h : G ≠ ⊥) : 1 ≤ treeWidth G := by
   convert tsub_le_tsub_right h2 1
   simp +decide [h3]
 
-theorem tree_treeWidth (hG : G.IsTree) (hG' : G ≠ ⊥) : treeWidth G = 1 := by
-  refine' le_antisymm _ _
-  · refine' le_trans ( csInf_le _ _ ) _
-    exact ( treeDecompositionOfTree hG ( Classical.choose ( show ∃ x : α, True from by
-                                                              contrapose! hG'; aesop ) ) ).width
-    all_goals generalize_proofs at *
-    · exact ⟨ 0, fun w hw => hw.choose_spec.symm ▸ zero_le _ ⟩
-    · exact ⟨ _, rfl ⟩
-    · (expose_names; exact treeDecompositionOfTree_width hG (choose pf))
-  · exact treeWidth_ge_one hG'
-
 theorem bot_treeWidth : treeWidth (⊥ : SimpleGraph α) = 0 := by
   refine le_antisymm ?_ bot_le
   suffices : ∃ D : TreeDecomposition (⊥ : SimpleGraph α), D.width = 0
@@ -47,6 +36,18 @@ theorem bot_treeWidth : treeWidth (⊥ : SimpleGraph α) = 0 := by
   · letI : IsEmpty α := not_nonempty_iff.mp hne ; use .trivial
     have := ENat.card_eq_zero_iff_empty α |>.2 this
     simp [TreeDecomposition.width, TreeDecomposition.trivial, this]
+
+theorem treeWidth_tree_le_one (hG : G.IsTree) : treeWidth G ≤ 1 := by
+  by_cases hG' : G = ⊥
+  · simp [hG', bot_treeWidth]
+  · obtain ⟨r, -⟩ : ∃ x : α, True := by contrapose! hG' ; aesop
+    exact csInf_le_of_le (OrderBot.bddBelow _) (by simp) (treeDecompositionOfTree_width hG r)
+
+theorem tree_treeWidth (hG : G.IsTree) (hG' : G ≠ ⊥) : treeWidth G = 1 :=
+  le_antisymm (treeWidth_tree_le_one hG) (treeWidth_ge_one hG')
+
+theorem treeWidth_le {H : SimpleGraph α} (h : H ≤ G) : treeWidth H ≤ treeWidth G := by
+  sorry
 
 theorem treeWidth_mono {H : G.Subgraph} : treeWidth H.coe ≤ treeWidth G := by
   unfold treeWidth
@@ -65,8 +66,15 @@ theorem treeWidth_minor (h : G ≼ H) : treeWidth G ≤ treeWidth H := by
   rcases h with ⟨K, hK⟩
   exact le_trans (treeWidth_contract hK) (treeWidth_mono (H := K))
 
-theorem treeWidth_le_one : treeWidth G ≤ 1 ↔ G.IsAcyclic := by
-  sorry
+theorem treeWidth_le_one [Nonempty α] : treeWidth G ≤ 1 ↔ G.IsAcyclic := by
+  constructor
+  · sorry
+  · intro h
+    obtain ⟨H, h1, h2⟩ := exists_maximal_isAcyclic_of_le_isAcyclic le_top h
+    simp at h2
+    trans (treeWidth H)
+    · apply treeWidth_le h1
+    · apply treeWidth_tree_le_one h2
 
 theorem treeWidth_loop_le_two (h : 2 < n) : treeWidth (cycleGraph n) ≤ 2 := by
   sorry

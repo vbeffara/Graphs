@@ -192,6 +192,11 @@ noncomputable def contractEdge_preimage [Fintype V] (x y : V)
     (Y : Finset (Quotient (contractEdgeSetoid x y))) : Finset V :=
   Finset.univ.filter (fun v => contractEdgeProj x y v ∈ Y)
 
+lemma mem_contractEdge_preimage [Fintype V] {x y : V}
+    {Y : Finset (Quotient (contractEdgeSetoid x y))} {v : V} :
+  v ∈ contractEdge_preimage x y Y ↔ contractEdgeProj x y v ∈ Y := by
+  simp [contractEdge_preimage]
+
 /-
 If a set of vertices separates A and B in the contracted graph G/e, then its preimage separates A and B in G.
 -/
@@ -449,15 +454,16 @@ If a path intersects X, there is a prefix path ending in X that avoids X interna
 lemma SimpleGraph.Walk.exists_path_prefix_avoiding_set {G : SimpleGraph V} {u v : V} (p : G.Walk u v)
     (X : Set V) (h : ∃ w ∈ p.support, w ∈ X) :
     ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
-    obtain ⟨ w, hw₁, hw₂ ⟩ := h;
-    obtain ⟨ q, hq₁, hq₂ ⟩ := p.exists_walk_prefix_avoiding_set X ⟨ w, hw₁, hw₂ ⟩;
-    refine' ⟨ q, hq₁.toPath, hq₂.1, _, _, _ ⟩
+    obtain ⟨w, hw₁, hw₂⟩ := h
+    obtain ⟨w', q, hw'X, hq_support, hq_unique⟩ :=
+      p.exists_walk_prefix_avoiding_set X ⟨w, hw₁, hw₂⟩
+    refine ⟨w', q.toPath, hw'X, ?_, ?_, ?_⟩
     · simp
-    · refine subset_trans ?_ hq₂.2.1
+    · refine subset_trans ?_ hq_support
       simp [toPath, Finset.subset_iff]
-      exact fun x hx => SimpleGraph.Walk.support_bypass_subset hq₁ hx
-    · intro z hz hzX; specialize hq₂; have := hq₂.2.2 z; simp_all
-      exact hq₂.2.2 z ( by simpa using hq₁.support_bypass_subset hz ) hzX
+      exact fun x hx => SimpleGraph.Walk.support_bypass_subset q hx
+    · intro z hz hzX
+      exact hq_unique z (by simpa using q.support_bypass_subset hz) hzX
 
 /-
 If X separates A and B in G and contains x and y, then any separator of A and X in G-xy is also a separator of A and B in G.
@@ -1289,19 +1295,16 @@ lemma SimpleGraph.lift_path_start_eq_vertex [Fintype V] (G : SimpleGraph V) (A B
   (h_liftA : SimpleGraph.contractEdge_vertex x y ∈ SimpleGraph.contractEdge_liftSet x y A) :
   ∃ p : G.ABPath A B,
     p.walk.support.toFinset.image (SimpleGraph.contractEdgeProj x y) ⊆ p'.support.toFinset := by
-      -- By Lemma 2, there exists a path `q` in `G` starting at `u` (where `u = x` or `u = y`) and ending at `v` (where `v \in B`).
-      obtain ⟨u, v, q, hq_path, hq_support⟩ : ∃ u v : V, ∃ q : G.Walk u v,
-        (u = x ∨ u = y) ∧
-        v ∈ B ∧
-        q.IsPath ∧
-        q.support.toFinset ⊆ SimpleGraph.contractEdge_preimage x y p'.support.toFinset ∧
-        q.support.toFinset ∩ {x, y} = {u} := by
-          exact ⟨ _, _, _, ( SimpleGraph.lift_path_from_contraction_start G B x y v' p' hp'_path hv' h_end_ne |> Classical.choose_spec |> Classical.choose_spec |> Classical.choose_spec ) |> And.left, ( SimpleGraph.lift_path_from_contraction_start G B x y v' p' hp'_path hv' h_end_ne |> Classical.choose_spec |> Classical.choose_spec |> Classical.choose_spec ) |> And.right |> And.left, ( SimpleGraph.lift_path_from_contraction_start G B x y v' p' hp'_path hv' h_end_ne |> Classical.choose_spec |> Classical.choose_spec |> Classical.choose_spec ) |> And.right |> And.right |> And.left, ( SimpleGraph.lift_path_from_contraction_start G B x y v' p' hp'_path hv' h_end_ne |> Classical.choose_spec |> Classical.choose_spec |> Classical.choose_spec ) |> And.right |> And.right |> And.right |> And.left, ( SimpleGraph.lift_path_from_contraction_start G B x y v' p' hp'_path hv' h_end_ne |> Classical.choose_spec |> Classical.choose_spec |> Classical.choose_spec ) |> And.right |> And.right |> And.right |> And.right ⟩;
-      obtain ⟨ u', q', hu', hq', hq'_support ⟩ := SimpleGraph.adjust_path_start_to_A G A x y hxy u v q hq_support.2.1 hq_path hq_support.2.2.2 h_liftA;
-      refine' ⟨ ⟨ ⟨ u', hu' ⟩, ⟨ v, hq_support.1 ⟩, q', hq' ⟩, _ ⟩;
-      refine' Finset.Subset.trans hq'_support _;
-      simp_all [ Finset.subset_iff ];
-      intro a ha; specialize hq_support; replace hq_support := hq_support.2.2.1 ha; unfold contractEdge_preimage at hq_support; aesop;
+      obtain ⟨u, v, q, hu_xy, hvB, hq_path, hq_pre, hq_xy⟩ :=
+        SimpleGraph.lift_path_from_contraction_start G B x y v' p' hp'_path hv' h_end_ne
+      obtain ⟨u', q', hu'A, hq'_path, hq'_support⟩ :=
+        SimpleGraph.adjust_path_start_to_A G A x y hxy u v q hq_path hu_xy hq_xy h_liftA
+      refine ⟨⟨⟨u', hu'A⟩, ⟨v, hvB⟩, q', hq'_path⟩, ?_⟩
+      refine hq'_support.trans ?_
+      intro a ha
+      rcases Finset.mem_image.mp ha with ⟨w, hw, rfl⟩
+      have hw' : w ∈ SimpleGraph.contractEdge_preimage x y p'.support.toFinset := hq_pre hw
+      exact (SimpleGraph.mem_contractEdge_preimage (x := x) (y := y) (Y := p'.support.toFinset) (v := w)).1 hw'
 
 /-
 Helper lemma: A path ending at the contracted vertex can be lifted to an A-B path if the contracted vertex is in the lifted set of B.

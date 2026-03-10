@@ -154,6 +154,9 @@ lemma diestel_12_3_4_global {W : Set α} (hW : ¬ ∃ t : D.ι, W ⊆ D.V t) :
       ⟨u, huW, huSide⟩ ⟨v, hvW, hvSide⟩
   exact ⟨t, c, htc, u', hu'W, v', hv'W, hsep⟩
 
+def restrict' (D : TreeDecomposition G) {H : SimpleGraph α} (h : H ≤ G) : TreeDecomposition H :=
+  { D with edge_mem_bag huv := D.edge_mem_bag (h huv) }
+
 def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.coe where
   ι := D.ι
   V t := {v | v.1 ∈ D.V t}
@@ -164,6 +167,10 @@ def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.co
   bag_inter {b₁ b₂ b₃} hordered x hx := D.bag_inter hordered ⟨hx.1, hx.2⟩
 
 noncomputable def width (D : TreeDecomposition G) := ⨆ b, (D.V b).encard - 1
+
+lemma width_restrict'_le (D : TreeDecomposition G) {H : SimpleGraph α} (h : H ≤ G) :
+    (D.restrict' h).width ≤ D.width := by
+  apply iSup_mono ; simp [restrict']
 
 lemma width_restrict_le (D : TreeDecomposition G) (H : G.Subgraph) :
     (D.restrict H).width ≤ D.width := by
