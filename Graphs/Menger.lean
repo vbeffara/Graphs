@@ -783,30 +783,7 @@ lemma SimpleGraph.contractEdge_separator_lift_card [Fintype V] (x y : V) (hxy : 
   (Y : Finset (Quotient (SimpleGraph.contractEdgeSetoid x y)))
   (h_ve : SimpleGraph.contractEdge_vertex x y ∈ Y) :
   (SimpleGraph.contractEdge_preimage x y Y).card = Y.card + 1 := by
-    rw [ card_preimage_contractEdge ] ; aesop;
-    assumption
-
-/-
-Base case for lifting a path: if the path is nil (start = end = contracted vertex), we can lift it to a nil path at x or y.
--/
-lemma SimpleGraph.lift_path_to_contraction_nil [Fintype V] (G : SimpleGraph V) (A : Finset V) (x y : V)
-  (u' : Quotient (SimpleGraph.contractEdgeSetoid x y))
-  (p' : (G.contractEdge x y).Walk u' (SimpleGraph.contractEdge_vertex x y))
-  (hp'_path : p'.IsPath)
-  (hp'_end : p'.support.toFinset ∩ {SimpleGraph.contractEdge_vertex x y} = {SimpleGraph.contractEdge_vertex x y})
-  (hu' : u' ∈ SimpleGraph.contractEdge_liftSet x y A)
-  (h_eq : u' = SimpleGraph.contractEdge_vertex x y) :
-  ∃ (u v : V) (p : G.Walk u v),
-    u ∈ A ∧
-    (v = x ∨ v = y) ∧
-    p.IsPath ∧
-    p.support.toFinset ⊆ SimpleGraph.contractEdge_preimage x y p'.support.toFinset := by
-      simp [contractEdge_liftSet] at hu'
-      obtain ⟨ u, hu, rfl ⟩ := hu';
-      -- By definition of `contractEdgeProj`, we know that `u = x` or `u = y`.
-      have h_cases : u = x ∨ u = y := by
-        exact (contractEdgeProj_eq_vertex_iff x y u).mp h_eq;
-      unfold contractEdge_preimage; aesop;
+    simp [card_preimage_contractEdge (x := x) (y := y) hxy, h_ve]
 
 /-
 If a walk is a path and the start is not the end, it can be decomposed into a prefix path avoiding the end vertex, and a final edge.
@@ -1036,9 +1013,9 @@ lemma SimpleGraph.Walk.split_at_vertex {G : SimpleGraph V} {u v : V} (p : G.Walk
 /-
 If a walk is a path, its support intersects the singleton set of its endpoint exactly at that point.
 -/
-lemma SimpleGraph.Walk.IsPath.support_inter_singleton_eq_of_end {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (hp : p.IsPath) :
+lemma SimpleGraph.Walk.IsPath.support_inter_singleton_eq_of_end {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (_hp : p.IsPath) :
   p.support.toFinset ∩ {v} = {v} := by
-    cases p <;> aesop
+    cases p <;> simp
 
 /-
 The support of a walk intersects the singleton set of its start point exactly at that point.
