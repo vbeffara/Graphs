@@ -1,8 +1,6 @@
 import Mathlib
 import Graphs.WQO
 
-universe u
-
 open Set PartiallyWellOrderedOn
 
 namespace RootedTree
@@ -24,8 +22,7 @@ lemma card_le_of_le (h : t₁ ≤ t₂) : Nat.card t₁ ≤ Nat.card t₂ := by
 lemma card_lt_of_lt (h : t₁ < t₂) : Nat.card t₁ < Nat.card t₂ := by
   rw [lt_iff_le_not_ge] at h ⊢
   obtain ⟨⟨f⟩, h2⟩ := h
-  have h3 := card_le_of_le ⟨f⟩
-  refine ⟨h3, ?_⟩
+  refine ⟨card_le_of_le ⟨f⟩, ?_⟩
   contrapose h2
   have h6 := t₂.prop
   have h4 := f.injective.bijective_of_nat_card_le h2
@@ -34,9 +31,17 @@ lemma card_lt_of_lt (h : t₁ < t₂) : Nat.card t₁ < Nat.card t₂ := by
 
 instance finiteTree_wf : WellFoundedLT FiniteTree := StrictMono.wellFoundedLT card_lt_of_lt
 
-theorem kruskal : WellQuasiOrderedLE FiniteTree.{u} := by
+def Bad (f : ℕ → FiniteTree) : Prop := ∀ (m n : ℕ), m < n → ¬f m ≤ f n
+
+def MinimalBad (f : ℕ → FiniteTree) : Prop :=
+  Bad f ∧ ∀ n, ∀ g : ℕ → FiniteTree, (∀ m < n, g m = f m) → (g n < f n) → ¬ Bad g
+
+lemma exists_minimalBad {f : ℕ → FiniteTree} (hf : Bad f) : ∃ g, MinimalBad g := by
+  sorry
+
+theorem kruskal : WellQuasiOrderedLE FiniteTree := by
   rw [wellQuasiOrderedLE_def, WellQuasiOrdered]
-  by_contra!
+  by_contra! h : ∃ A, Bad A ; obtain ⟨A, hA⟩ := h
   sorry
 
 end RootedTree
