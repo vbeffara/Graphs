@@ -2,7 +2,7 @@ import Mathlib.Algebra.Order.Group.Nat
 import Mathlib.Algebra.Order.Monoid.NatCast
 import Mathlib.Order.WellQuasiOrder
 
-variable {α : Type*} [PartialOrder α]
+variable {α : Type*} [Preorder α]
 
 theorem StrictAnti_iff_descending {X : Type*} [Preorder X] {f : ℕ → X} :
     StrictAnti f ↔ ∀ n, f (n + 1) < f n := by

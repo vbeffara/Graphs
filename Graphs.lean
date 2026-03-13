@@ -12,6 +12,7 @@ import Graphs.PlanarMap
 import Graphs.RTree
 import Graphs.Ramsey
 import Graphs.Return
+import Graphs.RootedTree
 import Graphs.Separation
 import Graphs.Smaller
 import Graphs.TopologicalMinor
