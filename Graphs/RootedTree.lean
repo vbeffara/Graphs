@@ -29,12 +29,30 @@ lemma card_lt_of_lt (h : t₁ < t₂) : Nat.card t₁ < Nat.card t₂ := by
   have h5 := RelIso.ofSurjective f h4.surjective
   exact ⟨h5.symm, by simp⟩
 
-instance finiteTree_wf : WellFoundedLT FiniteTree := StrictMono.wellFoundedLT card_lt_of_lt
+instance : WellFoundedLT FiniteTree := StrictMono.wellFoundedLT card_lt_of_lt
 
 def Bad (f : ℕ → FiniteTree) : Prop := ∀ (m n : ℕ), m < n → ¬f m ≤ f n
 
+abbrev Prefix (n : ℕ) := { f : Fin n → FiniteTree // ∃ g : ℕ → FiniteTree, Bad g ∧ ∀ k : Fin n, g k = f k }
+
+noncomputable def nextPrefix {n} : {f : Prefix n // IsMin f} → {f : Prefix (n + 1) // IsMin f} := by
+  rintro ⟨f, hf⟩
+  choose g hg1 hg2 using f.2
+  let s := {f : Prefix (n + 1) | ∀ k, f.1 k = g k}
+  have h1 : s.Nonempty := ⟨⟨fun k => g k, g, by grind⟩, by grind⟩
+  let ff := WellFounded.min (r := LT.lt) IsWellFounded.wf _ h1
+  refine ⟨ff, ?_⟩
+
+  sorry
+
+def MinimalBadUntil (f : ℕ → FiniteTree) (n : ℕ) : Prop :=
+  Bad f ∧ ∀ m < n, ∀ g : ℕ → FiniteTree, (∀ k < m, g k = f k) → (g m < f m) → ¬ Bad g
+
 def MinimalBad (f : ℕ → FiniteTree) : Prop :=
   Bad f ∧ ∀ n, ∀ g : ℕ → FiniteTree, (∀ m < n, g m = f m) → (g n < f n) → ¬ Bad g
+
+lemma exists_minimalBad_aux {f : ℕ → FiniteTree} (hf : Bad f) (n : ℕ) :
+    ∃ g : ℕ → FiniteTree, MinimalBadUntil g n := sorry
 
 lemma exists_minimalBad {f : ℕ → FiniteTree} (hf : Bad f) : ∃ g, MinimalBad g := by
   sorry

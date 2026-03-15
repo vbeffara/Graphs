@@ -9,6 +9,7 @@ import Graphs.Map
 import Graphs.Menger
 import Graphs.Minor
 import Graphs.PlanarMap
+import Graphs.QuasiMin
 import Graphs.RTree
 import Graphs.Ramsey
 import Graphs.Return

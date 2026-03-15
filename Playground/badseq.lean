@@ -1,6 +1,6 @@
 import Mathlib
 
-variable {α : Type*} [PartialOrder α] {n : ℕ}
+variable {α : Type*} [Preorder α] {n : ℕ}
 
 def bad (A : ℕ → α) : Prop := ∀ i j, i < j → ¬ (A i ≤ A j)
 
