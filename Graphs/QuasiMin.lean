@@ -1,68 +1,76 @@
 import Mathlib
 
-open Fin
+open Fin Nat
 
-variable {α : Type*} [Preorder α] {P : (ℕ → α) → Prop} {f f' : ℕ → α} {hf : P f} {n : ℕ}
+variable {α : Type*} [Preorder α] {P : (ℕ → α) → Prop} {f f' : ℕ → α} {hf : P f} {m n k : ℕ}
 
 def MinAt (P : (ℕ → α) → Prop) (n : ℕ) (f : ℕ → α) : Prop :=
     ∀ g, (∀ m < n, g m = f m) → (g n < f n) → ¬ P g
 
-theorem MinAt_of_eq (hf : MinAt P n f) (h : ∀ k ≤ n, f' k = f k) : MinAt P n f' := by
-  grind [MinAt]
+theorem MinAt_of_eq (hf : MinAt P n f) (h : ∀ k ≤ n, f' k = f k) : MinAt P n f' := by grind [MinAt]
 
 def MinUntil (P : (ℕ → α) → Prop) (n : ℕ) (f : ℕ → α) : Prop := ∀ k < n, MinAt P k f
 
 def QuasiMin (P : (ℕ → α) → Prop) (f : ℕ → α) : Prop := ∀ n, MinAt P n f
 
-noncomputable def extendAt [Preorder α] [WellFoundedLT α] (P : (ℕ → α) → Prop) (hf : P f) (n : ℕ) :
+variable [WellFoundedLT α]
+
+noncomputable def extendAt (P : (ℕ → α) → Prop) (hf : P f) (n : ℕ) :
     { g : ℕ → α // P g ∧ (∀ m < n, g m = f m) ∧ MinAt P n g } := by
   let good (x : α) : Prop := ∃ g, P g ∧ (∀ m < n, g m = f m) ∧ g n = x
-  have h1 : ∃ x, good x := ⟨f n, ⟨f, hf, by simp⟩⟩
-  have h2 : ∃ x, Minimal good x := exists_minimal_of_wellFoundedLT good h1
-  choose x h3 h4 using h2
+  choose x h3 h4 using exists_minimal_of_wellFoundedLT good ⟨f n, ⟨f, hf, by simp⟩⟩
   obtain ⟨h5, h6, h7⟩ := Classical.choose_spec h3
-  refine ⟨_, h5, h6, ?_⟩
-  rintro g h8 h9 h10
+  refine ⟨_, h5, h6, fun g h8 h9 h10 => ?_⟩
   have h11 : good (g n) := ⟨g, h10, fun m hm => by simp [h6, h8, hm], rfl⟩
-  specialize h4 h11
-  grind
+  specialize h4 h11 ; grind
 
-noncomputable def extendAux [Preorder α] [WellFoundedLT α] (P : (ℕ → α) → Prop) (hf : P f) :
-    ∀ m : ℕ, { g : ℕ → α // P g ∧ MinUntil P m g }
+noncomputable def extendAux (P : (ℕ → α) → Prop) (hf : P f) : ∀ m, { g : ℕ → α // P g ∧ MinUntil P m g }
 | 0 => ⟨f, hf, by tauto⟩
 | m + 1 => by
     let g := extendAux P hf m
     use extendAt P g.2.1 m
-    let ⟨g', h3, h4, h5⟩ := extendAt P g.2.1 m
+    obtain ⟨g', h3, h4, h5⟩ := extendAt P g.2.1 m
     refine ⟨h3, fun k hk => ?_⟩
-    by_cases h6 : k = m
-    · simpa only [h6]
-    · have h4 : k < m := by omega
-      apply MinAt_of_eq (g.2.2 k h4)
-      grind
+    obtain (h | h) := Nat.lt_succ_iff_lt_or_eq.1 hk
+    · exact MinAt_of_eq (g.2.2 k h) (by grind)
+    · grind
 
-theorem extendAux_next [WellFoundedLT α] {k} (hk : k < n) :
-    (extendAux P hf (n + 1)).1 k = (extendAux P hf n).1 k := by
-  exact (extendAt P (extendAux P hf n).2.1 n).2.2.1 k hk
+theorem extendAux_next (hk : k < n) : (extendAux P hf (n + 1)).1 k = (extendAux P hf n).1 k :=
+  (extendAt P (extendAux P hf n).2.1 n).2.2.1 k hk
 
-theorem extendAux_later [WellFoundedLT α] {k m} (hk : k < n) :
-    (extendAux P hf (n + m)).1 k = (extendAux P hf n).1 k := by
+theorem extendAux_later (hk : k < n) : (extendAux P hf (n + m)).1 k = (extendAux P hf n).1 k := by
   induction m with
   | zero => rfl
   | succ m ih => rwa [← add_assoc, extendAux_next (by omega)]
 
-noncomputable def extend [Preorder α] [WellFoundedLT α] (P : (ℕ → α) → Prop) (hf : P f) :
-    { g // QuasiMin P g } := by
-  let φ := extendAux P hf
-  let g (n : ℕ) : α := (φ (n + 1)).1 n
-  have key n k (hk : k ≤ n) : g k = (φ (n + 1)).1 k := by
-    obtain ⟨m, rfl⟩ := Nat.exists_eq_add_of_le hk
-    have := @extendAux_later α _ P f hf (k + 1) _ k m (by omega)
-    grind
-  refine ⟨g, fun n => ?_⟩
-  apply MinAt_of_eq ((φ (n + 1)).2.2 n (by grind)) (by grind)
+noncomputable def extend (P : (ℕ → α) → Prop) (hf : P f) (n : ℕ) : α := (extendAux P hf (n + 1)).1 n
 
-theorem exists_quasiMin [WellFoundedLT α] (P : (ℕ → α) → Prop) (hf : ∃ f, P f) : ∃ g, QuasiMin P g := by
-  obtain ⟨f, hf⟩ := hf
-  obtain ⟨g, hg⟩ := extend P hf
-  exact ⟨g, hg⟩
+theorem extend_eq (hk : k ≤ n) : extend P hf k = (extendAux P hf (n + 1)).1 k := by
+  obtain ⟨m, rfl⟩ := Nat.exists_eq_add_of_le hk
+  have := @extendAux_later α _ P f hf m (k + 1) k (by omega) (by omega)
+  grind [extend]
+
+theorem extend_quasiMin (hf : P f) : QuasiMin P (extend P hf) := by
+  have key n k (hk : k ≤ n) : extend P hf k = (extendAux P hf (n + 1)).1 k := extend_eq hk
+  intro n
+  apply MinAt_of_eq ((extendAux P hf (n + 1)).2.2 n (by grind)) (by grind)
+
+def localProp (P : (ℕ → α) → Prop) : Prop :=
+  ∀ (F : ℕ → (ℕ → α)) (f : ℕ → α), (∀ n k, k < n → F n k = f k) → (∀ n, P (F n)) → P f
+
+theorem extend_spec (hf : P f) (hP : localProp P) : P (extend P hf) := by
+  apply hP (fun n => extendAux P hf n) (extend P hf)
+  · simp [extend]
+    intro n k hkn
+    have : k + 1 ≤ n := by omega
+    obtain ⟨m, rfl⟩ := Nat.exists_eq_add_of_le this
+    exact @extendAux_later α _ P f hf m (k + 1) k _ (by omega)
+  · intro n
+    exact (extendAux P hf n).2.1
+
+-- Being a bad sequence is a local property
+omit [WellFoundedLT α] in
+theorem key : localProp (fun (f : ℕ → α) => ∀ i j, i < j → ¬ (f i ≤ f j)) := by
+  rintro F f h1 h2 i j hij
+  let n := 1 + max i j
+  simpa [← h1 n i (by omega), ← h1 n j (by omega)] using h2 n i j hij
