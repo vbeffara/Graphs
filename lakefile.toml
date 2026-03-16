@@ -19,7 +19,6 @@ rev = "main"
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "95dde257a2a4d47c656d10aa8e4a05947754a7f0"
 
 [[lean_lib]]
 name = "Graphs"

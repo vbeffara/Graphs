@@ -8,6 +8,12 @@ def pref (X : Fin n → α) : Prop := ∃ A : ℕ → α, bad A ∧ ∀ i : Fin 
 
 def concat (X : Fin n → α) (Xn : α) (i : Fin (n + 1)) : α := if h : i < n then X ⟨i, h⟩ else Xn
 
+def concat' (X : Fin n → α) (Xn : α) : Fin (n + 1) → α := by
+  intro i
+  by_cases h : i < n
+  · exact X ⟨i, h⟩
+  · exact Xn
+
 def nexts (X : Fin n → α) : Set α := { x | pref (concat X x) }
 
 lemma nexts_nonempty (X : Fin n → α) (hX : pref X) : (nexts X).Nonempty := by

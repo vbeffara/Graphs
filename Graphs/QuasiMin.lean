@@ -25,8 +25,8 @@ noncomputable def extendAt (P : (ℕ → α) → Prop) (hf : P f) (n : ℕ) :
   specialize h4 h11 ; grind
 
 noncomputable def extendAux (P : (ℕ → α) → Prop) (hf : P f) : ∀ m, { g : ℕ → α // P g ∧ MinUntil P m g }
-| 0 => ⟨f, hf, by tauto⟩
-| m + 1 => by
+  | 0 => ⟨f, hf, by tauto⟩
+  | m + 1 => by
     let g := extendAux P hf m
     use extendAt P g.2.1 m
     obtain ⟨g', h3, h4, h5⟩ := extendAt P g.2.1 m
@@ -38,39 +38,26 @@ noncomputable def extendAux (P : (ℕ → α) → Prop) (hf : P f) : ∀ m, { g 
 theorem extendAux_next (hk : k < n) : (extendAux P hf (n + 1)).1 k = (extendAux P hf n).1 k :=
   (extendAt P (extendAux P hf n).2.1 n).2.2.1 k hk
 
-theorem extendAux_later (hk : k < n) : (extendAux P hf (n + m)).1 k = (extendAux P hf n).1 k := by
-  induction m with
-  | zero => rfl
-  | succ m ih => rwa [← add_assoc, extendAux_next (by omega)]
+theorem extendAux_later (hk : k < n) (hm : n ≤ m) : (extendAux P hf m).1 k = (extendAux P hf n).1 k := by
+  induction m, hm using le_induction with
+  | base => rfl
+  | succ m hm ih => rwa [extendAux_next (by omega)]
 
 noncomputable def extend (P : (ℕ → α) → Prop) (hf : P f) (n : ℕ) : α := (extendAux P hf (n + 1)).1 n
 
 theorem extend_eq (hk : k ≤ n) : extend P hf k = (extendAux P hf (n + 1)).1 k := by
-  obtain ⟨m, rfl⟩ := Nat.exists_eq_add_of_le hk
-  have := @extendAux_later α _ P f hf m (k + 1) k (by omega) (by omega)
-  grind [extend]
+  rw [extend, eq_comm, extendAux_later] <;> omega
 
-theorem extend_quasiMin (hf : P f) : QuasiMin P (extend P hf) := by
-  have key n k (hk : k ≤ n) : extend P hf k = (extendAux P hf (n + 1)).1 k := extend_eq hk
-  intro n
-  apply MinAt_of_eq ((extendAux P hf (n + 1)).2.2 n (by grind)) (by grind)
+theorem extend_quasiMin (hf : P f) : QuasiMin P (extend P hf) :=
+  fun n => MinAt_of_eq ((extendAux P hf (n + 1)).2.2 n (by grind)) (by grind [extend_eq])
 
-def localProp (P : (ℕ → α) → Prop) : Prop :=
-  ∀ (F : ℕ → (ℕ → α)) (f : ℕ → α), (∀ n k, k < n → F n k = f k) → (∀ n, P (F n)) → P f
+def localProp (P : (ℕ → α) → Prop) := ∀ ⦃f⦄, (∀ n, ∃ g, P g ∧ ∀ k < n, g k = f k) → P f
 
-theorem extend_spec (hf : P f) (hP : localProp P) : P (extend P hf) := by
-  apply hP (fun n => extendAux P hf n) (extend P hf)
-  · simp [extend]
-    intro n k hkn
-    have : k + 1 ≤ n := by omega
-    obtain ⟨m, rfl⟩ := Nat.exists_eq_add_of_le this
-    exact @extendAux_later α _ P f hf m (k + 1) k _ (by omega)
-  · intro n
-    exact (extendAux P hf n).2.1
+theorem extend_spec' (hf : P f) (hP : localProp P) : P (extend P hf) := by
+  refine hP (fun n => ⟨extendAux P hf n, (extendAux P hf n).2.1, fun k hk => ?_⟩)
+  apply extendAux_later <;> omega
 
 -- Being a bad sequence is a local property
 omit [WellFoundedLT α] in
 theorem key : localProp (fun (f : ℕ → α) => ∀ i j, i < j → ¬ (f i ≤ f j)) := by
-  rintro F f h1 h2 i j hij
-  let n := 1 + max i j
-  simpa [← h1 n i (by omega), ← h1 n j (by omega)] using h2 n i j hij
+  intro f h i j hij ; grind [h (1 + max i j)]
