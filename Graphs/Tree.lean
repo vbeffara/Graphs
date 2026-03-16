@@ -12,20 +12,31 @@ noncomputable def path (u v : α) : G.Path u v := by
   have := h.existsUnique_path u v
   exact ⟨this.choose, this.choose_spec.1⟩
 
-theorem path_spec' (p : G.Path u v) : p.1 = (h.path u v).1 := by
-  exact (h.existsUnique_path u v).choose_spec.2 p p.2
+theorem path_spec' (p : G.Path u v) : (h.path u v).1 = p.1 := by
+  exact (h.existsUnique_path u v).choose_spec.2 p p.2 |>.symm
 
-theorem path_spec (p : G.Path u v) : p = h.path u v := by
+theorem path_spec (p : G.Path u v) : h.path u v = p := by
   ext ; exact h.path_spec' p
 
+@[simp] theorem path_self : h.path u u = Path.nil := path_spec _ _
+
+theorem path_symm : h.path u v = (h.path v u).reverse := path_spec _ _
+
 def ordered (a b c : α) : Prop := b ∈ (h.path a c).1.support
+
+@[simp] theorem ordered_left : h.ordered a a b := Walk.start_mem_support _
+
+@[simp] theorem ordered_right : h.ordered a b b := Walk.end_mem_support _
+
+@[simp] theorem ordered_self : h.ordered a b a ↔ b = a := by
+  simp [ordered]
 
 def left (u v : α) : Set α := {w | h.ordered w u v}
 
 def right (u v : α) : Set α := {w | h.ordered u v w}
 
 lemma path_adj (huv : G.Adj u v) : h.path u v = huv.toWalk := by
-  exact h.path_spec' ⟨_, Walk.IsPath.of_adj huv⟩ |>.symm
+  exact h.path_spec' ⟨_, Walk.IsPath.of_adj huv⟩
 
 lemma path_split (hv : h.ordered u v w) : h.path u w = (h.path u v).1.append (h.path v w).1 := by
   have h_split : ∀ (p : G.Walk u w), v ∈ p.support → ∃ q : G.Walk u v, ∃ r : G.Walk v w, p = q.append r := by
@@ -140,7 +151,6 @@ lemma path_mem_left (huv : G.Adj u v) (ha : a ∈ h.left u v) {x : α} (hx : x �
     simp +decide [ add_assoc ] at this;
     cases h : ( h.path x u : G.Walk x u ) <;> simp +decide [ h ] at this ⊢;
     simp +decide [ SimpleGraph.IsTree.left ] at *;
-    simp +decide [ SimpleGraph.IsTree.ordered ] at *;
   · have := h.left_right_disjoint huv; simp_all +decide [ Set.ext_iff ] ;
     specialize this u ; aesop
 

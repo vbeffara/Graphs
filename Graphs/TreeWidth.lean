@@ -47,7 +47,9 @@ theorem tree_treeWidth (hG : G.IsTree) (hG' : G ≠ ⊥) : treeWidth G = 1 :=
   le_antisymm (treeWidth_tree_le_one hG) (treeWidth_ge_one hG')
 
 theorem treeWidth_le {H : SimpleGraph α} (h : H ≤ G) : treeWidth H ≤ treeWidth G := by
-  sorry
+  apply sInf_le_sInf
+  rintro w ⟨D, rfl⟩
+  exact ⟨D.restrict' h, rfl⟩
 
 theorem treeWidth_mono {H : G.Subgraph} : treeWidth H.coe ≤ treeWidth G := by
   unfold treeWidth

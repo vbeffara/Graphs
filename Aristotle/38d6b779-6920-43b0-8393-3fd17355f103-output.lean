@@ -1,3 +1,24 @@
+/-
+This file was edited by Aristotle (https://aristotle.harmonic.fun).
+
+Lean version: leanprover/lean4:v4.24.0
+Mathlib version: f897ebcf72cd16f89ab4577d0c826cd14afaafc7
+This project request had uuid: 38d6b779-6920-43b0-8393-3fd17355f103
+
+To cite Aristotle, tag @Aristotle-Harmonic on GitHub PRs/issues, and add as co-author to commits:
+Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
+
+The version of Mathlib expected in this file appears to be incompatible with Aristotle's.
+Please either switch your project to use the same version, or try again with `import Mathlib` only.
+Details:
+object file '/code/harmonic-lean/.lake/packages/mathlib/.lake/build/lib/lean/Mathlib/Combinatorics/SimpleGraph/Walks/Basic.olean' of module Mathlib.Combinatorics.SimpleGraph.Walks.Basic does not exist
+unknown namespace `SimpleGraph`
+unexpected token '*'; expected '}'
+expected token
+Unknown constant `CoeFun`
+expected token
+-/
+
 import Graphs.Basic
 import Graphs.Contraction
 import Graphs.Separation
@@ -39,10 +60,13 @@ def botAt (a : α) : TreeDecomposition (⊥ : SimpleGraph α) where
   ι := α
   V b := {b}
   T := Star a
-  tree := Star.isTree a
+  tree := Star.isTree
   union_bags := by ext x ; simp
   edge_mem_bag := by tauto
-  bag_inter := by simp ; grind
+  bag_inter {u v w} := by
+    simp [IsTree.ordered]
+
+    sorry
 
 variable {D : TreeDecomposition G} {t₁ t₂ : D.ι}
 
@@ -114,7 +138,7 @@ private lemma exists_first_step_on_path {a b : D.ι} (hab : a ≠ b) :
       refine ⟨c, hac, ?_⟩
       unfold SimpleGraph.IsTree.ordered
       have hpath : (D.tree.path a b).1 = SimpleGraph.Walk.cons hac p := by
-        exact (D.tree.path_spec' ⟨SimpleGraph.Walk.cons hac p, hp⟩)
+        exact (D.tree.path_spec' ⟨SimpleGraph.Walk.cons hac p, hp⟩).symm
       simp [hpath]
 
 lemma diestel_12_3_4_global {W : Set α} (hW : ¬ ∃ t : D.ι, W ⊆ D.V t) :
@@ -168,8 +192,9 @@ def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.co
 
 noncomputable def width (D : TreeDecomposition G) := ⨆ b, (D.V b).encard - 1
 
-@[simp] lemma width_restrict'_le (D : TreeDecomposition G) {H : SimpleGraph α} (h : H ≤ G) :
-    (D.restrict' h).width = D.width := rfl
+lemma width_restrict'_le (D : TreeDecomposition G) {H : SimpleGraph α} (h : H ≤ G) :
+    (D.restrict' h).width ≤ D.width := by
+  apply iSup_mono ; simp [restrict']
 
 lemma width_restrict_le (D : TreeDecomposition G) (H : G.Subgraph) :
     (D.restrict H).width ≤ D.width := by
@@ -252,7 +277,7 @@ noncomputable def map (D : TreeDecomposition H) (φ : β → α) (hφs : Functio
     obtain ⟨q, hq⟩ := map_build_walk D φ p hp hx₁ hx₃
     have ht₂_toPath : t₂ ∈ (q.toPath : D.T.Walk t₁ t₃).support := by
       have hqpath : (q.toPath : D.T.Walk t₁ t₃) = (D.tree.path t₁ t₃).1 := by
-        simpa using (D.tree.path_spec' (u := t₁) (v := t₃) q.toPath).symm
+        simpa using (D.tree.path_spec' (u := t₁) (v := t₃) q.toPath)
       simpa [SimpleGraph.IsTree.ordered, hqpath] using hordered
     have ht₂ : t₂ ∈ q.support := (SimpleGraph.Walk.support_toPath_subset q) ht₂_toPath
     rcases hq t₂ ht₂ with ⟨x₂, hx₂, hx₂φ⟩
@@ -391,7 +416,7 @@ lemma pathGraph_ordered (n : ℕ) (i j k : Fin (n + 1)) :
     (pathGraph_isTree n).ordered i j k ↔ j ∈ uIcc i k := by
   simp [SimpleGraph.IsTree.ordered]
   obtain ⟨p, hp⟩ := pathPath _ i k
-  rw [← (pathGraph_isTree n).path_spec' p] at hp
+  rw [(pathGraph_isTree n).path_spec' p] at hp
   exact hp j
 
 def td_cycle (n : ℕ) : TreeDecomposition (cycleGraph (n + 3)) where
