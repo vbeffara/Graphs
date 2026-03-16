@@ -30,10 +30,9 @@ theorem isTree {a : α} : IsTree (Star a) := by
   refine ⟨⟨fun u v => reachable.symm.trans reachable⟩, ?_⟩
   rw [isAcyclic_iff_forall_adj_isBridge]
   rintro u v ⟨h1, h2⟩
-  wlog h : u = a ; grind [Sym2.eq_swap]
-  subst u
-  rw [Sym2.eq_swap]
-  simp [IsBridge, Star, h1.symm]
+  wlog h : v = a ; grind [Sym2.eq_swap]
+  subst v
+  simp [IsBridge, Star, h1]
   rintro ⟨p⟩
   cases p <;> simp at * ; grind
 
