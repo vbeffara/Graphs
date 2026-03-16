@@ -48,16 +48,15 @@ noncomputable def extend (P : (ℕ → α) → Prop) (hf : P f) (n : ℕ) : α :
 theorem extend_eq (hk : k ≤ n) : extend P hf k = (extendAux P hf (n + 1)).1 k := by
   rw [extend, eq_comm, extendAux_later] <;> omega
 
-theorem extend_quasiMin (hf : P f) : QuasiMin P (extend P hf) :=
+theorem extend_quasiMin : QuasiMin P (extend P hf) :=
   fun n => MinAt_of_eq ((extendAux P hf (n + 1)).2.2 n (by grind)) (by grind [extend_eq])
 
 def localProp (P : (ℕ → α) → Prop) := ∀ ⦃f⦄, (∀ n, ∃ g, P g ∧ ∀ k < n, g k = f k) → P f
 
-theorem extend_spec' (hf : P f) (hP : localProp P) : P (extend P hf) := by
+theorem extend_spec (hP : localProp P) : P (extend P hf) := by
   refine hP (fun n => ⟨extendAux P hf n, (extendAux P hf n).2.1, fun k hk => ?_⟩)
   apply extendAux_later <;> omega
 
--- Being a bad sequence is a local property
-omit [WellFoundedLT α] in
-theorem key : localProp (fun (f : ℕ → α) => ∀ i j, i < j → ¬ (f i ≤ f j)) := by
-  intro f h i j hij ; grind [h (1 + max i j)]
+theorem exists_quasiMin (hP : localProp P) (h : ∃ f, P f) : ∃ f, P f ∧ QuasiMin P f := by
+  obtain ⟨f, hf⟩ := h
+  refine ⟨extend P hf, extend_spec hP, extend_quasiMin⟩
