@@ -28,22 +28,14 @@ theorem reachable {a u : α} : (Star a).Reachable a u := by
 theorem isTree {a : α} : IsTree (Star a) := by
   have : Nonempty α := ⟨a⟩
   refine ⟨⟨fun u v => reachable.symm.trans reachable⟩, ?_⟩
-  intro u p hp
-  cases p with
-  | nil => simp at hp
-  | cons h1 p =>
-    simp [Star, Walk.cons_isCycle_iff] at h1 hp
-    cases p with
-    | nil => simp at h1
-    | cons h2 p =>
-      simp [Star] at h2 p hp
-      cases p with
-      | nil =>
-        simp at hp
-      | cons h3 p =>
-        cases p with
-        | nil => simp at * ; grind
-        | cons h4 p => simp at * ; grind
+  rw [isAcyclic_iff_forall_adj_isBridge]
+  rintro u v ⟨h1, h2⟩
+  wlog h : u = a ; grind [Sym2.eq_swap]
+  subst u
+  rw [Sym2.eq_swap]
+  simp [IsBridge, Star, h1.symm]
+  rintro ⟨p⟩
+  cases p <;> simp at * ; grind
 
 end Star
 
