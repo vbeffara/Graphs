@@ -39,10 +39,13 @@ def botAt (a : α) : TreeDecomposition (⊥ : SimpleGraph α) where
   ι := α
   V b := {b}
   T := Star a
-  tree := sorry
+  tree := Star.isTree
   union_bags := by ext x ; simp
   edge_mem_bag := by tauto
-  bag_inter := sorry
+  bag_inter {u v w} := by
+    simp [IsTree.ordered]
+
+    sorry
 
 variable {D : TreeDecomposition G} {t₁ t₂ : D.ι}
 
