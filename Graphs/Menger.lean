@@ -145,6 +145,11 @@ lemma Menger_strong_base (G : SimpleGraph V) (A B : Finset V) (h : G.edgeSet = �
         · simp
         · intro a b ; simp [γ] ; tauto
 
+noncomputable def merge_to {x y : V} (h : y ≠ x) (z : V) : {z : V // z ≠ x} :=
+  if h' : z = x then ⟨y, h⟩ else ⟨z, h'⟩
+
+noncomputable def contract (G : SimpleGraph V) {x y : V} (h : y ≠ x) := G.map (merge_to h)
+
 /-
 Definitions for edge contraction: the setoid identifying the endpoints, the
 contracted graph, and the projection map.
