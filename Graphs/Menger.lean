@@ -163,12 +163,18 @@ The contraction of edge (x, y) in G.
 def contractEdge (G : SimpleGraph V) (x y : V) : SimpleGraph (Quotient (contractEdgeSetoid x y)) :=
   fromRel (fun a b => ∃ a' b', ⟦a'⟧ = a ∧ ⟦b'⟧ = b ∧ G.Adj a' b')
 
-def contractEdgeProj (x y : V) : V → Quotient (contractEdgeSetoid x y) :=
-  Quotient.mk (contractEdgeSetoid x y)
+@[deprecated]
+def contractEdgeProj (x y z : V) : Quotient (contractEdgeSetoid x y) := ⟦z⟧
+
+lemma contract_eq_map : contractEdge G x y = G.map (⟦·⟧) := by
+  ext a b
+  simp [SimpleGraph.map, Relation.Map, contractEdge, Quotient.mk_eq_iff_out]
+  intro h ; constructor ; rintro (⟨a', h1, b', h2, h3⟩ | ⟨a', h1, b', h2, h3⟩)
+  all_goals { grind [Adj.symm] }
 
 noncomputable def contractEdge_liftSet (x y : V) (S : Finset V) :
     Finset (Quotient (contractEdgeSetoid x y)) :=
-  S.image (contractEdgeProj x y)
+  S.image (⟦·⟧)
 
 /-
 Given a walk in G, there exists a walk in the contracted graph G/e between the
@@ -1191,7 +1197,7 @@ The contracted vertex is in the lifted set of A if and only if x or y is in A.
 -/
 lemma SimpleGraph.mem_liftSet_contraction_vertex_iff (A : Finset V) (x y : V) :
   SimpleGraph.contractEdge_vertex x y ∈ SimpleGraph.contractEdge_liftSet x y A ↔ x ∈ A ∨ y ∈ A := by
-    unfold SimpleGraph.contractEdge_liftSet SimpleGraph.contractEdge_vertex SimpleGraph.contractEdgeProj;
+    unfold SimpleGraph.contractEdge_liftSet SimpleGraph.contractEdge_vertex
     constructor <;> intro h;
     · simp at h
       cases' h with z hz;
@@ -1271,7 +1277,7 @@ lemma SimpleGraph.adjust_path_end_to_B (G : SimpleGraph V) (B : Finset V) (x y :
         · -- Since $v \notin B$, we have $x \in B$.
           have hx : x ∈ B := by
             contrapose! h_liftB; simp_all [ contractEdge_liftSet ] ;
-            intro w hw; rw [ SimpleGraph.contractEdgeProj, SimpleGraph.contractEdge_vertex ] ; simp_all [ Quotient.eq, SimpleGraph.contractEdgeSetoid ] ;
+            intro w hw; rw [SimpleGraph.contractEdge_vertex ] ; simp_all [ Quotient.eq, SimpleGraph.contractEdgeSetoid ] ;
             grind;
           refine' ⟨ x, p.append ( SimpleGraph.Walk.cons hxy.symm SimpleGraph.Walk.nil ), hx, _, _ ⟩;
           · refine' SimpleGraph.Walk.IsPath_append_of_support_inter_subset_one _ _ hp_path _ _;
@@ -1350,7 +1356,7 @@ lemma SimpleGraph.lift_path_nil_eq_vertex (G : SimpleGraph V) (A B : Finset V) (
         contrapose! hx_1; simp_all [ Quotient.eq, SimpleGraph.contractEdge_vertex, SimpleGraph.contractEdgeProj ] ;
         unfold contractEdgeSetoid; aesop;
       have hx_2_eq : x_2 = x ∨ x_2 = y := by
-        rw [ SimpleGraph.contractEdgeProj, SimpleGraph.contractEdge_vertex ] at hx_2;
+        rw [ SimpleGraph.contractEdge_vertex ] at hx_2;
         rw [ Quotient.eq ] at hx_2;
         cases hx_2 <;> aesop;
       cases hx_1_eq <;> cases hx_2_eq <;> simp_all [ contractEdge_vertex ];
@@ -1360,7 +1366,7 @@ lemma SimpleGraph.lift_path_nil_eq_vertex (G : SimpleGraph V) (A B : Finset V) (
         exact ⟨ x, hx_1_A ⟩;
         exact ⟨ x, hx_2_B ⟩;
         exact SimpleGraph.Walk.nil;
-        all_goals simp [*];
+        all_goals simp [*, contractEdgeProj];
       · refine' ⟨ ⟨ _, _, _, _ ⟩, _ ⟩ <;> norm_num;
         exact ⟨ x, hx_1_A ⟩;
         exact ⟨ y, hx_2_B ⟩;
@@ -1374,7 +1380,7 @@ lemma SimpleGraph.lift_path_nil_eq_vertex (G : SimpleGraph V) (A B : Finset V) (
         exact ⟨ x, hx_2_B ⟩;
         exact SimpleGraph.Walk.cons hxy.symm SimpleGraph.Walk.nil;
         simp [Finset.image];
-        · by_cases h : y = x <;> simp_all
+        · by_cases h : y = x <;> simp_all [contractEdgeProj]
         · simp [ SimpleGraph.Walk.isPath_def ];
           exact hxy.ne.symm;
       · refine' ⟨ _, _ ⟩;
@@ -1383,7 +1389,7 @@ lemma SimpleGraph.lift_path_nil_eq_vertex (G : SimpleGraph V) (A B : Finset V) (
         exact ⟨ y, hx_1_A ⟩;
         exact ⟨ y, hx_2_B ⟩;
         exact SimpleGraph.Walk.nil;
-        all_goals simp_all
+        all_goals simp_all [contractEdgeProj]
 
 /-
 A path in the contracted graph that passes through the contracted vertex can be lifted to a path in the original graph.
