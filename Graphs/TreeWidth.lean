@@ -79,6 +79,7 @@ theorem treeWidth_le_one [Nonempty α] : treeWidth G ≤ 1 ↔ G.IsAcyclic := by
     · apply treeWidth_tree_le_one h2
 
 theorem treeWidth_loop_le_two (h : 2 < n) : treeWidth (cycleGraph n) ≤ 2 := by
-  sorry
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + 3 := ⟨n - 3, by omega⟩
+  exact csInf_le_of_le (OrderBot.bddBelow _) ⟨td_cycle m, td_cycle_width⟩ le_rfl
 
 #print axioms treeWidth_minor
