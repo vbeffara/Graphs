@@ -10,7 +10,7 @@ set_option maxHeartbeats 0
 
 open Classical
 
-variable {V : Type*} {G : SimpleGraph V} {x y u v : V} {A B X : Finset V} {n : ℕ}
+variable {V W : Type*} {G : SimpleGraph V} {x y u v : V} {A B X : Finset V} {n : ℕ}
 
 namespace SimpleGraph
 
@@ -40,8 +40,6 @@ A set of A-B paths is disjoint if any two distinct paths in the set are vertex-d
 -/
 def disjointPaths (P : Set (G.ABPath A B)) : Prop := P.Pairwise (Disjoint ·.support ·.support)
 
-/- =========================== REVIEW BAR ===================== -/
-
 def Joiner (G : SimpleGraph V) (A B : Finset V) :=
   { P : Finset (G.ABPath A B) // disjointPaths (P : Set (G.ABPath A B)) }
 
@@ -68,6 +66,8 @@ theorem card_le (P : G.Joiner A B) : P.1.card ≤ A.card :=
 
 end Joiner
 
+/- =========================== REVIEW BAR ===================== -/
+
 /-
 The minimum size of a separator and the maximum number of disjoint paths.
 -/
@@ -83,20 +83,9 @@ theorem exists_mincut (G : SimpleGraph V) (A B : Finset V) :
 noncomputable def maxflow (G : SimpleGraph V) (A B : Finset V) : ℕ :=
   Nat.findGreatest (fun n => ∃ P : G.Joiner A B, P.1.card = n) A.card
 
-noncomputable def maxflow' (G : SimpleGraph V) (A B : Finset V) : ℕ :=
-  Nat.find' (p := fun n => ∃ P : G.Joiner A B, P.1.card = n)
-    ⟨0, ⟨∅, by tauto⟩, rfl⟩ ⟨A.card, fun n ⟨P, hP⟩ => hP ▸ P.card_le⟩
-
-theorem maxflow_eq_maxflow' : G.maxflow A B = G.maxflow' A B :=
-  findGreatest_eq_find' (fun _ ⟨P, hP⟩ => hP ▸ P.card_le)
-
 theorem exists_maxflow (G : SimpleGraph V) (A B : Finset V) :
     ∃ P : G.Joiner A B, P.1.card = G.maxflow A B :=
   Nat.findGreatest_spec (P := fun n => ∃ P : G.Joiner A B, P.1.card = n) (zero_le _) ⟨⟨∅, by tauto⟩, rfl⟩
-
-theorem exists_maxflow' (G : SimpleGraph V) (A B : Finset V) :
-    ∃ P : G.Joiner A B, P.1.card = G.maxflow' A B :=
-  find'_spec (p := fun n => ∃ P : G.Joiner A B, P.1.card = n)
 
 /-
 The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
@@ -110,29 +99,29 @@ theorem Menger_weak : G.maxflow A B ≤ G.mincut A B := by
 Base case of Menger's theorem: if G has no edges, the theorem holds.
 -/
 lemma Menger_strong_base (G : SimpleGraph V) (A B : Finset V) (h : G.edgeSet = ∅) :
-  G.mincut A B ≤ G.maxflow A B := by
-    simp at h ; subst G
-    have h_empty : ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v := by
-      intro u v p; induction p <;> aesop;
-    trans (A ∩ B).card
-    · simp [mincut]
-      refine ⟨⟨(A ∩ B), ?_⟩, le_of_eq rfl⟩
-      intro a ha b hb p
-      refine ⟨a, p.start_mem_support, ?_⟩
-      simp [← h_empty a b p] at hb
-      simp [ha, hb]
-    · refine Nat.le_findGreatest (Finset.card_mono Finset.inter_subset_left) ?_
-      let γ (a : ((A ∩ B) : Finset _)) : (⊥ : SimpleGraph V).ABPath A B :=
-        ⟨⟨a, by grind⟩, ⟨a, by grind⟩ , Walk.nil, Walk.IsPath.nil⟩
-      refine ⟨⟨Set.range γ |>.toFinset, ?_⟩, ?_⟩
-      · intro ⟨⟨a, ha⟩, ⟨b, hb⟩, p1, hp1⟩ hp2 ⟨⟨a', ha'⟩, ⟨b', hb'⟩, p'1, hp'1⟩ hp'2 h
-        cases p1 ; swap ; contradiction
-        cases p'1 ; swap ; contradiction
-        simp_all ; grind
+    G.mincut A B ≤ G.maxflow A B := by
+  simp at h ; subst G
+  have h_empty : ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v := by
+    intro u v p; induction p <;> aesop;
+  trans (A ∩ B).card
+  · simp [mincut]
+    refine ⟨⟨(A ∩ B), ?_⟩, le_of_eq rfl⟩
+    intro a ha b hb p
+    refine ⟨a, p.start_mem_support, ?_⟩
+    simp [← h_empty a b p] at hb
+    simp [ha, hb]
+  · refine Nat.le_findGreatest (Finset.card_mono Finset.inter_subset_left) ?_
+    let γ (a : ((A ∩ B) : Finset _)) : (⊥ : SimpleGraph V).ABPath A B :=
+      ⟨⟨a, by grind⟩, ⟨a, by grind⟩ , Walk.nil, Walk.IsPath.nil⟩
+    refine ⟨⟨Set.range γ |>.toFinset, ?_⟩, ?_⟩
+    · intro ⟨⟨a, ha⟩, ⟨b, hb⟩, p1, hp1⟩ hp2 ⟨⟨a', ha'⟩, ⟨b', hb'⟩, p'1, hp'1⟩ hp'2 h
+      cases p1 ; swap ; contradiction
+      cases p'1 ; swap ; contradiction
+      simp_all ; grind
+    · simp
+      rw [Finset.card_image_of_injective]
       · simp
-        rw [Finset.card_image_of_injective]
-        · simp
-        · intro a b ; simp [γ] ; tauto
+      · intro a b ; simp [γ] ; tauto
 
 noncomputable def merge_to {x y : V} (h : y ≠ x) (z : V) : {z : V // z ≠ x} :=
   if h' : z = x then ⟨y, h⟩ else ⟨z, h'⟩
@@ -146,7 +135,7 @@ contracted graph, and the projection map.
 def contractEdgeSetoid (x y : V) : Setoid V :=
   Setoid.mk (fun a b => a = b ∨ (a = x ∧ b = y) ∨ (a = y ∧ b = x)) (by constructor <;> aesop)
 
-def contractType (x y : V) := Quotient (contractEdgeSetoid x y)
+abbrev contractType (x y : V) := Quotient (contractEdgeSetoid x y)
 
 /-
 The contraction of edge (x, y) in G.
@@ -160,9 +149,17 @@ lemma contract_eq_map : contractEdge G x y = G.map (⟦·⟧) := by
   intro h ; constructor ; rintro (⟨a', h1, b', h2, h3⟩ | ⟨a', h1, b', h2, h3⟩)
   all_goals { grind [Adj.symm] }
 
-noncomputable def contractEdge_liftSet (x y : V) (S : Finset V) :
-    Finset (Quotient (contractEdgeSetoid x y)) :=
+noncomputable def contractEdge_liftSet (x y : V) (S : Finset V) : Finset (contractType x y) :=
   S.image (⟦·⟧)
+
+noncomputable def Walk.map' (f : V → W) : ∀ ⦃u v⦄ (p : G.Walk u v),
+    {q : (G.map f).Walk (f u) (f v) // q.support.toFinset ⊆ p.support.toFinset.image f}
+  | _, _, .nil => ⟨Walk.nil, by simp⟩
+  | u, _, .cons h p => by
+    rename_i v'
+    by_cases h : f v' = f u
+    · use .copy (p.map' f) h rfl, by simpa using (p.map' f).2.trans $ Finset.subset_insert _ _
+    · use .cons (by simp [SimpleGraph.map, Relation.Map] ; grind) (p.map' f).1, by simp [(p.map' f).2]
 
 /-
 Given a walk in G, there exists a walk in the contracted graph G/e between the
