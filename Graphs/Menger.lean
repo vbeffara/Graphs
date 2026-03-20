@@ -415,28 +415,31 @@ lemma contractEdge_adj_lift_vertex (G : SimpleGraph V) (x y : V) (u : V)
       cases eq_or_ne a' x <;> cases eq_or_ne a' y <;> cases eq_or_ne b' x <;> cases eq_or_ne b' y
       all_goals simp_all [ contractEdge_vertex, Quotient.eq, contractEdgeSetoid, adj_comm ]
 
-/-
-The number of edges in the contracted graph is strictly less than in the original graph.
--/
-lemma contractEdge_edge_card_lt [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (x y : V) (h : G.Adj x y) :
-  (G.contractEdge x y).edgeFinset.card < G.edgeFinset.card := by
-    have h_inter : Finset.card (G.contractEdge x y).edgeFinset ≤ Finset.card (G.edgeFinset \ {s(x, y)}) := by
-      have h_sub : (G.contractEdge x y).edgeFinset ⊆ Finset.image
-          (fun e => Sym2.map (⟦·⟧) e) (G.edgeFinset \ {s(x, y)}) := by
-        intro e he; simp_all [ contractEdge ]
-        rcases e with ⟨ a, b ⟩ ; simp_all [ fromRel ]
-        rcases he.2 with ( ⟨ a', rfl, b', rfl, hab ⟩ | ⟨ a', rfl, b', rfl, hab ⟩ ) <;> use s(a', b') <;> simp_all [ Sym2.eq_swap ];
-        · simp_all [Quotient.eq, contractEdgeSetoid]
-        · simp_all [Quotient.eq, contractEdgeSetoid] ; aesop
-      exact le_trans ( Finset.card_le_card h_sub ) ( Finset.card_image_le )
-    exact lt_of_le_of_lt h_inter ( Finset.card_lt_card ( Finset.ssubset_iff_subset_ne.mpr ⟨ Finset.sdiff_subset, by aesop ⟩ ) )
-
-lemma contractEdge_edgeSet_encard_lt [Fintype V] (G : SimpleGraph V) (x y : V) (h : G.Adj x y) :
+lemma contractEdge_edgeSet_encard_lt (h : G.Adj x y) (hfin : G.edgeSet.Finite) :
     (G.contractEdge x y).edgeSet.encard < G.edgeSet.encard := by
-  have h1 := contractEdge_edge_card_lt G x y h
-  simp only [edgeFinset] at h1
-  rw [Set.encard_eq_coe_toFinset_card, Set.encard_eq_coe_toFinset_card]
-  exact WithTop.coe_lt_coe.mpr h1
+  have hxy : (⟦x⟧ : contractType x y) = ⟦y⟧ :=
+    Quotient.sound (Or.inr (Or.inl ⟨rfl, rfl⟩))
+  have h_sub : (G.contractEdge x y).edgeSet ⊆ Sym2.map (⟦·⟧) '' (G.edgeSet \ {s(x, y)}) := by
+    intro e he
+    induction e using Sym2.ind with
+    | _ a b =>
+      simp only [mem_edgeSet, contractEdge, fromRel_adj] at he
+      obtain ⟨hab, (⟨a', b', ha', hb', hadj⟩ | ⟨a', b', ha', hb', hadj⟩)⟩ := he
+      all_goals {
+        refine ⟨s(a', b'), ⟨hadj, fun heq => hab ?_⟩,
+          by simp [Sym2.map_mk, ha', hb', Sym2.eq_swap]⟩
+        have : (⟦a'⟧ : contractType x y) = ⟦b'⟧ := by
+          have heq' : s(a', b') = s(x, y) := by simpa using heq
+          rcases Sym2.eq_iff.mp heq' with (⟨rfl, rfl⟩ | ⟨rfl, rfl⟩)
+          · exact hxy
+          · exact hxy.symm
+        rw [← ha', ← hb']
+        first | exact this | exact this.symm }
+  calc (G.contractEdge x y).edgeSet.encard
+    ≤ (Sym2.map (⟦·⟧) '' (G.edgeSet \ {s(x, y)})).encard := Set.encard_le_encard h_sub
+    _ ≤ (G.edgeSet \ {s(x, y)}).encard := Set.encard_image_le _ _
+    _ < G.edgeSet.encard :=
+        (hfin.subset Set.diff_subset).encard_lt_encard (Set.diff_singleton_ssubset.mpr h)
 
 /-
 If a walk's support intersects {x, y} only at v (or not at all), then the walk does not use the edge xy.
@@ -1746,7 +1749,7 @@ theorem Menger_strong_aux [Fintype V] (n : ℕ) :
       | _ a b => exact ⟨a, b, he⟩
     have h_contract_lt : (G.contractEdge x y).edgeSet.encard < ↑n := by
       calc (G.contractEdge x y).edgeSet.encard
-        < G.edgeSet.encard := contractEdge_edgeSet_encard_lt G x y hxy
+        < G.edgeSet.encard := contractEdge_edgeSet_encard_lt hxy (Set.toFinite _)
         _ = ↑n := h_card
     have h_delete_lt : (G.deleteEdge x y).edgeSet.encard < ↑n := by
       calc (G.deleteEdge x y).edgeSet.encard
