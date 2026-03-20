@@ -519,7 +519,7 @@ lemma SimpleGraph.separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph 
 /-
 If a separator in the contracted graph has size strictly less than the minimum separator size of the original graph, then it must contain the contracted vertex.
 -/
-theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V) (k : ℕ∞)
+theorem SimpleGraph.contractEdge_separator_contains_vertex (G : SimpleGraph V) (A B : Set V) (x y : V) (k : ℕ∞)
   (h_min : G.mincut A B = k)
   (Y : (G.contractEdge x y).Separator (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
   (hY_card : Y.1.encard < k)
@@ -980,7 +980,7 @@ lemma SimpleGraph.lift_path_extension_step (G : SimpleGraph V) (x y : V)
 /-
 A path in the contracted graph ending at the contracted vertex can be lifted to a path in the original graph ending at one of the contracted edge's endpoints.
 -/
-lemma SimpleGraph.lift_path_to_contraction_end [Fintype V] (G : SimpleGraph V) (A : Set V) (x y : V)
+lemma SimpleGraph.lift_path_to_contraction_end (G : SimpleGraph V) (A : Set V) (x y : V)
   (u' : Quotient (SimpleGraph.contractEdgeSetoid x y))
   (p' : (G.contractEdge x y).Walk u' (SimpleGraph.contractEdge_vertex x y))
   (hp'_path : p'.IsPath)
@@ -1028,7 +1028,7 @@ lemma SimpleGraph.lift_path_to_contraction_end [Fintype V] (G : SimpleGraph V) (
 /-
 A path in the contracted graph starting at the contracted vertex can be lifted to a path in the original graph starting at one of the contracted edge's endpoints.
 -/
-lemma SimpleGraph.lift_path_from_contraction_start [Fintype V] (G : SimpleGraph V) (B : Set V) (x y : V)
+lemma SimpleGraph.lift_path_from_contraction_start (G : SimpleGraph V) (B : Set V) (x y : V)
   (v' : Quotient (SimpleGraph.contractEdgeSetoid x y))
   (p' : (G.contractEdge x y).Walk (SimpleGraph.contractEdge_vertex x y) v')
   (hp'_path : p'.IsPath)
@@ -1145,7 +1145,7 @@ lemma SimpleGraph.contractEdge_preimage_disjoint_away_from_endpoints (x y : V)
 /-
 If two paths in the contracted graph intersect only at the contracted vertex, their lifted paths in the original graph are disjoint away from the endpoints of the contracted edge.
 -/
-lemma SimpleGraph.lifted_paths_disjoint [Fintype V] (G : SimpleGraph V) (x y : V)
+lemma SimpleGraph.lifted_paths_disjoint (G : SimpleGraph V) (x y : V)
   (p1' : (G.contractEdge x y).Walk ⟦x⟧ (SimpleGraph.contractEdge_vertex x y)) -- start doesn't matter much
   (p2' : (G.contractEdge x y).Walk (SimpleGraph.contractEdge_vertex x y) ⟦x⟧) -- end doesn't matter much
   (h_inter : p1'.support.toFinset ∩ p2'.support.toFinset = {SimpleGraph.contractEdge_vertex x y})
@@ -1174,7 +1174,7 @@ lemma SimpleGraph.lifted_paths_disjoint [Fintype V] (G : SimpleGraph V) (x y : V
 /-
 If two paths in the contracted graph meet only at the contracted vertex, they can be lifted to paths in the original graph that are disjoint away from the contracted edge's endpoints.
 -/
-lemma SimpleGraph.lift_split_paths [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V)
+lemma SimpleGraph.lift_split_paths (G : SimpleGraph V) (A B : Set V) (x y : V)
   (u' v' : Quotient (SimpleGraph.contractEdgeSetoid x y))
   (p1' : (G.contractEdge x y).Walk u' (SimpleGraph.contractEdge_vertex x y))
   (p2' : (G.contractEdge x y).Walk (SimpleGraph.contractEdge_vertex x y) v')
@@ -1221,7 +1221,7 @@ lemma SimpleGraph.lift_split_paths [Fintype V] (G : SimpleGraph V) (A B : Set V)
 /-
 A path in the contracted graph passing through the contracted vertex can be lifted to a path in the original graph.
 -/
-lemma SimpleGraph.lift_path_through_contraction_internal [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : G.Adj x y)
+lemma SimpleGraph.lift_path_through_contraction_internal (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : G.Adj x y)
   (u' v' : Quotient (SimpleGraph.contractEdgeSetoid x y))
   (p' : (G.contractEdge x y).Walk u' v')
   (hp'_path : p'.IsPath)
@@ -1373,7 +1373,7 @@ lemma SimpleGraph.adjust_path_end_to_B (G : SimpleGraph V) (B : Set V) (x y : V)
 /-
 Helper lemma: A path starting at the contracted vertex can be lifted to an A-B path if the contracted vertex is in the lifted set of A.
 -/
-lemma SimpleGraph.lift_path_start_eq_vertex [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : G.Adj x y)
+lemma SimpleGraph.lift_path_start_eq_vertex (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : G.Adj x y)
   (v' : Quotient (SimpleGraph.contractEdgeSetoid x y))
   (p' : (G.contractEdge x y).Walk (SimpleGraph.contractEdge_vertex x y) v')
   (hp'_path : p'.IsPath)
@@ -1392,7 +1392,7 @@ lemma SimpleGraph.lift_path_start_eq_vertex [Fintype V] (G : SimpleGraph V) (A B
       rcases Finset.mem_image.mp ha with ⟨w, hw, rfl⟩
       have hw' : w ∈ SimpleGraph.contractEdge_preimage x y (↑p'.support.toFinset) := hq_pre (Finset.mem_coe.mpr hw)
       exact (SimpleGraph.mem_contractEdge_preimage (x := x) (y := y) (Y := ↑p'.support.toFinset) (v := w)).1 hw'
-lemma SimpleGraph.lift_path_end_eq_vertex [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : G.Adj x y)
+lemma SimpleGraph.lift_path_end_eq_vertex (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : G.Adj x y)
   (u' : Quotient (SimpleGraph.contractEdgeSetoid x y))
   (p' : (G.contractEdge x y).Walk u' (SimpleGraph.contractEdge_vertex x y))
   (hp'_path : p'.IsPath)
@@ -1468,7 +1468,7 @@ lemma SimpleGraph.lift_path_nil_eq_vertex (G : SimpleGraph V) (A B : Set V) (x y
         swap
         exact SimpleGraph.Path.nil;
         all_goals simp_all
-lemma SimpleGraph.exists_lifted_ABPath_through [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : G.Adj x y)
+lemma SimpleGraph.exists_lifted_ABPath_through (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : G.Adj x y)
   (p' : (G.contractEdge x y).ABPath (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
   (hp'_mem : SimpleGraph.contractEdge_vertex x y ∈ p'.p.1.support) :
   ∃ p : G.ABPath A B,
@@ -1492,13 +1492,13 @@ lemma SimpleGraph.exists_lifted_ABPath_through [Fintype V] (G : SimpleGraph V) (
           all_goals norm_num [ hv' ];
           · grind;
           · grind;
-        · rename_i p hp;
+        · rename_i hp;
           obtain ⟨ u, v, lifted_p, hp₁, hp₂, hp₃, hp₄ ⟩ := SimpleGraph.lift_path_through_contraction_internal G A B x y hxy u' v' p p.2 hp'_mem hu' hv' u'.2 ‹_›;
           refine ⟨ ⟨ ⟨u, hp₁⟩, ⟨v, hp₂⟩, lifted_p, hp₃ ⟩, ?_ ⟩;
           intro a ha; rcases Finset.mem_image.mp ha with ⟨w, hw, rfl⟩
           have := hp₄ (Finset.mem_coe.mpr hw)
           exact (mem_contractEdge_preimage (x := x) (y := y) (Y := ↑p.1.support.toFinset) (v := w)).1 this
-lemma SimpleGraph.exists_disjoint_paths_lift [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V)
+lemma SimpleGraph.exists_disjoint_paths_lift (G : SimpleGraph V) (A B : Set V) (x y : V)
     (hxy : G.Adj x y)
     (P' : ((G.contractEdge x y).Joiner (contractEdge_liftSet x y A) (contractEdge_liftSet x y B))) :
   ∃ P : G.Joiner A B, P.1.encard = P'.1.encard := by
@@ -1537,7 +1537,7 @@ lemma SimpleGraph.exists_disjoint_paths_lift [Fintype V] (G : SimpleGraph V) (A 
 /-
 If min_sep(G/e) < k, then there exists a separator X in G such that |X|=k, x in X, and y in X.
 -/
-lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : x ≠ y)
+lemma SimpleGraph.Menger_case2_exists_X (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : x ≠ y)
   (k : ℕ∞)
   (h_min : G.mincut A B = k)
   (h_contract_min : (G.contractEdge x y).mincut (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B) < k) :
@@ -1562,7 +1562,7 @@ lemma SimpleGraph.Menger_case2_exists_X [Fintype V] (G : SimpleGraph V) (A B : S
   -- X has encard ≤ k (since |Y| < k, so |Y| + 1 ≤ k)
   have h_le_k : (contractEdge_preimage x y Y).encard ≤ k := by
     rw [h_lift_card]
-    have : Y.encard ≠ ⊤ := Set.encard_ne_top_iff.mpr (Set.toFinite Y)
+    have : Y.encard ≠ ⊤ := ne_top_of_lt (lt_of_lt_of_le hY_card le_top)
     exact (ENat.add_one_le_iff this).mpr hY_card
   refine ⟨⟨_, h_sep⟩, le_antisymm h_le_k h_ge_k, ?_, ?_⟩
   · exact mem_contractEdge_preimage.mpr h_ve
@@ -1670,13 +1670,12 @@ private lemma exists_le_of_le_iSup {ι : Type*} [Nonempty ι] (f : ι → ℕ∞
 /-
 If there exists a separator X of size k containing x and y, then G has k disjoint A-B paths.
 -/
-lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V)
+lemma SimpleGraph.Menger_case2_imp_paths (G : SimpleGraph V) (A B : Set V) (x y : V)
     (hxy : G.Adj x y)
-    (k : ℕ∞) (h_min : G.mincut A B = k) (X : G.Separator A B) (hX_card : X.1.encard = k) (hx : x ∈ X.1)
+    (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B = k) (X : G.Separator A B) (hX_card : X.1.encard = k) (hx : x ∈ X.1)
     (hy : y ∈ X.1) (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
     k ≤ G.maxflow A B := by
-  have hk : k ≠ ⊤ := hX_card ▸ Set.encard_ne_top_iff.mpr (Set.toFinite X.1)
-  have hX_fin : X.1.Finite := Set.toFinite X.1
+  have hX_fin : X.1.Finite := Set.encard_ne_top_iff.mp (hX_card ▸ hk)
   have h_del_A : k ≤ (G.deleteEdge x y).maxflow A X.1 :=
     le_trans (min_sep_delete_ge_k_left G A B x y k h_min X hx hy hxy.ne) (IH_delete A X.1)
   have h_del_B : k ≤ (G.deleteEdge x y).maxflow X.1 B :=
@@ -1707,8 +1706,8 @@ lemma SimpleGraph.Menger_case2_imp_paths [Fintype V] (G : SimpleGraph V) (A B : 
 /-
 Inductive step for Menger's theorem.
 -/
-lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : Set V) (x y : V)
-    (hxy : G.Adj x y)
+lemma SimpleGraph.Menger_inductive_step (G : SimpleGraph V) (A B : Set V) (x y : V)
+    (hxy : G.Adj x y) (hk : G.mincut A B ≠ ⊤)
     (IH_contract : (G.contractEdge x y).mincut (SimpleGraph.contractEdge_liftSet x y A)
       (SimpleGraph.contractEdge_liftSet x y B) ≤
       (G.contractEdge x y).maxflow (SimpleGraph.contractEdge_liftSet x y A) (SimpleGraph.contractEdge_liftSet x y B))
@@ -1718,12 +1717,9 @@ lemma SimpleGraph.Menger_inductive_step [Fintype V] (G : SimpleGraph V) (A B : S
   · -- Case 1: contraction has smaller mincut → separator containing both x and y
     obtain ⟨⟨X, hX_sep⟩, hX_card, hx_mem, hy_mem⟩ :=
       Menger_case2_exists_X G A B x y hxy.ne (G.mincut A B) rfl h
-    exact Menger_case2_imp_paths G A B x y hxy (G.mincut A B) rfl ⟨X, hX_sep⟩ hX_card hx_mem hy_mem IH_delete
+    exact Menger_case2_imp_paths G A B x y hxy (G.mincut A B) hk rfl ⟨X, hX_sep⟩ hX_card hx_mem hy_mem IH_delete
   · -- Case 2: contraction mincut ≥ G.mincut → lift paths from contracted graph
     push_neg at h
-    have hk : G.mincut A B ≠ ⊤ := by
-      have := iInf_le (fun S : G.Separator A B => S.1.encard) ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
-      exact ne_top_of_le_ne_top (Set.encard_ne_top_iff.mpr (Set.toFinite A)) this
     obtain ⟨P', hP'⟩ := exists_le_of_le_iSup _ hk (le_trans h IH_contract)
     obtain ⟨P, hP⟩ := exists_disjoint_paths_lift G A B x y hxy P'
     calc G.mincut A B ≤ P'.1.encard := hP'
@@ -1749,7 +1745,10 @@ theorem SimpleGraph.Menger_strong_aux [Fintype V] (n : ℕ) :
     have h_delete : (G.deleteEdge x y).edgeFinset.card < n := by
       apply lt_of_lt_of_le (deleteEdge_card_edges_lt G x y hxy)
       omega
-    exact Menger_inductive_step G A B x y hxy
+    have hk : G.mincut A B ≠ ⊤ := by
+      have := iInf_le (fun S : G.Separator A B => S.1.encard) ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
+      exact ne_top_of_le_ne_top (Set.encard_ne_top_iff.mpr (Set.toFinite A)) this
+    exact Menger_inductive_step G A B x y hxy hk
       (ih _ h_contract rfl) (fun A' B' => ih _ h_delete rfl)
 
 /-
