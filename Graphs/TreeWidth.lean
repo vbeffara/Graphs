@@ -8,18 +8,18 @@ open Classical Set SimpleGraph
 
 universe u
 
-variable {α β : Type u} {G : SimpleGraph α} {H : SimpleGraph β} {n : ℕ}
+variable {α β : Type u} {G : SimpleGraph α} {H : SimpleGraph β} {n : ℕ} {u v w : α}
+
+noncomputable def treeWidth (G : SimpleGraph α) : ℕ∞ :=
+  sInf {w | ∃ D : TreeDecomposition G, D.width = w}
 
 private lemma encard_three_ne {a b c : α} (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) :
-    ({a, b, c} : Set α).encard = 3 := by
-  rw [encard_insert_of_notMem (by simp only [Set.mem_insert_iff, Set.mem_singleton_iff, not_or]; exact ⟨hab, hac⟩),
-    encard_insert_of_notMem (by simp only [Set.mem_singleton_iff]; exact hbc), encard_singleton]
-  rfl
+    ({a, b, c} : Set α).encard = 3 :=
+  Set.encard_eq_three.2 ⟨a, b, c, by grind⟩
 
-private lemma exists_transition {ι : Type*} {T : SimpleGraph ι} (htree : T.IsTree)
-    {P : ι → Prop} {u w : ι}
-    (p : T.Walk u w) (hp : p.IsPath) (hPu : P u) (hPw : ¬P w) :
-    ∃ t₁ t₂ : ι, T.Adj t₁ t₂ ∧ P t₁ ∧ ¬P t₂ ∧ htree.ordered t₁ t₂ w ∧ htree.ordered u t₁ w := by
+private lemma exists_transition (htree : G.IsTree) {P : α → Prop}
+    (p : G.Walk u w) (hp : p.IsPath) (hPu : P u) (hPw : ¬P w) :
+    ∃ t₁ t₂ : α, G.Adj t₁ t₂ ∧ P t₁ ∧ ¬P t₂ ∧ htree.ordered t₁ t₂ w ∧ htree.ordered u t₁ w := by
   induction p with
   | nil => exact absurd hPu hPw
   | @cons u' v' w' h' rest ih =>
@@ -32,9 +32,6 @@ private lemma exists_transition {ι : Type*} {T : SimpleGraph ι} (htree : T.IsT
     · exact ⟨u', v', h', hPu, hPv,
         by simp [IsTree.ordered, htree.path_spec' ⟨Walk.cons h' rest, hp⟩],
         by simp [IsTree.ordered, htree.path_spec' ⟨Walk.cons h' rest, hp⟩]⟩
-
-noncomputable def treeWidth (G : SimpleGraph α) : ℕ∞ :=
-  sInf {w | ∃ D : TreeDecomposition G, D.width = w}
 
 theorem treeWidth_ge_one (h : G ≠ ⊥) : 1 ≤ treeWidth G := by
   refine le_csInf ⟨_, .trivial, rfl⟩ ?_
@@ -166,5 +163,3 @@ theorem treeWidth_le_one [Nonempty α] : treeWidth G ≤ 1 ↔ G.IsAcyclic := by
 theorem treeWidth_loop_le_two (h : 2 < n) : treeWidth (cycleGraph n) ≤ 2 := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 3 := ⟨n - 3, by omega⟩
   exact csInf_le_of_le (OrderBot.bddBelow _) ⟨td_cycle m, td_cycle_width⟩ le_rfl
-
-#print axioms treeWidth_minor
