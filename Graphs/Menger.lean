@@ -752,43 +752,6 @@ lemma joined_path_is_path (G : SimpleGraph V) (A B : Set V)
     · exact (q.p.1.isPath_copy h_q rfl).mpr q.p.2
 
 /-
-If we have two pairs of paths (px, qx) and (py, qy) meeting at x and y respectively, and the pairs are disjoint from each other, and cross-intersections are empty due to separation, then the joined paths are disjoint.
--/
-lemma joined_paths_disjoint (G : SimpleGraph V) (A B : Set V) (X : G.Separator A B)
-  (x y : V) (hxy : x ≠ y)
-  (px : G.ABPath A X.1) (hpx : px.v = x) (hpx_X : px.support ∩ X.1 = {x})
-  (py : G.ABPath A X.1) (hpy : py.v = y) (hpy_X : py.support ∩ X.1 = {y})
-  (qx : G.ABPath X.1 B) (hqx : qx.u = x) (hqx_X : qx.support ∩ X.1 = {x})
-  (qy : G.ABPath X.1 B) (hqy : qy.u = y) (hqy_X : qy.support ∩ X.1 = {y})
-  (hp_disj : Disjoint px.support py.support)
-  (hq_disj : Disjoint qx.support qy.support) :
-  Disjoint (px.support ∪ qx.support) (py.support ∪ qy.support) := by
-    rw [Set.disjoint_iff]
-    intro z ⟨hz_left, hz_right⟩
-    simp only [Set.mem_union] at hz_left hz_right
-    rcases hz_left with hz_px | hz_qx <;> rcases hz_right with hz_py | hz_qy
-    · exact (Set.disjoint_left.mp hp_disj hz_px) hz_py
-    · -- z ∈ px.support ∩ qy.support
-      have h := path_intersection_of_separator X px qy
-        (by rw [show (px.v : V) = x from hpx]; exact hpx_X)
-        (by rw [show (qy.u : V) = y from hqy]; exact hqy_X)
-      have hz_fin : z ∈ px.p.1.support.toFinset ∩ qy.p.1.support.toFinset :=
-        Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hz_px, List.mem_toFinset.mpr hz_qy⟩
-      have := h hz_fin
-      simp only [Finset.mem_inter, Finset.mem_singleton] at this
-      exact hxy ((hpx.symm.trans this.1.symm).trans (this.2.trans hqy))
-    · -- z ∈ qx.support ∩ py.support
-      have h := path_intersection_of_separator X py qx
-        (by rw [show (py.v : V) = y from hpy]; exact hpy_X)
-        (by rw [show (qx.u : V) = x from hqx]; exact hqx_X)
-      have hz_fin : z ∈ py.p.1.support.toFinset ∩ qx.p.1.support.toFinset :=
-        Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hz_py, List.mem_toFinset.mpr hz_qx⟩
-      have := h hz_fin
-      simp only [Finset.mem_inter, Finset.mem_singleton] at this
-      exact hxy ((hqx.symm.trans this.2.symm).trans (this.1.trans hpy))
-    · exact (Set.disjoint_left.mp hq_disj hz_qx) hz_qy
-
-/-
 If X separates A and B, and we have k disjoint paths from A to X and k disjoint paths from X to B, then we can combine them to form k disjoint paths from A to B.
 -/
 theorem disjoint_paths_join (G : SimpleGraph V) (A B : Set V) (X : G.Separator A B) (k : ℕ∞)
@@ -893,69 +856,6 @@ lemma Walk.exists_prefix_path_of_path_ne {G : SimpleGraph V}
           refine' ⟨ w, hw₁, cons h₁ q, _, _, _ ⟩ <;> simp_all
           · exact fun h => hp.2 ( by simpa using hq₃ ( by simpa using h ) )
           · grind
-
-/-
-The preimages of disjoint sets in the contracted graph are disjoint in the original graph.
--/
-lemma contractEdge_preimage_disjoint (x y : V) (s t : Set (Quotient (contractEdgeSetoid x y))) (h : Disjoint s t) :
-  Disjoint (contractEdge_preimage x y s) (contractEdge_preimage x y t) := by
-    refine Set.disjoint_left.mpr ?_
-    intro v hv ht
-    exact Set.disjoint_left.mp h
-      ((mem_contractEdge_preimage (x := x) (y := y) (Y := s) (v := v)).1 hv)
-      ((mem_contractEdge_preimage (x := x) (y := y) (Y := t) (v := v)).1 ht)
-
-/-
-If two vertices are adjacent to the endpoints of an edge, there is a path between them using only the endpoints of the edge and themselves.
--/
-lemma exists_path_between_neighbors_of_edge (G : SimpleGraph V) (x y a b : V)
-    (hxy : G.Adj x y) (ha : G.Adj a x ∨ G.Adj a y) (hb : G.Adj b x ∨ G.Adj b y)
-    (hab : a ≠ b) (hax : a ≠ x) (hay : a ≠ y) (hbx : b ≠ x) (hby : b ≠ y) :
-    ∃ p : G.Walk a b, p.IsPath ∧ p.support.toFinset ⊆ {a, b, x, y} := by
-  rcases ha with ha | ha <;> rcases hb with hb | hb;
-  · use Walk.cons ha (Walk.cons hb.symm Walk.nil)
-    aesop_cat
-  · use Walk.cons ha (Walk.cons hxy (Walk.cons hb.symm Walk.nil))
-    aesop_cat
-  · use Walk.cons ha (Walk.cons hxy.symm (Walk.cons hb.symm Walk.nil))
-    aesop_cat
-  · refine' ⟨ Walk.cons ha ( Walk.cons hb.symm Walk.nil ), _, _ ⟩ <;> simp_all [ Walk.isPath_def ];
-    · grind
-    · simp [ Finset.insert_subset_iff ]
-
-/-
-Extending a path that avoids x and y by an edge to x (or y) results in a path.
--/
-lemma path_extension_to_contraction_endpoint {G : SimpleGraph V} {u w : V} (x y : V) (v : V)
-  (q : G.Walk u w) (hq_path : q.IsPath)
-  (hx_avoid : x ∉ q.support) (hy_avoid : y ∉ q.support)
-  (hv : v = x ∨ v = y)
-  (h_adj : G.Adj w v) :
-  (q.append (Walk.cons h_adj Walk.nil)).IsPath := by
-    cases hv <;> simp_all [ Walk.isPath_def ];
-    · rw [ Walk.support_append ]
-      rw [ List.nodup_append ] ; aesop
-    · simp_all [ Walk.support_append ]
-      rw [ List.nodup_append ] ; aesop
-
-/-
-If the projection of a set is contained in another set, and the contracted vertex is in that other set, then extending the first set by an endpoint of the contracted edge keeps it within the preimage.
--/
-lemma support_subset_preimage_extension (x y : V)
-  (q_support : Set V) (p'_support : Set (Quotient (contractEdgeSetoid x y))) (v : V)
-  (h_subset : (⟦·⟧) '' q_support ⊆ p'_support)
-  (h_ve : contractEdge_vertex x y ∈ p'_support)
-  (hv : v = x ∨ v = y) :
-  (q_support ∪ {v}) ⊆ contractEdge_preimage x y p'_support := by
-    intro u hu
-    simp only [Set.mem_union, Set.mem_singleton_iff] at hu
-    simp only [contractEdge_preimage, Set.mem_setOf_eq]
-    rcases hu with hu | hu
-    · exact h_subset ⟨u, hu, rfl⟩
-    · subst hu
-      rcases hv with rfl | rfl
-      · exact h_ve
-      · rwa [contractEdge_vertex_eq] at h_ve
 
 /-
 If a path ends at a vertex whose projection is adjacent to the contracted vertex, and the path avoids the contracted edge's endpoints, it can be extended to one of the endpoints.
@@ -1111,20 +1011,6 @@ lemma Walk.split_at_vertex {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (hp : 
       · aesop
 
 /-
-If a walk is a path, its support intersects the singleton set of its endpoint exactly at that point.
--/
-lemma Walk.IsPath.support_inter_singleton_eq_of_end {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (_hp : p.IsPath) :
-  p.support.toFinset ∩ {v} = {v} := by
-    cases p <;> simp
-
-/-
-The support of a walk intersects the singleton set of its start point exactly at that point.
--/
-lemma Walk.IsPath.support_inter_singleton_eq_of_start {G : SimpleGraph V} {u v : V} (p : G.Walk u v) :
-  p.support.toFinset ∩ {u} = {u} := by
-    ext; simp
-
-/-
 If two sets in the contracted graph are disjoint away from the contracted vertex, their preimages in the original graph are disjoint away from the endpoints of the contracted edge.
 -/
 lemma contractEdge_preimage_disjoint_away_from_endpoints (x y : V)
@@ -1148,35 +1034,6 @@ lemma contractEdge_preimage_disjoint_away_from_endpoints (x y : V)
     have hb_t' : ⟦a⟧ ∈ t \ {contractEdge_vertex x y} :=
       ⟨hb_t, hproj_ne⟩
     exact (Set.disjoint_left.mp h_disj) ha_s' hb_t'
-
-/-
-If two paths in the contracted graph intersect only at the contracted vertex, their lifted paths in the original graph are disjoint away from the endpoints of the contracted edge.
--/
-lemma lifted_paths_disjoint (G : SimpleGraph V) (x y : V)
-  (p1' : (G.contractEdge x y).Walk ⟦x⟧ (contractEdge_vertex x y)) -- start doesn't matter much
-  (p2' : (G.contractEdge x y).Walk (contractEdge_vertex x y) ⟦x⟧) -- end doesn't matter much
-  (h_inter : p1'.support.toFinset ∩ p2'.support.toFinset = {contractEdge_vertex x y})
-  (p1 : G.Walk x x) -- endpoints don't matter for support
-  (p2 : G.Walk x x) -- endpoints don't matter for support
-  (h_sub1 : (↑p1.support.toFinset : Set V) ⊆ contractEdge_preimage x y (↑p1'.support.toFinset : Set _))
-  (h_sub2 : (↑p2.support.toFinset : Set V) ⊆ contractEdge_preimage x y (↑p2'.support.toFinset : Set _)) :
-  Disjoint (p1.support.toFinset \ {x, y}) (p2.support.toFinset \ {x, y}) := by
-    have h_disj_sets : Disjoint ((↑p1'.support.toFinset : Set _) \ {contractEdge_vertex x y}) ((↑p2'.support.toFinset : Set _) \ {contractEdge_vertex x y}) := by
-      rw [Set.disjoint_left]
-      intro z ⟨hz1, hz_ne⟩ ⟨hz2, _⟩
-      have : z ∈ p1'.support.toFinset ∩ p2'.support.toFinset :=
-        Finset.mem_inter.mpr ⟨Finset.mem_coe.mp hz1, Finset.mem_coe.mp hz2⟩
-      rw [h_inter] at this
-      exact hz_ne (Finset.mem_singleton.mp this ▸ Set.mem_singleton _)
-    have h_preimage_disj := contractEdge_preimage_disjoint_away_from_endpoints x y _ _ h_disj_sets
-    rw [Finset.disjoint_left]
-    intro z hz1 hz2
-    simp only [Finset.mem_sdiff, List.mem_toFinset, Finset.mem_insert, Finset.mem_singleton] at hz1 hz2
-    have hz1_set : z ∈ contractEdge_preimage x y (↑p1'.support.toFinset) \ ({x, y} : Set V) :=
-      ⟨h_sub1 (Finset.mem_coe.mpr (List.mem_toFinset.mpr hz1.1)), by simp [Set.mem_insert_iff]; tauto⟩
-    have hz2_set : z ∈ contractEdge_preimage x y (↑p2'.support.toFinset) \ ({x, y} : Set V) :=
-      ⟨h_sub2 (Finset.mem_coe.mpr (List.mem_toFinset.mpr hz2.1)), by simp [Set.mem_insert_iff]; tauto⟩
-    exact Set.disjoint_left.mp h_preimage_disj hz1_set hz2_set
 
 /-
 If two paths in the contracted graph meet only at the contracted vertex, they can be lifted to paths in the original graph that are disjoint away from the contracted edge's endpoints.
@@ -1574,20 +1431,6 @@ lemma Menger_case2_exists_X (G : SimpleGraph V) (A B : Set V) (x y : V) (hxy : x
   refine ⟨⟨_, h_sep⟩, le_antisymm h_le_k h_ge_k, ?_, ?_⟩
   · exact mem_contractEdge_preimage.mpr h_ve
   · exact mem_contractEdge_preimage.mpr (contractEdge_vertex_eq x y ▸ h_ve)
-
-/-
-If a path intersects X, there is a suffix starting in X that avoids X internally.
--/
-lemma Walk.exists_suffix_path_avoiding_set {G : SimpleGraph V} {u v : V} (p : G.Walk u v)
-    (X : Set V) (h : ∃ w ∈ p.support, w ∈ X) :
-    ∃ (w : V) (q : G.Walk w v), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
-    obtain ⟨w, q, hwX, hq_path, hq_support, hq_unique⟩ :=
-      Walk.exists_path_prefix_avoiding_set (p := p.reverse) X
-        (by simpa [Walk.support_reverse] using h)
-    refine ⟨w, q.reverse, hwX, ?_, ?_, ?_⟩
-    · exact (Walk.isPath_reverse_iff q).mpr hq_path
-    · simpa [Walk.support_reverse] using hq_support
-    · simpa [Walk.support_reverse] using hq_unique
 
 /-
 If X separates A and B in G and contains x and y, then any separator of X and B in G-xy is also a separator of A and B in G.
