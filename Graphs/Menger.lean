@@ -364,13 +364,10 @@ Define deleting a single edge and prove it reduces edge count if the edge exists
 def deleteEdge (G : SimpleGraph V) (x y : V) : SimpleGraph V :=
   G.deleteEdges {s(x, y)}
 
-lemma deleteEdge_card_edges_lt [Fintype V] (G : SimpleGraph V) [DecidableRel G.Adj] (x y : V) (h : G.Adj x y) :
-  (G.deleteEdge x y).edgeFinset.card < G.edgeFinset.card := by
-    refine' Finset.card_lt_card _
-    rw [ssubset_iff_subset_ne]
-    constructor
-    · simp [deleteEdge, deleteEdges]
-    · simpa [deleteEdge]
+lemma deleteEdge_edgeSet_encard_lt (h : G.Adj x y) (hfin : G.edgeSet.Finite) :
+    (G.deleteEdge x y).edgeSet.encard < G.edgeSet.encard := by
+  rw [deleteEdge, edgeSet_deleteEdges]
+  exact (hfin.subset Set.diff_subset).encard_lt_encard (Set.diff_singleton_ssubset.mpr h)
 
 
 /-
@@ -433,6 +430,13 @@ lemma contractEdge_edge_card_lt [Fintype V] (G : SimpleGraph V) [DecidableRel G.
         · simp_all [Quotient.eq, contractEdgeSetoid] ; aesop
       exact le_trans ( Finset.card_le_card h_sub ) ( Finset.card_image_le )
     exact lt_of_le_of_lt h_inter ( Finset.card_lt_card ( Finset.ssubset_iff_subset_ne.mpr ⟨ Finset.sdiff_subset, by aesop ⟩ ) )
+
+lemma contractEdge_edgeSet_encard_lt [Fintype V] (G : SimpleGraph V) (x y : V) (h : G.Adj x y) :
+    (G.contractEdge x y).edgeSet.encard < G.edgeSet.encard := by
+  have h1 := contractEdge_edge_card_lt G x y h
+  simp only [edgeFinset] at h1
+  rw [Set.encard_eq_coe_toFinset_card, Set.encard_eq_coe_toFinset_card]
+  exact WithTop.coe_lt_coe.mpr h1
 
 /-
 If a walk's support intersects {x, y} only at v (or not at all), then the walk does not use the edge xy.
@@ -901,7 +905,10 @@ lemma contractEdge_preimage_disjoint (x y : V) (s t : Set (Quotient (contractEdg
 /-
 If two vertices are adjacent to the endpoints of an edge, there is a path between them using only the endpoints of the edge and themselves.
 -/
-lemma exists_path_between_neighbors_of_edge (G : SimpleGraph V) (x y a b : V) (hxy : G.Adj x y) (ha : G.Adj a x ∨ G.Adj a y) (hb : G.Adj b x ∨ G.Adj b y) (hab : a ≠ b) (hax : a ≠ x) (hay : a ≠ y) (hbx : b ≠ x) (hby : b ≠ y) : ∃ p : G.Walk a b, p.IsPath ∧ p.support.toFinset ⊆ {a, b, x, y} := by
+lemma exists_path_between_neighbors_of_edge (G : SimpleGraph V) (x y a b : V)
+    (hxy : G.Adj x y) (ha : G.Adj a x ∨ G.Adj a y) (hb : G.Adj b x ∨ G.Adj b y)
+    (hab : a ≠ b) (hax : a ≠ x) (hay : a ≠ y) (hbx : b ≠ x) (hby : b ≠ y) :
+    ∃ p : G.Walk a b, p.IsPath ∧ p.support.toFinset ⊆ {a, b, x, y} := by
   rcases ha with ha | ha <;> rcases hb with hb | hb;
   · use Walk.cons ha (Walk.cons hb.symm Walk.nil)
     aesop_cat
@@ -1727,32 +1734,38 @@ lemma Menger_inductive_step (G : SimpleGraph V) (A B : Set V) (x y : V)
 Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edges, proved by strong induction on n.
 -/
 theorem Menger_strong_aux [Fintype V] (n : ℕ) :
-  G.edgeFinset.card = n → G.mincut A B ≤ G.maxflow A B := by
+  G.edgeSet.encard = ↑n → G.mincut A B ≤ G.maxflow A B := by
   induction n using Nat.strongRecOn generalizing V with
   | _ n ih =>
   intro h_card
-  by_cases h_empty : G.edgeFinset = ∅
-  · exact Menger_strong_base G A B (by simpa [edgeSet_eq_empty] using h_empty)
+  by_cases h_empty : G.edgeSet = ∅
+  · exact Menger_strong_base G A B h_empty
   · obtain ⟨x, y, hxy⟩ : ∃ x y : V, G.Adj x y := by
-      simp +zetaDelta at *
-      contrapose! h_empty
-      ext x y; simp [h_empty]
-    have h_contract : (G.contractEdge x y).edgeFinset.card < n :=
-      h_card ▸ contractEdge_edge_card_lt G x y hxy
-    have h_delete : (G.deleteEdge x y).edgeFinset.card < n := by
-      apply lt_of_lt_of_le (deleteEdge_card_edges_lt G x y hxy)
-      omega
+      obtain ⟨e, he⟩ := Set.nonempty_iff_ne_empty.mpr h_empty
+      induction e using Sym2.ind with
+      | _ a b => exact ⟨a, b, he⟩
+    have h_contract_lt : (G.contractEdge x y).edgeSet.encard < ↑n := by
+      calc (G.contractEdge x y).edgeSet.encard
+        < G.edgeSet.encard := contractEdge_edgeSet_encard_lt G x y hxy
+        _ = ↑n := h_card
+    have h_delete_lt : (G.deleteEdge x y).edgeSet.encard < ↑n := by
+      calc (G.deleteEdge x y).edgeSet.encard
+        < G.edgeSet.encard := deleteEdge_edgeSet_encard_lt hxy (Set.toFinite _)
+        _ = ↑n := h_card
+    have hmc := Set.encard_eq_coe_toFinset_card (G.contractEdge x y).edgeSet
+    have hmd := Set.encard_eq_coe_toFinset_card (G.deleteEdge x y).edgeSet
     have hk : G.mincut A B ≠ ⊤ := by
       have := iInf_le (fun S : G.Separator A B => S.1.encard) ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
       exact ne_top_of_le_ne_top (Set.encard_ne_top_iff.mpr (Set.toFinite A)) this
     exact Menger_inductive_step G A B x y hxy hk
-      (ih _ h_contract rfl) (fun A' B' => ih _ h_delete rfl)
+      (ih _ (by rw [hmc] at h_contract_lt; exact WithTop.coe_lt_coe.mp h_contract_lt) hmc)
+      (fun A' B' => ih _ (by rw [hmd] at h_delete_lt; exact WithTop.coe_lt_coe.mp h_delete_lt) hmd)
 
 /-
 Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G. (This is the strong direction: min separator <= max paths)
 -/
 theorem Menger_strong [Fintype V] : G.mincut A B ≤ G.maxflow A B :=
-  Menger_strong_aux _ rfl
+  Menger_strong_aux _ (Set.encard_eq_coe_toFinset_card _)
 
 /-
 Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G.
