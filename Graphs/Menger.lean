@@ -107,11 +107,11 @@ lemma Menger_strong_base (G : SimpleGraph V) (A B : Set V) (h : G.edgeSet = ∅)
     simp only [ABPath.support, γ, Set.disjoint_left, Set.mem_setOf_eq, Walk.support_nil,
       List.mem_cons, List.mem_nil_iff, or_false]
     intro z hz1 hz2; rw [hz1] at hz2
-    exact hpq (by congr 1 <;> exact Subtype.ext hz2)
+    exact hpq (by congr 1; all_goals exact Subtype.ext hz2)
   have h_maxflow_ge : (A ∩ B).encard ≤ maxflow ⊥ A B := by
     apply le_iSup_of_le ⟨Set.range γ, h_joiner⟩
     show (A ∩ B).encard ≤ (Set.range γ).encard
-    rw [← Set.image_univ, hγ_inj.encard_image, Set.encard_univ_coe]
+    rw [← Set.image_univ, hγ_inj.encard_image]; simp
   exact h_mincut_le.trans h_maxflow_ge
 
 noncomputable def merge_to {x y : V} (h : y ≠ x) (z : V) : {z : V // z ≠ x} :=
@@ -274,7 +274,7 @@ lemma encard_preimage_contractEdge (h : x ≠ y) (Y : Set (Quotient (contractEdg
     -- Preimage decomposes
     have h_pre_eq : contractEdge_preimage x y Y =
         contractEdge_preimage x y Y' ∪ {x, y} := by
-      ext v; simp only [contractEdge_preimage, Set.mem_setOf_eq, Set.mem_union, Set.mem_diff,
+      ext v; simp only [contractEdge_preimage, Set.mem_setOf_eq, Set.mem_union,
         Set.mem_singleton_iff, Set.mem_insert_iff]
       constructor
       · intro hv_mem
@@ -534,7 +534,7 @@ theorem SimpleGraph.contractEdge_separator_contains_vertex [Fintype V] (G : Simp
       · intro v hv w _ hvw
         by_contra h_ne
         have h_rel := Quotient.exact hvw
-        simp [contractEdgeSetoid] at h_rel
+        simp at h_rel
         rcases h_rel with rfl | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
         · exact h_ne rfl
         · exact hY_card ((mem_contractEdge_preimage).1 hv)
@@ -856,7 +856,7 @@ theorem SimpleGraph.disjoint_paths_join (G : SimpleGraph V) (A B : Set V) (X : G
     · exact Set.disjoint_left.mp (P_B.2 (hqb_mem x hx) (hqb_mem y hy) (hqb_ne x hx y hy hxy)) hzqx hzqy
   have h_card : (Set.range joinPath).encard = k := by
     rw [show Set.range joinPath = joinPath '' Set.univ from Set.image_univ.symm,
-        h_inj.injOn.encard_image, Set.encard_univ_coe, hX_card]
+        h_inj.injOn.encard_image]; simp [hX_card]
   exact ⟨⟨Set.range joinPath, h_disj⟩, h_card⟩
 
 /-
@@ -1445,7 +1445,7 @@ lemma SimpleGraph.lift_path_nil_eq_vertex (G : SimpleGraph V) (A B : Set V) (x y
         all_goals simp [*];
       · refine ⟨⟨⟨x, hx_1_A⟩, ⟨y, hx_2_B⟩, SimpleGraph.Walk.cons hxy SimpleGraph.Walk.nil,
             by simp [SimpleGraph.Walk.cons_isPath_iff, hxy.ne]⟩, ?_⟩;
-        simp [ SimpleGraph.Walk.cons_isPath_iff, hxy.ne ];
+        simp;
         aesop;
       · refine ⟨ ?_, ?_ ⟩;
         constructor;
@@ -1773,7 +1773,35 @@ This version would actually be true without the `[Fintype S]` assumption.
 -/
 theorem SimpleGraph.Menger' [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B, ∃ φ : P.1 ≃ S.1,
     ∀ p : P.1, (φ p).1 ∈ p.1.p.1.support := by
-  sorry
+  have h_maxflow_lt : G.maxflow A B < ⊤ :=
+    lt_of_le_of_lt (iSup_le (fun P => Joiner.encard_le P)) (Set.toFinite A).encard_lt_top
+  obtain ⟨P, hP⟩ := ENat.exists_eq_iSup_of_lt_top h_maxflow_lt
+  use P
+  obtain ⟨S, hS⟩ := ENat.exists_eq_iInf (fun S : G.Separator A B => S.1.encard)
+  use S
+  have key (p : P.1) : ∃ x : S.1, x.1 ∈ p.1.p.1.support := by
+    obtain ⟨x, h1, h2⟩ := S.2 p.1.u p.1.u.2 p.1.v p.1.v.2 p.1.p.1
+    exact ⟨⟨x, h2⟩, h1⟩
+  choose f hf using key
+  have hf_inj : f.Injective := by
+    intro p q hpq
+    by_contra h
+    have h1 := P.2 p.2 q.2 (fun heq => h (Subtype.ext heq))
+    exact Set.disjoint_left.mp h1 (hf p) (hpq ▸ hf q)
+  have hP_fin : P.1.Finite :=
+    Set.encard_ne_top_iff.mp (ne_top_of_le_ne_top
+      (Set.encard_ne_top_iff.mpr (Set.toFinite A)) (Joiner.encard_le P))
+  haveI : Fintype P.1 := hP_fin.fintype
+  haveI : Fintype S.1 := (Set.toFinite S.1).fintype
+  have h_card_eq : Fintype.card P.1 = Fintype.card S.1 := by
+    have h_eq : P.1.encard = S.1.encard := by
+      calc P.1.encard = G.maxflow A B := hP
+        _ = G.mincut A B := Menger.symm
+        _ = S.1.encard := hS.symm
+    rw [Set.encard_eq_coe_toFinset_card, Set.toFinset_card] at h_eq
+    rw [Set.encard_eq_coe_toFinset_card, Set.toFinset_card] at h_eq
+    exact WithTop.coe_injective h_eq
+  exact ⟨.ofBijective f ((Fintype.bijective_iff_injective_and_card f).mpr ⟨hf_inj, h_card_eq⟩), hf⟩
 
 #print axioms SimpleGraph.Menger
 -- #lint
