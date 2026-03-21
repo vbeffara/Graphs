@@ -27,6 +27,34 @@ instance Separator.nonempty (G : SimpleGraph V) (A B : Set V) : Nonempty (G.Sepa
   ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
 
 /-
+A vertex cover (a set containing at least one endpoint of every edge)
+together with A ∩ B forms a separator.
+-/
+lemma Separator.of_vertex_cover (S : Set V)
+    (hS : ∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e) :
+    G.Separates A B (A ∩ B ∪ S) := by
+  intro u hu v hv p
+  by_cases hp : p.Nil
+  · exact ⟨u, p.start_mem_support, Or.inl ⟨hu, Walk.Nil.eq hp ▸ hv⟩⟩
+  · rw [Walk.not_nil_iff] at hp
+    obtain ⟨w, e, q, rfl⟩ := hp
+    have hmem : s(u, w) ∈ (Walk.cons e q).edges := by simp [Walk.edges]
+    obtain ⟨z, hz_S, hz_e⟩ := hS s(u, w) (Walk.edges_subset_edgeSet _ hmem)
+    rw [Sym2.mem_iff] at hz_e
+    rcases hz_e with rfl | rfl
+    · exact ⟨z, Walk.start_mem_support _, Or.inr hz_S⟩
+    · exact ⟨z, List.mem_cons_of_mem _ q.start_mem_support, Or.inr hz_S⟩
+
+/-
+There exists a vertex cover with encard at most edgeSet.encard.
+-/
+lemma exists_vertex_cover :
+    ∃ S : Set V, (∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e) ∧ S.encard ≤ G.edgeSet.encard := by
+  refine ⟨(fun e : Sym2 V => (Quot.out e).1) '' G.edgeSet, ?_, Set.encard_image_le _ _⟩
+  intro e he
+  exact ⟨(Quot.out e).1, ⟨e, he, rfl⟩, Sym2.out_fst_mem e⟩
+
+/-
 An A-B path is a path in G starting in A and ending in B.
 -/
 structure ABPath (G : SimpleGraph V) (A B : Set V) where
@@ -84,19 +112,25 @@ theorem Menger_weak : G.maxflow A B ≤ G.mincut A B := by
   apply iSup_le; intro P; apply le_iInf; intro S; exact Joiner.le_sep P S
 
 /-
-Base case of Menger's theorem: if G has no edges, the theorem holds.
+The minimum separator size is bounded by (A ∩ B).encard + edgeSet.encard:
+a vertex cover (one vertex per edge) together with A ∩ B forms a separator.
 -/
-lemma Menger_strong_base (G : SimpleGraph V) (A B : Set V) (h : G.edgeSet = ∅) :
-    G.mincut A B ≤ G.maxflow A B := by
-  simp at h ; subst G
-  have h_empty : ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v := by
-    intro u v p; induction p <;> aesop;
-  -- The separator A ∩ B has size ≤ mincut
-  have h_mincut_le : mincut ⊥ A B ≤ (A ∩ B).encard := by
-    exact iInf_le_of_le ⟨A ∩ B, fun a ha b hb p => ⟨a, p.start_mem_support, by
-      simp [← h_empty a b p] at hb; simp [ha, hb]⟩⟩ le_rfl
-  -- Build a joiner from A ∩ B
-  let γ : ↥(A ∩ B) → (⊥ : SimpleGraph V).ABPath A B := fun a =>
+lemma mincut_le : G.mincut A B ≤ (A ∩ B).encard + G.edgeSet.encard := by
+  obtain ⟨S, hS_cover, hS_card⟩ := G.exists_vertex_cover (V := V)
+  exact le_trans
+    (iInf_le_of_le ⟨A ∩ B ∪ S, Separator.of_vertex_cover S hS_cover⟩ le_rfl)
+    (le_trans (Set.encard_union_le _ _) (add_le_add_right hS_card _))
+
+lemma inter_subset_separator (S : G.Separator A B) : A ∩ B ⊆ S.1 := by
+  intro v ⟨hv_A, hv_B⟩
+  obtain ⟨w, hw_supp, hw_S⟩ := S.2 v hv_A v hv_B Walk.nil
+  simp at hw_supp; exact hw_supp ▸ hw_S
+
+lemma le_mincut : (A ∩ B).encard ≤ G.mincut A B :=
+  le_iInf fun S => Set.encard_le_encard (inter_subset_separator S)
+
+lemma le_maxflow : (A ∩ B).encard ≤ G.maxflow A B := by
+  let γ : ↥(A ∩ B) → G.ABPath A B := fun a =>
     ⟨⟨a, a.2.1⟩, ⟨a, a.2.2⟩, Walk.nil, Walk.IsPath.nil⟩
   have hγ_inj : Function.Injective γ := by
     intro a b hab; simp [γ] at hab; exact Subtype.ext hab.1
@@ -107,11 +141,22 @@ lemma Menger_strong_base (G : SimpleGraph V) (A B : Set V) (h : G.edgeSet = ∅)
       List.mem_cons, List.mem_nil_iff, or_false]
     intro z hz1 hz2; rw [hz1] at hz2
     exact hpq (by congr 1; all_goals exact Subtype.ext hz2)
-  have h_maxflow_ge : (A ∩ B).encard ≤ maxflow ⊥ A B := by
-    apply le_iSup_of_le ⟨Set.range γ, h_joiner⟩
-    show (A ∩ B).encard ≤ (Set.range γ).encard
-    rw [← Set.image_univ, hγ_inj.encard_image]; simp
-  exact h_mincut_le.trans h_maxflow_ge
+  calc (A ∩ B).encard = (Set.range γ).encard := by
+          rw [← Set.image_univ, hγ_inj.encard_image]; simp
+    _ ≤ G.maxflow A B := le_iSup_of_le ⟨_, h_joiner⟩ le_rfl
+
+/-
+Base case of Menger's theorem: if G has no edges, the theorem holds.
+-/
+lemma Menger_strong_base (G : SimpleGraph V) (A B : Set V) (h : G.edgeSet = ∅) :
+    G.mincut A B ≤ G.maxflow A B := by
+  simp at h ; subst G
+  have h_mincut_le : mincut ⊥ A B ≤ (A ∩ B).encard :=
+    iInf_le_of_le ⟨A ∩ B, fun a ha b hb p => ⟨a, p.start_mem_support, by
+      have := (show ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v by
+        intro u v p; induction p <;> aesop) a b p
+      simp [← this] at hb; simp [ha, hb]⟩⟩ le_rfl
+  exact h_mincut_le.trans le_maxflow
 
 noncomputable def merge_to {x y : V} (h : y ≠ x) (z : V) : {z : V // z ≠ x} :=
   if h' : z = x then ⟨y, h⟩ else ⟨z, h'⟩
@@ -1523,13 +1568,15 @@ If there exists a separator X of size k containing x and y, then G has k disjoin
 lemma Menger_case2_imp_paths (G : SimpleGraph V) (A B : Set V) (x y : V)
     (hxy : G.Adj x y)
     (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B = k) (X : G.Separator A B) (hX_card : X.1.encard = k) (hx : x ∈ X.1)
-    (hy : y ∈ X.1) (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
+    (hy : y ∈ X.1) (IH_delete : ∀ A' B', (A' ∩ B').Finite → (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
     k ≤ G.maxflow A B := by
   have hX_fin : X.1.Finite := Set.encard_ne_top_iff.mp (hX_card ▸ hk)
   have h_del_A : k ≤ (G.deleteEdge x y).maxflow A X.1 :=
-    le_trans (min_sep_delete_ge_k_left G A B x y k h_min X hx hy hxy.ne) (IH_delete A X.1)
+    le_trans (min_sep_delete_ge_k_left G A B x y k h_min X hx hy hxy.ne)
+      (IH_delete A X.1 (hX_fin.inter_of_right _))
   have h_del_B : k ≤ (G.deleteEdge x y).maxflow X.1 B :=
-    le_trans (min_sep_delete_ge_k_right G A B x y k h_min X hx hy hxy.ne) (IH_delete X.1 B)
+    le_trans (min_sep_delete_ge_k_right G A B x y k h_min X hx hy hxy.ne)
+      (IH_delete X.1 B (hX_fin.inter_of_left _))
   have h_subgraph : G.deleteEdge x y ≤ G := fun _ _ huv => huv.1
   -- Extract joiner witness from ⨆ using helper
   suffices h : ∃ P : G.Joiner A B, P.1.encard = k by
@@ -1561,7 +1608,7 @@ lemma Menger_inductive_step (G : SimpleGraph V) (A B : Set V) (x y : V)
     (IH_contract : (G.contractEdge x y).mincut (contractEdge_liftSet x y A)
       (contractEdge_liftSet x y B) ≤
       (G.contractEdge x y).maxflow (contractEdge_liftSet x y A) (contractEdge_liftSet x y B))
-    (IH_delete : ∀ A' B', (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
+    (IH_delete : ∀ A' B', (A' ∩ B').Finite → (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
     G.mincut A B ≤ G.maxflow A B := by
   by_cases h : (G.contractEdge x y).mincut (contractEdge_liftSet x y A) (contractEdge_liftSet x y B) < G.mincut A B
   · -- Case 1: contraction has smaller mincut → separator containing both x and y
@@ -1579,7 +1626,7 @@ lemma Menger_inductive_step (G : SimpleGraph V) (A B : Set V) (x y : V)
 /-
 Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edges, proved by strong induction on n.
 -/
-theorem Menger_strong_aux [Fintype V] (n : ℕ) :
+theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
   G.edgeSet.encard = ↑n → G.mincut A B ≤ G.maxflow A B := by
   induction n using Nat.strongRecOn generalizing V with
   | _ n ih =>
@@ -1590,34 +1637,51 @@ theorem Menger_strong_aux [Fintype V] (n : ℕ) :
       obtain ⟨e, he⟩ := Set.nonempty_iff_ne_empty.mpr h_empty
       induction e using Sym2.ind with
       | _ a b => exact ⟨a, b, he⟩
-    have h_contract_lt : (G.contractEdge x y).edgeSet.encard < ↑n := by
-      calc (G.contractEdge x y).edgeSet.encard
-        < G.edgeSet.encard := contractEdge_edgeSet_encard_lt hxy (Set.toFinite _)
-        _ = ↑n := h_card
-    have h_delete_lt : (G.deleteEdge x y).edgeSet.encard < ↑n := by
-      calc (G.deleteEdge x y).edgeSet.encard
-        < G.edgeSet.encard := deleteEdge_edgeSet_encard_lt hxy (Set.toFinite _)
-        _ = ↑n := h_card
-    have hmc := Set.encard_eq_coe_toFinset_card (G.contractEdge x y).edgeSet
-    have hmd := Set.encard_eq_coe_toFinset_card (G.deleteEdge x y).edgeSet
-    have hk : G.mincut A B ≠ ⊤ := by
-      have := iInf_le (fun S : G.Separator A B => S.1.encard) ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
-      exact ne_top_of_le_ne_top (Set.encard_ne_top_iff.mpr (Set.toFinite A)) this
+    have hfin : G.edgeSet.Finite := Set.finite_of_encard_eq_coe h_card
+    have h_contract_lt : (G.contractEdge x y).edgeSet.encard < ↑n :=
+      (contractEdge_edgeSet_encard_lt hxy hfin).trans_eq h_card
+    have h_delete_lt : (G.deleteEdge x y).edgeSet.encard < ↑n :=
+      (deleteEdge_edgeSet_encard_lt hxy hfin).trans_eq h_card
+    obtain ⟨mc, hmc⟩ := (Set.finite_of_encard_le_coe h_contract_lt.le).exists_encard_eq_coe
+    obtain ⟨md, hmd⟩ := (Set.finite_of_encard_le_coe h_delete_lt.le).exists_encard_eq_coe
+    have hk : G.mincut A B ≠ ⊤ :=
+      ne_top_of_le_ne_top (WithTop.add_ne_top.mpr
+        ⟨Set.encard_ne_top_iff.mpr hAB, h_card ▸ WithTop.coe_ne_top⟩) mincut_le
+    have hAB_contract : (contractEdge_liftSet x y A ∩ contractEdge_liftSet x y B).Finite := by
+      apply Set.Finite.subset ((hAB.image (⟦·⟧)).union (Set.finite_singleton (⟦x⟧)))
+      intro q ⟨⟨a, ha, haq⟩, b, hb, hbq⟩
+      simp at haq hbq
+      have hab_q : (⟦a⟧ : contractType x y) = ⟦b⟧ := by rw [haq, hbq]
+      by_cases hab : a = b
+      · exact Or.inl ⟨a, ⟨ha, hab ▸ hb⟩, haq⟩
+      · right; rw [Set.mem_singleton_iff, ← haq]
+        rw [Quotient.eq] at hab_q
+        rcases hab_q with rfl | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+        · exact absurd rfl hab
+        · rfl
+        · grind
     exact Menger_inductive_step G A B x y hxy hk
-      (ih _ (by rw [hmc] at h_contract_lt; exact WithTop.coe_lt_coe.mp h_contract_lt) hmc)
-      (fun A' B' => ih _ (by rw [hmd] at h_delete_lt; exact WithTop.coe_lt_coe.mp h_delete_lt) hmd)
+      (ih _ (by rw [hmc] at h_contract_lt; exact WithTop.coe_lt_coe.mp h_contract_lt)
+        hAB_contract hmc)
+      (fun A' B' hAB' => ih _ (by rw [hmd] at h_delete_lt; exact WithTop.coe_lt_coe.mp h_delete_lt)
+        hAB' hmd)
 
-/-
-Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G. (This is the strong direction: min separator <= max paths)
--/
-theorem Menger_strong [Fintype V] : G.mincut A B ≤ G.maxflow A B :=
-  Menger_strong_aux _ (Set.encard_eq_coe_toFinset_card _)
+theorem Menger_strong (hAB : (A ∩ B).Finite) (hG : G.edgeSet.Finite) : G.mincut A B = G.maxflow A B :=
+  le_antisymm (Menger_strong_aux hAB hG.encard_eq_coe) Menger_weak
 
 /-
 Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G.
 -/
-theorem Menger [Fintype V] : G.mincut A B = G.maxflow A B :=
-  le_antisymm Menger_strong Menger_weak
+theorem Menger_finite [Fintype V] : G.mincut A B = G.maxflow A B :=
+  Menger_strong (Set.toFinite _) (Set.toFinite _)
+
+#print axioms Menger_finite
+
+theorem Menger_infinite (hAB : (A ∩ B).Infinite) : G.mincut A B = G.maxflow A B := by
+  have h_top : (A ∩ B).encard = ⊤ := Set.encard_eq_top hAB
+  have hmin : G.mincut A B = ⊤ := top_le_iff.mp (h_top ▸ le_mincut)
+  have hmax : G.maxflow A B = ⊤ := top_le_iff.mp (h_top ▸ le_maxflow)
+  rw [hmin, hmax]
 
 /-
 Menger's theorem: there exist a separator set `S` between `A` and `B` and a set
@@ -1626,7 +1690,7 @@ path in `P`.
 
 This version would actually be true without the `[Fintype S]` assumption.
 -/
-theorem Menger' [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B, ∃ φ : P.1 ≃ S.1,
+theorem Menger_equiv [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B, ∃ φ : P.1 ≃ S.1,
     ∀ p : P.1, (φ p).1 ∈ p.1.p.1.support := by
   have h_maxflow_lt : G.maxflow A B < ⊤ :=
     lt_of_le_of_lt (iSup_le (fun P => Joiner.encard_le P)) (Set.toFinite A).encard_lt_top
@@ -1651,14 +1715,11 @@ theorem Menger' [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B, ∃
   have h_card_eq : Fintype.card P.1 = Fintype.card S.1 := by
     have h_eq : P.1.encard = S.1.encard := by
       calc P.1.encard = G.maxflow A B := hP
-        _ = G.mincut A B := Menger.symm
+        _ = G.mincut A B := Menger_finite.symm
         _ = S.1.encard := hS.symm
     rw [Set.encard_eq_coe_toFinset_card, Set.toFinset_card] at h_eq
     rw [Set.encard_eq_coe_toFinset_card, Set.toFinset_card] at h_eq
     exact WithTop.coe_injective h_eq
   exact ⟨.ofBijective f ((Fintype.bijective_iff_injective_and_card f).mpr ⟨hf_inj, h_card_eq⟩), hf⟩
 
-
 end SimpleGraph
-
-#print axioms SimpleGraph.Menger
