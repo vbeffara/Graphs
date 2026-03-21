@@ -1791,4 +1791,20 @@ theorem Menger_equiv [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B
     exact WithTop.coe_injective h_eq
   exact ⟨.ofBijective f ((Fintype.bijective_iff_injective_and_card f).mpr ⟨hf_inj, h_card_eq⟩), hf⟩
 
+/-
+Menger's theorem, combining all cases proved so far.
+The full theorem (without any assumption) is work in progress.
+-/
+theorem Menger_so_far
+    (h : Nonempty (Fintype V)
+      ∨ ((A ∩ B).Finite ∧ G.edgeSet.Finite)
+      ∨ (A ∩ B).Infinite
+      ∨ G.mincut A B = ⊤) :
+    G.mincut A B = G.maxflow A B := by
+  rcases h with ⟨hV⟩ | ⟨hAB, hG⟩ | hAB | h
+  · exact @Menger_finite _ _ _ _ hV.some
+  · exact Menger_strong hAB hG
+  · exact Menger_infinite hAB
+  · exact Menger_of_mincut_top h
+
 end SimpleGraph
