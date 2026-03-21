@@ -1,3 +1,4 @@
+import Architect
 import Graphs.Basic
 import Graphs.Contraction
 import Graphs.Separation
@@ -14,6 +15,11 @@ universe u
 
 variable {α : Type u} {G : SimpleGraph α}
 
+@[blueprint
+  "def:tree-decomposition"
+  (title := "Tree-decomposition")
+  (statement := /-- A tree-decomposition of \(G\) is a tree \(T\) with bags \(V_t \subseteq V(G)\)
+    satisfying cover, edge coverage, and the bag-intersection axiom. -/)]
 structure TreeDecomposition (G : SimpleGraph α) where
   ι : Type u
   V : ι → Set α
@@ -53,6 +59,12 @@ def U₂ (D : TreeDecomposition G) (t₁ t₂ : D.ι) : Set α := ⋃ t ∈ D.tr
 theorem U_cover (h : D.T.Adj t₁ t₂) : D.U₁ t₁ t₂ ∪ D.U₂ t₁ t₂ = univ := by
   simp [U₁, U₂, ← biUnion_union, D.tree.left_union_right h, D.union_bags]
 
+@[blueprint
+  "lem:td-edge-separator"
+  (title := "Diestel Lemma~12.3.1")
+  (statement := /-- For an edge \(t_1t_2\in E(T)\), \(V_{t_1}\cap V_{t_2}\) separates the two
+    induced sides of \(T-t_1t_2\). -/)
+  (latexEnv := "lemma")]
 lemma diestel_12_3_1 (h : D.T.Adj t₁ t₂) : G.Separates (D.U₁ t₁ t₂) (D.U₂ t₁ t₂) (D.V t₁ ∩ D.V t₂) := by
   refine separates_cover (U_cover h) |>.2 ⟨?_, ?_⟩
   · intro v hv
@@ -79,6 +91,11 @@ lemma diestel_12_3_1 (h : D.T.Adj t₁ t₂) : G.Separates (D.U₁ t₁ t₂) (D
       have h5 := D.bag_inter h3.1
       grind
 
+@[blueprint
+  "lem:td-adhesion"
+  (title := "Adhesion identity (cf.\\ Diestel \\S12.3)")
+  (statement := /-- The two side regions intersect exactly in \(V_{t_1}\cap V_{t_2}\). -/)
+  (latexEnv := "lemma")]
 theorem adhesion (h : D.T.Adj t₁ t₂) : D.U₁ t₁ t₂ ∩ D.U₂ t₁ t₂ = D.V t₁ ∩ D.V t₂ := by
   ext x; constructor <;> intro hx
   · obtain ⟨y, h1, h2⟩ := diestel_12_3_1 h x hx.1 x hx.2 SimpleGraph.Walk.nil ; simp_all
@@ -117,6 +134,12 @@ private lemma exists_first_step_on_path {a b : D.ι} (hab : a ≠ b) :
         exact (D.tree.path_spec' ⟨SimpleGraph.Walk.cons hac p, hp⟩)
       simp [hpath]
 
+@[blueprint
+  "lem:td-bag-separation"
+  (title := "Diestel Lemma~12.3.4")
+  (statement := /-- Any set of vertices not contained in a bag of \((T,V)\) contains two
+    vertices that are separated by an adhesion set of \((T,V)\). -/)
+  (latexEnv := "lemma")]
 lemma diestel_12_3_4_global {W : Set α} (hW : ¬ ∃ t : D.ι, W ⊆ D.V t) :
     ∃ t₁ t₂, D.T.Adj t₁ t₂ ∧
       ∃ u ∈ W, ∃ v ∈ W, G.Separates ({u} : Set α) ({v} : Set α) (D.V t₁ ∩ D.V t₂) := by
@@ -157,6 +180,12 @@ lemma diestel_12_3_4_global {W : Set α} (hW : ¬ ∃ t : D.ι, W ⊆ D.V t) :
 def restrict' (D : TreeDecomposition G) {H : SimpleGraph α} (h : H ≤ G) : TreeDecomposition H :=
   { D with edge_mem_bag huv := D.edge_mem_bag (h huv) }
 
+@[blueprint
+  "lem:td-restrict"
+  (title := "Diestel Lemma~12.3.2")
+  (statement := /-- For every \(H \le G\), \((T,(V_t\cap V(H))_{t\in V(T)})\) is a
+    tree-decomposition of \(H\). -/)
+  (latexEnv := "lemma")]
 def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.coe where
   ι := D.ι
   V t := {v | v.1 ∈ D.V t}
@@ -166,11 +195,21 @@ def restrict (D : TreeDecomposition G) (H : G.Subgraph) : TreeDecomposition H.co
   edge_mem_bag {u v} huv := D.edge_mem_bag (H.coe_adj_sub u v huv)
   bag_inter {b₁ b₂ b₃} hordered x hx := D.bag_inter hordered ⟨hx.1, hx.2⟩
 
+@[blueprint
+  "def:td-width"
+  (title := "Diestel \\S12.4")
+  (statement := /-- The width of a decomposition is
+    \(\sup_t (|V_t|-1)\). -/)]
 noncomputable def width (D : TreeDecomposition G) := ⨆ b, (D.V b).encard - 1
 
 @[simp] lemma width_restrict'_le (D : TreeDecomposition G) {H : SimpleGraph α} (h : H ≤ G) :
     (D.restrict' h).width = D.width := rfl
 
+@[blueprint
+  "lem:td-width-restrict"
+  (title := "Lean auxiliary: width under restriction")
+  (statement := /-- Restricting a decomposition to a subgraph does not increase width. -/)
+  (latexEnv := "lemma")]
 lemma width_restrict_le (D : TreeDecomposition G) (H : G.Subgraph) :
     (D.restrict H).width ≤ D.width := by
   classical
@@ -223,6 +262,12 @@ private lemma map_build_walk (D : TreeDecomposition H) (φ : β → α) :
       · exact hq₁ r hr
       · exact hq₂ r (List.mem_of_mem_tail hr)
 
+@[blueprint
+  "lem:td-map"
+  (title := "Diestel Lemma~12.3.3")
+  (statement := /-- Transporting bags along contraction maps gives a decomposition of the
+    contracted graph. -/)
+  (latexEnv := "lemma")]
 noncomputable def map (D : TreeDecomposition H) (φ : β → α) (hφs : Function.Surjective φ)
     (hφa : H.Adapted φ) : TreeDecomposition (H.map φ) := {
   ι := D.ι
@@ -258,6 +303,12 @@ noncomputable def map (D : TreeDecomposition H) (φ : β → α) (hφs : Functio
     rcases hq t₂ ht₂ with ⟨x₂, hx₂, hx₂φ⟩
     exact ⟨x₂, hx₂, hx₂φ.trans hx₃₁⟩ }
 
+@[blueprint
+  "lem:td-width-map"
+  (title := "Lean auxiliary: width under contraction pushforward")
+  (statement := /-- Pushing a decomposition through an adapted surjection does not increase width.
+    -/)
+  (latexEnv := "lemma")]
 lemma width_map_le (D : TreeDecomposition H) (φ : β → α)
     (hφs : Function.Surjective φ) (hφa : H.Adapted φ) : (D.map φ hφs hφa).width ≤ D.width := by
   apply iSup_mono

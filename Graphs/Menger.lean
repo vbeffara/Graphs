@@ -1,5 +1,5 @@
 -- With help from Aristotle
-
+import Architect
 import Graphs.Util
 import Graphs.Separation
 import Mathlib.Algebra.Order.Ring.Star
@@ -105,10 +105,10 @@ noncomputable def mincut (G : SimpleGraph V) (A B : Set V) : ℕ∞ :=
 noncomputable def maxflow (G : SimpleGraph V) (A B : Set V) : ℕ∞ :=
   ⨆ P : G.Joiner A B, P.1.encard
 
-/-
-The maximum number of disjoint A-B paths is at most the minimum size of an A-B separator.
--/
-theorem Menger_weak : G.maxflow A B ≤ G.mincut A B := by
+@[blueprint "thm:maxflow_le_mincut"
+  (statement := /-- The maximum number of disjoint A-B paths is at most the
+    minimum size of an A-B separator. -/)]
+theorem maxflow_le_mincut : G.maxflow A B ≤ G.mincut A B := by
   apply iSup_le; intro P; apply le_iInf; intro S; exact Joiner.le_sep P S
 
 private lemma exists_new_disjoint_path (P : Set (G.ABPath A B))
@@ -1736,11 +1736,12 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
         hAB' hmd)
 
 theorem Menger_strong (hAB : (A ∩ B).Finite) (hG : G.edgeSet.Finite) : G.mincut A B = G.maxflow A B :=
-  le_antisymm (Menger_strong_aux hAB hG.encard_eq_coe) Menger_weak
+  le_antisymm (Menger_strong_aux hAB hG.encard_eq_coe) maxflow_le_mincut
 
-/-
-Menger's theorem: The minimum number of vertices separating A from B in G is equal to the maximum number of disjoint A--B paths in G.
--/
+@[blueprint "thm:menger"
+  (statement := /-- Menger's theorem: The minimum number of vertices separating
+      $A$ from $B$ in a finite graph $G$ is equal to the maximum number of disjoint
+      $A--B$ paths in $G$. -/)]
 theorem Menger_finite [Fintype V] : G.mincut A B = G.maxflow A B :=
   Menger_strong (Set.toFinite _) (Set.toFinite _)
 

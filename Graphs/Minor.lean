@@ -1,3 +1,4 @@
+import Architect
 import Graphs.Basic
 import Graphs.Contraction
 
@@ -5,6 +6,12 @@ open SimpleGraph Subgraph
 
 variable {α β γ : Type*} {G G' : SimpleGraph α} {H : SimpleGraph β} {K : SimpleGraph γ}
 
+@[blueprint
+  "def:minor"
+  (statement := /-- A graph $H$ is a minor of $G$ if it can be realized as a subgraph of a
+    contraction minor of $G$, or equivalently as a contraction subgraph of a
+    subgraph of $G$ (in Diestel's parlance, if $G$ contains an $IH$ as a
+    subgraph). -/)]
 def IsMinor (G : SimpleGraph α) (H : SimpleGraph β) : Prop :=
   ∃ K : Subgraph H, G ≼c K.coe
 

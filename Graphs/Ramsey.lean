@@ -1,4 +1,5 @@
 import Architect
+import Architect
 import Mathlib.Combinatorics.SimpleGraph.EdgeLabeling
 import Mathlib.Data.Fintype.Pigeonhole
 import Mathlib.Data.Set.PowersetCard
@@ -19,6 +20,11 @@ def of (k : ℕ) (α : Type*) (S : Set α) := { s : parts k α // (s.1 : Set α)
 
 end parts
 
+@[blueprint
+  "defi:monochromatic"
+  (statement := /-- Given a $c$-coloring of $[X]^k$, the set of all $k$-subsets of $X$, we call a
+    set $Y \subseteq X$ \emph{monochromatic} if all the elements of $[Y]^k$ have
+    the same color. -/)]
 def Monochromatic (φ : parts k α → ι) (S : Set α) : Prop :=
   ∃ i : ι, ∀ s : parts.of k α S, φ s.1 = i
 
@@ -44,9 +50,29 @@ open ramsey912
 @[blueprint "thm:ramsey912"
   (title := /-- Theorem 9.1.2 -/)
   (statement := /-- For any finite coloring of the $k$-subsets of an infinite set,
-                  there is an infinite monochromatic subset. -/)]
+                  there is an infinite monochromatic subset. -/)
+  (title := "Theorem~9.1.2 in Diestel")
+  (proof := /-- Following Diestel with minor changes: We prove the theorem by induction on
+    $k$, with $c$ fixed. For $k = 0$ the assertion holds vacuously, so let $k > 0$
+    and assume the assertion for smaller values of $k$. Let $[X]^k$ be colored
+    with $c$ colors. We shall construct an infinite sequence $X_0, X_1, \ldots$ of
+    infinite subsets of $X$ and choose elements $x_i \in X_i$ with the following
+    properties (for all $i$):
+    \begin{enumerate}
+      \item $X_{i+1} \subseteq Xi \setminus \{xi\}$;
+      \item all $k$-sets $\{x_i\} \cup Z$ with $Z \in [X_{i+1}]^{k−1}$ have the
+      same color, which we associate with $x_i$.
+    \end{enumerate}
+    We start with $X_0 := X$ and pick $x_0 \in X_0$ arbitrarily. By assumption,
+    $X_0$ is infinite. Having chosen an infinite set $X_i$ and $x_i \in X_i$ for
+    some $i$, we $c$-color $[X_i \setminus \{xi\}]^{k−1}$ by giving each set $Z$
+    the color of $\{xi\} \cup Z$ from our $c$-coloring of $[X]^k$. By the
+    induction hypothesis, $X_i \setminus \{xi\}$ has an infinite monochromatic
+    subset, which we choose as $X_{i+1}$. Clearly, this choice satisfies both
+    conditions above. Finally, we pick $x_{i+1} \in X_{i+1}$ arbitrarily. Since
+    $c$ is finite, one of the $c$ colors is associated with infinitely many $x_i$.
+    These $x_i$ form an infinite monochromatic subset of $X$. -/)]
 theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Infinite ∧ Monochromatic φ S := by
-  /-- The proof follows Diestel. -/
   induction k generalizing α with
   | zero =>
     refine ⟨univ, infinite_univ, φ ⟨∅, rfl⟩, ?_⟩
@@ -139,6 +165,11 @@ structure Fan (φ : G.EdgeLabeling ι) where
   hX : X.Infinite
   hC : ∀ u ∈ X, ∀ h : G.Adj x u, φ.get x u h = i
 
+@[blueprint
+  "defi:mono_graph"
+  (statement := /-- Given a $c$-coloring of the edges of a graph $G$, we call a set $Y \subseteq
+    V(G)$ \emph{monochromatic} if all the edges joining vertices in $Y$ have the
+    same color. -/)]
 def EdgeLabeling.isMonochromatic (φ : G.EdgeLabeling ι) (S : Set α) : Prop :=
   ∃ i : ι, ∀ u ∈ S, ∀ v ∈ S, ∀ h : G.Adj u v, φ.get u v h = i
 
