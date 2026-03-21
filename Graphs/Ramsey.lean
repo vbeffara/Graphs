@@ -1,3 +1,4 @@
+import Architect
 import Mathlib.Combinatorics.SimpleGraph.EdgeLabeling
 import Mathlib.Data.Fintype.Pigeonhole
 import Mathlib.Data.Set.PowersetCard
@@ -40,7 +41,12 @@ end ramsey912
 
 open ramsey912
 
+@[blueprint "thm:ramsey912"
+  (title := /-- Theorem 9.1.2 -/)
+  (statement := /-- For any finite coloring of the $k$-subsets of an infinite set,
+                  there is an infinite monochromatic subset. -/)]
 theorem ramsey912 [Infinite α] (φ : parts k α → ι) : ∃ S : Set α, S.Infinite ∧ Monochromatic φ S := by
+  /-- The proof follows Diestel. -/
   induction k generalizing α with
   | zero =>
     refine ⟨univ, infinite_univ, φ ⟨∅, rfl⟩, ?_⟩
