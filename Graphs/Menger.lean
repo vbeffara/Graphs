@@ -111,6 +111,75 @@ The maximum number of disjoint A-B paths is at most the minimum size of an A-B s
 theorem Menger_weak : G.maxflow A B ≤ G.mincut A B := by
   apply iSup_le; intro P; apply le_iInf; intro S; exact Joiner.le_sep P S
 
+private lemma exists_new_disjoint_path (P : Set (G.ABPath A B))
+    (h_not_sep : ¬ G.Separates A B (⋃ p ∈ P, p.support)) :
+    ∃ q : G.ABPath A B, ∀ p ∈ P, Disjoint q.support p.support := by
+  simp only [Separates, not_forall] at h_not_sep
+  obtain ⟨u, hu, v, hv, w, hw⟩ := h_not_sep
+  push_neg at hw
+  refine ⟨⟨⟨u, hu⟩, ⟨v, hv⟩, w.toPath⟩, fun p hp => ?_⟩
+  rw [Set.disjoint_left]
+  intro z hz hp'
+  exact hw z (Walk.support_toPath_subset w hz) (Set.mem_biUnion hp hp')
+
+private lemma ABPath.support_finite (p : G.ABPath A B) : p.support.Finite :=
+  Set.Finite.ofFinset p.p.1.support.toFinset (by simp)
+
+private lemma finite_not_separates_of_mincut_top
+    (h : G.mincut A B = ⊤) (S : Set V) (hS : S.Finite) :
+    ¬ G.Separates A B S := by
+  intro h_sep
+  have : (⊤ : ℕ∞) ≤ S.encard :=
+    h ▸ iInf_le_of_le ⟨S, h_sep⟩ le_rfl
+  exact absurd (lt_of_le_of_lt this hS.encard_lt_top) (lt_irrefl _)
+
+private lemma extend_joiner_of_mincut_top (h : G.mincut A B = ⊤)
+    (P : G.Joiner A B) (hP_fin : P.1.Finite) :
+    ∃ Q : G.Joiner A B, P.1.encard + 1 ≤ Q.1.encard := by
+  have h_not_sep : ¬ G.Separates A B (⋃ p ∈ P.1, p.support) :=
+    finite_not_separates_of_mincut_top h _
+      (Set.Finite.biUnion hP_fin (fun p _ => ABPath.support_finite p))
+  obtain ⟨q, hq_disj⟩ := exists_new_disjoint_path P.1 h_not_sep
+  have hq_not_mem : q ∉ P.1 := by
+    intro hq_mem
+    exact Set.disjoint_left.mp (hq_disj q hq_mem)
+      q.p.1.start_mem_support q.p.1.start_mem_support
+  refine ⟨⟨insert q P.1, ?_⟩, ?_⟩
+  · intro a ha b hb hab
+    simp only [Set.mem_insert_iff] at ha hb
+    rcases ha with rfl | ha <;> rcases hb with rfl | hb
+    · exact absurd rfl hab
+    · exact hq_disj b hb
+    · exact (hq_disj a ha).symm
+    · exact P.2 ha hb hab
+  · rw [Set.encard_insert_of_notMem hq_not_mem]
+
+/-
+If the minimum cut is infinite, then so is the maximum flow.
+-/
+theorem maxflow_infinite_of_mincut_infinite (h : G.mincut A B = ⊤) :
+    G.maxflow A B = ⊤ := by
+  rw [maxflow, iSup_eq_top]
+  intro b hb
+  obtain ⟨n, rfl⟩ := WithTop.ne_top_iff_exists.mp (ne_of_lt hb)
+  suffices ∀ k : ℕ, ∃ P : G.Joiner A B, (k : ℕ∞) ≤ P.1.encard by
+    obtain ⟨P, hP⟩ := this (n + 1)
+    exact ⟨P, lt_of_lt_of_le (WithTop.coe_lt_coe.mpr (by omega)) hP⟩
+  intro k
+  induction k with
+  | zero => exact ⟨⟨∅, Set.pairwise_empty _⟩, zero_le _⟩
+  | succ m ih =>
+    obtain ⟨P, hP⟩ := ih
+    by_cases hP_top : P.1.encard = ⊤
+    · exact ⟨P, hP_top ▸ le_top⟩
+    · have hP_fin : P.1.Finite := Set.encard_ne_top_iff.mp hP_top
+      obtain ⟨Q, hQ⟩ := extend_joiner_of_mincut_top h P hP_fin
+      exact ⟨Q, le_trans (by push_cast; exact add_le_add hP le_rfl) hQ⟩
+
+theorem Menger_of_mincut_top (h : G.mincut A B = ⊤) :
+    G.mincut A B = G.maxflow A B :=
+  h ▸ (maxflow_infinite_of_mincut_infinite h).symm
+
 /-
 The minimum separator size is bounded by (A ∩ B).encard + edgeSet.encard:
 a vertex cover (one vertex per edge) together with A ∩ B forms a separator.
