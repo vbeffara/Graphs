@@ -35,12 +35,13 @@ jobs:
           build: true
           lint: false
           mk_all-check: true
+          use-github-cache: false
+          build-args: :blueprint
 
       - name: Build blueprint web
         run: |
           sudo apt install -y graphviz libgraphviz-dev
           pip install leanblueprint
-          lake build :blueprint
           leanblueprint web
           cp -r blueprint/web home_page/blueprint
 
