@@ -41,12 +41,13 @@ jobs:
       - name: Build blueprint web
         run: |
           sudo apt install -y graphviz libgraphviz-dev
-          pip install leanblueprint
+          pip install uv
+          uv sync
+          . .venv/bin/activate
           lake build :blueprint
           pwd
           find blueprint
           find .lake/build/blueprint
-          ln -vs `pwd`.lake/build/blueprint/library/Graphs.tex blueprint/src/
           leanblueprint web
           cp -r blueprint/web home_page/blueprint
 
