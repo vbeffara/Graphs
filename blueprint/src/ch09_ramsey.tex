@@ -1,24 +1,3 @@
 \chapter{Ramsey Theory for Graphs}
 
-\inputleannode{defi:monochromatic}
-
-\inputleannode{defi:mono_graph}
-
-\inputleannode{thm:ramsey912}
-
-\inputleannode{theo:ramsey_inf}
-
-
-
-\begin{theorem}
-  \label{theo:ramsey_infgraph} \lean{ramsey2} \leanok \uses{defi:mono_graph}
-
-  Let $c$ be a positive integer, and $G$ an infinite graph. If the edges of $G$
-  are colored with $c$ colors, then $G$ has an infinite monochromatic subset.
-\end{theorem}
-
-\begin{proof}
-  \leanok \uses{theo:ramsey_inf}
-
-  This is a direct consequence of Theorem~\ref{theo:ramsey_inf} for $k=2$
-\end{proof}
+\inputleanmodule{Graphs.Ramsey}

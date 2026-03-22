@@ -1,3 +1,4 @@
+import Architect
 import Graphs.Map
 import Mathlib.Combinatorics.SimpleGraph.Walks.Maps
 
@@ -178,8 +179,10 @@ theorem restrict {L : H'.Subgraph} (φ : ↑L.verts → α) (hφ₂ : L.coe.Adap
 
 end Adapted
 
+@[blueprint "def:contraction"
+  (statement := /-- A graph contraction. -/)]
 def IsContraction (G : SimpleGraph α) (G' : SimpleGraph β) : Prop :=
-∃ φ : β → α, Surjective φ ∧ Adapted G' φ ∧ G = G'.map φ
+  ∃ φ : β → α, Surjective φ ∧ Adapted G' φ ∧ G = G'.map φ
 
 infix:50 " ≼c " => IsContraction
 

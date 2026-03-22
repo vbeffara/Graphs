@@ -263,11 +263,10 @@ private lemma map_build_walk (D : TreeDecomposition H) (φ : β → α) :
       · exact hq₂ r (List.mem_of_mem_tail hr)
 
 @[blueprint
-  "lem:td-map"
+  "def:td-map"
   (title := "Diestel Lemma~12.3.3")
   (statement := /-- Transporting bags along contraction maps gives a decomposition of the
-    contracted graph. -/)
-  (latexEnv := "lemma")]
+    contracted graph. -/)]
 noncomputable def map (D : TreeDecomposition H) (φ : β → α) (hφs : Function.Surjective φ)
     (hφa : H.Adapted φ) : TreeDecomposition (H.map φ) := {
   ι := D.ι
