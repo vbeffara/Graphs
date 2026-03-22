@@ -48,6 +48,7 @@ jobs:
           pwd
           find blueprint
           find .lake/build/blueprint
+          ls -l .lake/build/blueprint/library
           ln -sv `pwd`/.lake/build/blueprint blueprint/src
           leanblueprint web
           cp -r blueprint/web home_page/blueprint
