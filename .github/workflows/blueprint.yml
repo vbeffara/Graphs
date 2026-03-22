@@ -50,6 +50,8 @@ jobs:
           find .lake/build/blueprint
           cp -v .lake/build/blueprint/library/Graphs.tex blueprint/src/Graphs.tex
           cat blueprint/src/Graphs.tex
+          ls -l /home/runner/work/Graphs/Graphs/.lake/build/blueprint/module/Graphs/Separation.tex
+          ls -l `pwd`/.lake/build/blueprint/module/Graphs/Separation.tex
           leanblueprint web
           cp -r blueprint/web home_page/blueprint
 
