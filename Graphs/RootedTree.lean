@@ -1,8 +1,9 @@
-import Mathlib
-import Graphs.WQO
 import Graphs.QuasiMin
+import Mathlib.Order.SuccPred.Tree
+import Mathlib.Order.WellQuasiOrder
+import Mathlib.SetTheory.Cardinal.Finite
 
-open Set PartiallyWellOrderedOn
+open Set
 
 namespace RootedTree
 

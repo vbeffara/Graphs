@@ -1,5 +1,4 @@
 import Architect
-import Architect
 import Mathlib.Combinatorics.SimpleGraph.EdgeLabeling
 import Mathlib.Data.Fintype.Pigeonhole
 import Mathlib.Data.Set.PowersetCard

@@ -1,5 +1,7 @@
-import Mathlib
 import Graphs.Ramsey
+import Mathlib.Data.Int.ConditionallyCompleteOrder
+import Mathlib.Order.OrderIsoNat
+import Mathlib.Tactic.FinCases
 
 open SimpleGraph Classical Set Function
 

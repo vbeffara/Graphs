@@ -1,4 +1,6 @@
-import Mathlib
+import Mathlib.Data.Int.ConditionallyCompleteOrder
+import Mathlib.Order.ConditionallyCompleteLattice.Basic
+import Mathlib.Order.Minimal
 
 open Fin Nat
 

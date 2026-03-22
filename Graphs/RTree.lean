@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
 
 open SimpleGraph Set Function
 

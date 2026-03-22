@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Order.Minimal
 
 variable {α : Type*} [Preorder α] {n : ℕ}
 

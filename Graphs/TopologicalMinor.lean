@@ -1,4 +1,3 @@
--- import Mathlib
 import Mathlib.Algebra.Order.Group.Nat
 import Mathlib.Algebra.Order.ZeroLEOne
 import Mathlib.Combinatorics.SimpleGraph.Paths

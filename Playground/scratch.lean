@@ -1,4 +1,7 @@
-import Mathlib
+module
+public import Mathlib.Algebra.Group.Fin.Basic
+public import Mathlib.Algebra.Order.Group.Nat
+public import Mathlib.Data.Nat.Find
 
 -- open Classical
 
@@ -40,6 +43,8 @@ def prev {n : ℕ} (i : Fin n) : Fin n :=
   | 1 => i
   | _ + 2 => i - 1
 
+variable {i : Fin n}
+
 @[simp] theorem next_prev : i.prev.next = i := by
   match n with
   | 0 => exact i.elim0
@@ -51,6 +56,10 @@ def prev {n : ℕ} (i : Fin n) : Fin n :=
   | 0 => exact i.elim0
   | 1 => rfl
   | _ + 2 => simp only [prev, next, add_sub_cancel_right]
+
+open Equiv
+
+variable {V : Type*} {d : V → ℕ}
 
 def rotate : Perm (Σ v, Fin (d v)) where
   toFun e := ⟨e.1, e.2.next⟩
