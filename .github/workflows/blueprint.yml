@@ -44,6 +44,26 @@ jobs:
           pip install uv
           uv sync
           . .venv/bin/activate
+          MODPATH="$(realpath .lake/build/blueprint/module)"
+          # Remove any previous generated files
+          rm -f blueprint/src/Graphs.tex
+          rm -rf blueprint/src/lean-modules
+          # Copy library index, rewriting absolute module paths to lean-modules/ relative paths
+          sed "s|${MODPATH}/|lean-modules/|g" \
+            .lake/build/blueprint/library/Graphs.tex > blueprint/src/Graphs.tex
+          # Copy the entire module tree into blueprint/src/lean-modules/
+          cp -r "${MODPATH}/." blueprint/src/lean-modules/
+          # Fix absolute paths in each copied .tex file so references are relative
+          # to the file's own directory (as required by plastex)
+          while IFS= read -r f; do
+            rel="${f#blueprint/src/lean-modules/}"
+            dir="$(dirname "$rel")"
+            if [ "$dir" = "." ]; then
+              sed -i "s|${MODPATH}/||g" "$f"
+            else
+              sed -i "s|${MODPATH}/${dir}/||g" "$f"
+            fi
+          done < <(find blueprint/src/lean-modules -name "*.tex")
           leanblueprint web
           cp -r blueprint/web home_page/blueprint
 
