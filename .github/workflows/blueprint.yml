@@ -53,18 +53,12 @@ jobs:
           sed "s|${MODPATH}/|lean-modules/|g" \
             .lake/build/blueprint/library/Graphs.tex > blueprint/src/Graphs.tex
           # Copy the entire module tree into blueprint/src/lean-modules/
+          mkdir -p blueprint/src/lean-modules
           cp -r "${MODPATH}/." blueprint/src/lean-modules/
-          # Fix absolute paths in each copied .tex file so references are relative
-          # to the file's own directory (as required by plastex)
-          while IFS= read -r f; do
-            rel="${f#blueprint/src/lean-modules/}"
-            dir="$(dirname "$rel")"
-            if [ "$dir" = "." ]; then
-              sed -i "s|${MODPATH}/||g" "$f"
-            else
-              sed -i "s|${MODPATH}/${dir}/||g" "$f"
-            fi
-          done < <(find blueprint/src/lean-modules -name "*.tex")
+          # Fix absolute paths in all copied .tex files: replace MODPATH/ with lean-modules/
+          # so that every \input{} resolves correctly relative to blueprint/src/ (plastex CWD)
+          find blueprint/src/lean-modules -name "*.tex" \
+            -exec sed -i "s|${MODPATH}/|lean-modules/|g" {} +
           leanblueprint web
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             cp -r blueprint/web home_page/blueprint
