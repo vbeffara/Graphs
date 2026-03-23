@@ -45,13 +45,22 @@ jobs:
           uv sync
           . .venv/bin/activate
           lake build :blueprint
-          pwd
-          find blueprint
-          find .lake/build/blueprint
-          cp -v .lake/build/blueprint/library/Graphs.tex blueprint/src/Graphs.tex
-          cat blueprint/src/Graphs.tex
-          ls -l /home/runner/work/Graphs/Graphs/.lake/build/blueprint/module/Graphs/Separation.tex
-          ls -l `pwd`/.lake/build/blueprint/module/Graphs/Separation.tex
+          MODPATH="$(pwd)/.lake/build/blueprint/module"
+          # Remove any existing generated files (including dangling symlinks from earlier attempts)
+          rm -f blueprint/src/Graphs.tex
+          rm -rf blueprint/src/lean-modules
+          # Copy the library index file, rewriting absolute module paths to relative ones
+          sed "s|${MODPATH}/|lean-modules/|g" \
+            .lake/build/blueprint/library/Graphs.tex > blueprint/src/Graphs.tex
+          # Copy all generated module tex files into blueprint/src/lean-modules/
+          cp -r .lake/build/blueprint/module/. blueprint/src/lean-modules/
+          # Fix absolute artifact paths inside module files to be relative to their own directory.
+          # Root-level modules (e.g. lean-modules/Graphs.tex) reference Graphs.artifacts/…
+          find blueprint/src/lean-modules -maxdepth 1 -name "*.tex" \
+            -exec sed -i "s|${MODPATH}/||g" {} \;
+          # Sub-modules (e.g. lean-modules/Graphs/Menger.tex) reference Menger.artifacts/…
+          find blueprint/src/lean-modules -mindepth 2 -name "*.tex" \
+            -exec sed -i "s|${MODPATH}/Graphs/||g" {} \;
           leanblueprint web
           cp -r blueprint/web home_page/blueprint
 
