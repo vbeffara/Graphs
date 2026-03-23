@@ -1,3 +1,4 @@
+import Architect
 import Graphs.QuasiMin
 import Mathlib.Order.SuccPred.Tree
 import Mathlib.Order.WellQuasiOrder
@@ -7,6 +8,7 @@ open Set
 
 namespace RootedTree
 
+@[blueprint "def:rooted_tree_preorder"]
 instance : Preorder RootedTree where
   le t₁ t₂ := Nonempty (t₁ ↪o t₂)
   le_refl t := ⟨RelEmbedding.refl _⟩
@@ -39,6 +41,9 @@ def IsBadSeq {α : Type*} [LE α] (f : ℕ → α) : Prop := ∀ i j, i < j → 
 theorem key {α : Type*} [LE α] : localProp (IsBadSeq (α := α)) := by
   intro f h i j hij ; grind [IsBadSeq, h (1 + max i j)]
 
+@[blueprint "thm:kruskal"
+  (title := "Kruskal's Tree Theorem")
+  (statement := /-- Finite rooted trees are well-quasi-ordered by the embedding relation. -/)]
 theorem kruskal : WellQuasiOrderedLE FiniteTree := by
   rw [wellQuasiOrderedLE_def, WellQuasiOrdered]
   by_contra! : ∃ A : ℕ → FiniteTree, IsBadSeq A

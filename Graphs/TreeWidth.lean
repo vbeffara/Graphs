@@ -11,8 +11,7 @@ universe u
 
 variable {α β : Type u} {G : SimpleGraph α} {H : SimpleGraph β} {n : ℕ} {u v w : α}
 
-@[blueprint
-  "def:tree-width"
+@[blueprint "def:tree-width"
   (title := "Diestel \\S12.4")
   (statement := /-- \(\mathrm{tw}(G)\) is the infimum of decomposition widths. -/)]
 noncomputable def treeWidth (G : SimpleGraph α) : ℕ∞ :=
@@ -38,6 +37,7 @@ private lemma exists_transition (htree : G.IsTree) {P : α → Prop}
         by simp [IsTree.ordered, htree.path_spec' ⟨Walk.cons h' rest, hp⟩],
         by simp [IsTree.ordered, htree.path_spec' ⟨Walk.cons h' rest, hp⟩]⟩
 
+@[blueprint "thm:tw_ge_one"]
 theorem treeWidth_ge_one (h : G ≠ ⊥) : 1 ≤ treeWidth G := by
   refine le_csInf ⟨_, .trivial, rfl⟩ ?_
   rintro w ⟨D, rfl⟩
@@ -53,9 +53,7 @@ theorem treeWidth_ge_one (h : G ≠ ⊥) : 1 ≤ treeWidth G := by
   convert tsub_le_tsub_right h2 1
   simp +decide [h3]
 
-@[blueprint
-  "thm:empty-treewidth"
-  (title := "Lean: empty graph case")
+@[blueprint "thm:tw_bot"
   (statement := /-- \(\mathrm{tw}(\emptyset)=0\). -/)]
 theorem bot_treeWidth : treeWidth (⊥ : SimpleGraph α) = 0 := by
   refine le_antisymm ?_ bot_le
@@ -74,21 +72,18 @@ theorem treeWidth_tree_le_one (hG : G.IsTree) : treeWidth G ≤ 1 := by
   · obtain ⟨r, -⟩ : ∃ x : α, True := by contrapose! hG' ; aesop
     exact csInf_le_of_le (OrderBot.bddBelow _) (by simp) (treeDecompositionOfTree_width hG r)
 
-@[blueprint
-  "thm:tree-treewidth"
-  (title := "Lean: tree case")
+@[blueprint "thm:tw_tree"
   (statement := /-- If \(G\) is a non-empty tree, then \(\mathrm{tw}(G)=1\). -/)]
 theorem tree_treeWidth (hG : G.IsTree) (hG' : G ≠ ⊥) : treeWidth G = 1 :=
   le_antisymm (treeWidth_tree_le_one hG) (treeWidth_ge_one hG')
 
+@[blueprint "thm:tw_mono_le"]
 theorem treeWidth_le {H : SimpleGraph α} (h : H ≤ G) : treeWidth H ≤ treeWidth G := by
   apply sInf_le_sInf
   rintro w ⟨D, rfl⟩
   exact ⟨D.restrict' h, rfl⟩
 
-@[blueprint
-  "thm:treewidth-subgraph-mono"
-  (title := "Lean: subgraph monotonicity")
+@[blueprint "thm:tw_mono_subgraph"
   (statement := /-- If \(H \le G\), then \(\mathrm{tw}(H)\le \mathrm{tw}(G)\). -/)]
 theorem treeWidth_mono {H : G.Subgraph} : treeWidth H.coe ≤ treeWidth G := by
   unfold treeWidth
@@ -96,9 +91,7 @@ theorem treeWidth_mono {H : G.Subgraph} : treeWidth H.coe ≤ treeWidth G := by
   rintro w ⟨D, rfl⟩
   exact le_trans (sInf_le ⟨D.restrict H, rfl⟩) (D.width_restrict_le H)
 
-@[blueprint
-  "thm:treewidth-contraction-mono"
-  (title := "Lean: contraction monotonicity")
+@[blueprint "thm:tw_mono_contract"
   (statement := /-- If \(G \preceq_c H\), then \(\mathrm{tw}(G)\le \mathrm{tw}(H)\). -/)]
 theorem treeWidth_contract (h : G ≼c H) : treeWidth G ≤ treeWidth H := by
   rcases h with ⟨φ, hφs, hφa, rfl⟩
@@ -107,15 +100,14 @@ theorem treeWidth_contract (h : G ≼c H) : treeWidth G ≤ treeWidth H := by
   rintro w ⟨D, rfl⟩
   exact le_trans (sInf_le ⟨D.map φ hφs hφa, rfl⟩) (D.width_map_le φ hφs hφa)
 
-@[blueprint
-  "lem:treewidth-minor"
-  (title := "Diestel Lemma~12.4.1")
-  (statement := /-- If \(H \preceq G\), then \(\mathrm{tw}(H)\le \mathrm{tw}(G)\). -/)
-  (latexEnv := "lemma")]
+@[blueprint "thm:tw_mono_minor"
+  (statement := /-- If \(H \preceq G\), then \(\mathrm{tw}(H)\le \mathrm{tw}(G)\). -/)]
 theorem treeWidth_minor (h : G ≼ H) : treeWidth G ≤ treeWidth H := by
   rcases h with ⟨K, hK⟩
   exact le_trans (treeWidth_contract hK) (treeWidth_mono (H := K))
 
+@[blueprint "thm:tw_le_one_iff_acyclic"
+  (statement := /-- A graph has tree width at most 1 if and only if it is acyclic. -/)]
 theorem treeWidth_le_one [Nonempty α] : treeWidth G ≤ 1 ↔ G.IsAcyclic := by
   constructor
   · intro htw
@@ -186,6 +178,7 @@ theorem treeWidth_le_one [Nonempty α] : treeWidth G ≤ 1 ↔ G.IsAcyclic := by
     · apply treeWidth_le h1
     · apply treeWidth_tree_le_one h2
 
+@[blueprint "thm:tw_cycle_le_two"]
 theorem treeWidth_loop_le_two (h : 2 < n) : treeWidth (cycleGraph n) ≤ 2 := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 3 := ⟨n - 3, by omega⟩
   exact csInf_le_of_le (OrderBot.bddBelow _) ⟨td_cycle m, td_cycle_width⟩ le_rfl

@@ -6,8 +6,7 @@ open SimpleGraph Subgraph
 
 variable {α β γ : Type*} {G G' : SimpleGraph α} {H : SimpleGraph β} {K : SimpleGraph γ}
 
-@[blueprint
-  "def:minor"
+@[blueprint "def:minor"
   (statement := /-- A graph $H$ is a minor of $G$ if it can be realized as a subgraph of a
     contraction minor of $G$, or equivalently as a contraction subgraph of a
     subgraph of $G$ (in Diestel's parlance, if $G$ contains an $IH$ as a
@@ -15,6 +14,7 @@ variable {α β γ : Type*} {G G' : SimpleGraph α} {H : SimpleGraph β} {K : Si
 def IsMinor (G : SimpleGraph α) (H : SimpleGraph β) : Prop :=
   ∃ K : Subgraph H, G ≼c K.coe
 
+@[blueprint "def:forbidden"]
 def IsForbidden (G : SimpleGraph α) (H : SimpleGraph β) : Prop :=
   ¬ (IsMinor G H)
 
@@ -52,7 +52,8 @@ theorem subgraph_left (K : Subgraph G) (h : G ≼ H) : K.coe ≼ H := by
       obtain ⟨c, d, ⟨⟨h3, h4, h5, h6⟩⟩, rfl, rfl⟩ := hab
       simp_all
 
-@[trans] theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by
+@[blueprint "thm:minor_trans", trans]
+theorem trans (h1 : G ≼ H) (h2 : H ≼ K) : G ≼ K := by
   obtain ⟨L₁, hL₁⟩ := h1
   obtain ⟨L', hL'⟩ := subgraph_left L₁ h2
   exact ⟨L', hL₁.trans hL'⟩

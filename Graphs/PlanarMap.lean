@@ -1,3 +1,4 @@
+import Architect
 import Mathlib.GroupTheory.Perm.Cycle.Type
 
 open Equiv Classical Function MulAction Set
@@ -5,6 +6,7 @@ open Equiv Classical Function MulAction Set
 variable {V E : Type*} {n : ℕ} {i : Fin n} {d : V → ℕ}
 
 -- As in https://ncatlab.org/nlab/show/combinatorial+map
+@[blueprint "def:planar_map"]
 structure PlanarMap (E : Type*) where
   σ : Perm E
   α : Perm E

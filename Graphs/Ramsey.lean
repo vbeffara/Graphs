@@ -19,8 +19,7 @@ def of (k : ℕ) (α : Type*) (S : Set α) := { s : parts k α // (s.1 : Set α)
 
 end parts
 
-@[blueprint
-  "defi:monochromatic"
+@[blueprint "def:monochromatic"
   (statement := /-- Given a $c$-coloring of $[X]^k$, the set of all $k$-subsets of $X$, we call a
     set $Y \subseteq X$ \emph{monochromatic} if all the elements of $[Y]^k$ have
     the same color. -/)]
@@ -164,8 +163,7 @@ structure Fan (φ : G.EdgeLabeling ι) where
   hX : X.Infinite
   hC : ∀ u ∈ X, ∀ h : G.Adj x u, φ.get x u h = i
 
-@[blueprint
-  "defi:mono_graph"
+@[blueprint "def:mono_graph"
   (statement := /-- Given a $c$-coloring of the edges of a graph $G$, we call a set $Y \subseteq
     V(G)$ \emph{monochromatic} if all the edges joining vertices in $Y$ have the
     same color. -/)]
@@ -187,6 +185,7 @@ noncomputable def FinsetEquivSym2 : {s : Finset α // s.card = 2} ≃ {z : Sym2 
     have : s(a, b).toFinset = {a, b} := by { ext; simp_all }
     simp_all ; rfl
 
+@[blueprint "thm:ramsey_infinite_graph"]
 theorem ramsey2 [Nonempty ι] [Infinite α] (φ : G.EdgeLabeling ι) :
     ∃ S : Set α, S.Infinite ∧ φ.isMonochromatic S := by
   let ψ (s : parts 2 α) : ι := if h : (FinsetEquivSym2 s).1 ∈ G.edgeSet then φ ⟨_, h⟩

@@ -1,3 +1,4 @@
+import Architect
 import Mathlib.Combinatorics.SimpleGraph.Acyclic
 import Mathlib.Combinatorics.SimpleGraph.Prod
 import Graphs.Tree
@@ -26,6 +27,7 @@ theorem reachable {a u : α} : (Star a).Reachable a u := by
   · rfl
   · exact ⟨Adj.toWalk ⟨h, .inl rfl⟩⟩
 
+@[blueprint "thm:star_is_tree"]
 theorem isTree (a : α) : IsTree (Star a) := by
   have : Nonempty α := ⟨a⟩
   refine ⟨⟨fun u v => reachable.symm.trans reachable⟩, ?_⟩

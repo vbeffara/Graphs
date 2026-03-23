@@ -2,9 +2,9 @@
 """Stage LeanArchitect-generated blueprint files flat into blueprint/src/.
 
 LeanArchitect generates module header files and artifact files with absolute
-paths in a nested directory structure under .lake/build/blueprint/module/.
-plastex (run by `leanblueprint web` from blueprint/src/) can only resolve
-input paths that are plain filenames in the same directory -- it cannot
+paths in a nested directory structure under .lake/build/blueprint/module/. On
+github CI, plastex (run by `leanblueprint web` from blueprint/src/) can only
+resolve input paths that are plain filenames in the same directory -- it cannot
 navigate into subdirectories.
 
 This script copies everything flat into blueprint/src/:

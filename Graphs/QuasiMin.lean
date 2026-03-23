@@ -1,3 +1,4 @@
+import Architect
 import Mathlib.Data.Int.ConditionallyCompleteOrder
 import Mathlib.Order.ConditionallyCompleteLattice.Basic
 import Mathlib.Order.Minimal
@@ -59,6 +60,7 @@ theorem extend_spec (hP : localProp P) : P (extend P hf) := by
   refine hP (fun n => ⟨extendAux P hf n, (extendAux P hf n).2.1, fun k hk => ?_⟩)
   apply extendAux_later <;> omega
 
+@[blueprint "thm:exist_prog_min"]
 theorem exists_quasiMin (hP : localProp P) (h : ∃ f, P f) : ∃ f, P f ∧ QuasiMin P f := by
   obtain ⟨f, hf⟩ := h
   refine ⟨extend P hf, extend_spec hP, extend_quasiMin⟩

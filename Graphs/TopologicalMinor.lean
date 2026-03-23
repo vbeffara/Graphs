@@ -1,3 +1,4 @@
+import Architect
 import Mathlib.Algebra.Order.Group.Nat
 import Mathlib.Algebra.Order.ZeroLEOne
 import Mathlib.Combinatorics.SimpleGraph.Paths
@@ -6,6 +7,9 @@ open Set SimpleGraph Function
 
 variable {α β γ : Type*} {G G₁ : SimpleGraph α} {H G₂ : SimpleGraph β} {G₃ : SimpleGraph γ}
 
+@[blueprint "def:topological_minor"
+  (statement := /-- A graph \(G\) is a \emph{topological minor} of a graph \(H\)
+    if there is a path embedding of \(G\) into \(H\). -/)]
 structure PathEmbedding (G : SimpleGraph α) (H : SimpleGraph β) where
   f : α ↪ β
   df (e : G.Dart) : H.Path (f e.fst) (f e.snd)

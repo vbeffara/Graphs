@@ -11,11 +11,8 @@ theorem StrictAnti_iff_descending {X : Type*} [Preorder X] {f : ℕ → X} :
   intro h n
   exact h $ lt_add_one n
 
-@[blueprint
-  "prop:wqo-criterion"
-  (title := "WQO criterion in Lean")
-  (statement := /-- The Diestel criterion above is equivalent to the standard WQO formulation. -/)
-  (latexEnv := "proposition")]
+@[blueprint "prop:wqo_criterion"
+  (statement := /-- The Diestel criterion above is equivalent to the standard WQO formulation. -/)]
 theorem WQO_iff : WellQuasiOrderedLE α ↔
     (∀ s : Set α, IsAntichain (· ≤ ·) s → Set.Finite s) ∧
     (∀ f : ℕ → α, ¬ StrictAnti f) := by
@@ -26,10 +23,7 @@ theorem WQO_iff : WellQuasiOrderedLE α ↔
 def FinsetLE (s t : Finset α) : Prop := ∃ f : s ↪ t, ∀ x, x.val ≤ f x
 
 -- Lemma 12.1.3
-@[blueprint
-  "lem:higman"
-  (title := "Diestel Lemma~12.1.3 (Higman)")
-  (statement := /-- If \(X\) is WQO, then finite sequences/finite supports over \(X\) are WQO. -/)
-  (latexEnv := "lemma")]
+@[blueprint "thm:higman"
+  (statement := /-- If \(X\) is WQO, then finite sequences/finite supports over \(X\) are WQO. -/)]
 theorem Higman (h : WellQuasiOrderedLE α) : WellQuasiOrdered (FinsetLE (α := α)) := by
   sorry

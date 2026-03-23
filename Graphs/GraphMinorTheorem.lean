@@ -10,6 +10,7 @@ structure FiniteGraph where
   n : ℕ
   graph : SimpleGraph (Fin n)
 
+@[blueprint "def:graph_minor_preorder"]
 instance : Preorder FiniteGraph where
   le G H := G.graph ≼ H.graph
   le_refl G := IsMinor.refl
@@ -23,7 +24,7 @@ instance : Preorder FiniteGraph where
 instance GraphMinorTheorem : WellQuasiOrderedLE FiniteGraph := sorry
 
 @[blueprint
-  "thm:wagner-theorem"
+  "thm:wagner"
   (title := "Planar forbidden-minor pointer")
   (statement := /-- \(G \preceq \mathrm{Plane} \iff K_5 \not\preceq G \land K_{3,3} \not\preceq G\).
     -/)
