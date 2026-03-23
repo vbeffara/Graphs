@@ -5,4 +5,5 @@
 /blueprint/web
 /blueprint/src/blueprint
 /blueprint/src/Graphs.tex
-/blueprint/src/lean-modules
+/blueprint/src/lm_*.tex
+/blueprint/src/la_*.tex
