@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main # Trigger on pushes to the default branch
+  pull_request:             # Trigger on pull requests (build only, no deployment)
   workflow_dispatch:        # Allow manual triggering of the workflow from the GitHub Actions interface
 
 # Cancel previous runs if a new commit is pushed to the same PR or branch
@@ -65,9 +66,12 @@ jobs:
             fi
           done < <(find blueprint/src/lean-modules -name "*.tex")
           leanblueprint web
-          cp -r blueprint/web home_page/blueprint
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            cp -r blueprint/web home_page/blueprint
+          fi
 
       - name: Compile blueprint and documentation
+        if: github.event_name != 'pull_request'
         uses: leanprover-community/docgen-action@deed0cdc44dd8e5de07a300773eb751d33e32fc8 # 2025-10-26
         with:
           blueprint: false
