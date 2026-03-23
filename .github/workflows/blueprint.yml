@@ -45,6 +45,68 @@ jobs:
           pip install uv
           uv sync
           . .venv/bin/activate
+          # Stage LeanArchitect-generated files into blueprint/src/ so that
+          # plasTeX (which runs from blueprint/src/) can find them.
+          # We extract the absolute module path prefix directly from the
+          # library index file to avoid any realpath/symlink mismatch.
+          python3 << 'PYEOF'
+          import os, re, shutil, sys
+
+          libfile = '.lake/build/blueprint/library/Graphs.tex'
+          src = 'blueprint/src'
+
+          if not os.path.exists(libfile):
+              print(f'ERROR: {libfile} not found', file=sys.stderr)
+              sys.exit(1)
+
+          with open(libfile) as f:
+              lib = f.read()
+
+          inputs = re.findall(r'\\input\{([^}]+)\}', lib)
+          if not inputs:
+              print('ERROR: no \\input found in library file', file=sys.stderr)
+              sys.exit(1)
+
+          def find_modpath(path):
+              parts = path.replace('\\', '/').split('/')
+              for i, part in enumerate(parts):
+                  if part == 'module':
+                      return '/'.join(parts[:i + 1])
+              return None
+
+          modpath = find_modpath(inputs[0])
+          if not modpath:
+              print(f'ERROR: no "module" component in: {inputs[0]}', file=sys.stderr)
+              sys.exit(1)
+          print(f'Module path: {modpath}')
+
+          if not os.path.isdir(modpath):
+              print(f'ERROR: module dir not found: {modpath}', file=sys.stderr)
+              sys.exit(1)
+
+          os.makedirs(src, exist_ok=True)
+          with open(os.path.join(src, 'Graphs.tex'), 'w') as f:
+              f.write(lib.replace(modpath + '/', 'lean-modules/'))
+
+          dest = os.path.join(src, 'lean-modules')
+          if os.path.exists(dest):
+              shutil.rmtree(dest)
+          shutil.copytree(modpath, dest)
+
+          count = 0
+          for root, dirs, files in os.walk(dest):
+              for fn in files:
+                  if fn.endswith('.tex'):
+                      fp = os.path.join(root, fn)
+                      with open(fp) as f:
+                          c = f.read()
+                      nc = c.replace(modpath + '/', 'lean-modules/')
+                      if nc != c:
+                          with open(fp, 'w') as f:
+                              f.write(nc)
+                          count += 1
+          print(f'Staged {len(inputs)} modules, {count} files updated')
+          PYEOF
           leanblueprint web
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             cp -r blueprint/web home_page/blueprint
