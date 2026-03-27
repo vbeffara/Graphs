@@ -1631,7 +1631,7 @@ lemma restrict_joiner_to_fromEdgeSet (G : SimpleGraph V) (A B : Set V)
     ⟨p.1.u, p.1.v, p.1.p.1.transfer H hp, p.1.p.2.transfer hp⟩
   have h_disj : disjointPaths (Set.range f) := by
     rintro p ⟨p', rfl⟩ q ⟨q', rfl⟩ hpq
-    have hpq' : p' ≠ q' := fun h => hpq (by simpa [h])
+    have hpq' : p' ≠ q' := fun h => hpq (by simp [h])
     have hdisj : Disjoint p'.1.support q'.1.support := by
       exact P.2 p'.2 q'.2 (fun h => hpq' (Subtype.ext h))
     show Disjoint (f p').support (f q').support
@@ -1866,7 +1866,7 @@ theorem Menger_finite_mincut
           have hdisj : Disjoint p.1.support q.1.support := by
             exact P.2 p.2 q.2 (fun h => hpq' (Subtype.ext h))
           have hqmem : (σ p).1 ∈ q.1.support := by
-            simpa [hpq] using (σ q).2
+            simp [hpq] --; exact (σ q).2
           exact Set.disjoint_left.mp hdisj (σ p).2 hqmem
         rw [show Schoice σ = (fun p : P.1 => (σ p).1) '' Set.univ by
           simpa [Schoice, Set.image_univ] using (Set.image_univ (fun p : P.1 => (σ p).1).symm),
@@ -1885,8 +1885,7 @@ theorem Menger_finite_mincut
         simp [SimpleGraph.Separates] at hns
         rcases hns with ⟨u, hu, v, hv, w, hw⟩
         refine ⟨⟨⟨u, hu⟩, ⟨v, hv⟩, w.toPath⟩, ?_⟩
-        intro x hx
-        intro hxS
+        intro x hx hxS
         exact hw x (Walk.support_toPath_subset w hx) hxS
       choose q hq using h_witness
       let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
@@ -1974,7 +1973,7 @@ theorem Menger_finite_mincut
           refine Set.encard_ne_top_iff.mp ?_
           simpa [hSchoice_card σ] using (Set.encard_ne_top_iff.mpr hP_fin)
         have hSH_le : SH.1.encard ≤ (Schoice σ).encard := by
-          simpa [hSH_card, hSchoice_card σ]
+          simp [hSH_card, hSchoice_card σ]
         have hSchoice_eq : Schoice σ = SH.1 :=
           hSchoice_fin.eq_of_subset_of_encard_le hSchoice_subset hSH_le
         have hqE : (q σ).p.1.edgeSet ⊆ E := by
