@@ -1653,14 +1653,8 @@ lemma restrict_joiner_to_fromEdgeSet (G : SimpleGraph V) (A B : Set V)
     (h_edges : ∀ p ∈ P.1, p.p.1.edgeSet ⊆ E) :
     ∃ PH : (SimpleGraph.fromEdgeSet E).Joiner A B, PH.1.encard = P.1.encard := by
   let H : SimpleGraph V := SimpleGraph.fromEdgeSet E
-  let f : P.1 → H.ABPath A B := fun p =>
-    let hp : ∀ e, e ∈ p.1.p.1.edges → e ∈ H.edgeSet := by
-      intro e he
-      rw [show H = SimpleGraph.fromEdgeSet E by rfl, SimpleGraph.edgeSet_fromEdgeSet]
-      refine ⟨h_edges p.1 p.2 he, ?_⟩
-      have heG : e ∈ G.edgeSet := p.1.p.1.edges_subset_edgeSet he
-      simpa [Set.mem_compl_iff, Sym2.mem_diagSet] using (G.not_isDiag_of_mem_edgeSet heG)
-    ⟨p.1.u, p.1.v, p.1.p.1.transfer H hp, p.1.p.2.transfer hp⟩
+  let f : P.1 → H.ABPath A B := fun p => by
+    simpa [H] using abPath_to_fromEdgeSet G A B p.1 E (h_edges p.1 p.2)
   have h_disj : disjointPaths (Set.range f) := by
     rintro p ⟨p', rfl⟩ q ⟨q', rfl⟩ hpq
     have hpq' : p' ≠ q' := fun h => hpq (by simp [h])
@@ -1670,19 +1664,20 @@ lemma restrict_joiner_to_fromEdgeSet (G : SimpleGraph V) (A B : Set V)
     rw [Set.disjoint_left]
     intro v hv hv'
     have hvp : v ∈ p'.1.support := by
-      simpa [f, ABPath.support] using (show v ∈ (f p').p.1.support from hv)
+      simpa [f, H] using hv
     have hvq : v ∈ q'.1.support := by
-      simpa [f, ABPath.support] using (show v ∈ (f q').p.1.support from hv')
+      simpa [f, H] using hv'
     exact Set.disjoint_left.mp hdisj hvp hvq
   have h_inj : Function.Injective f := by
     intro p q hpq
     by_contra hneq
     have hdisj : Disjoint p.1.support q.1.support := by
       exact P.2 p.2 q.2 (fun h => hneq (Subtype.ext h))
-    have h_support_eq : p.1.p.1.support = q.1.p.1.support := by
-      simpa [f] using congrArg (fun r => r.p.1.support) hpq
     have hp_mem : (p.1.u : V) ∈ p.1.p.1.support := p.1.p.1.start_mem_support
-    have hq_mem : (p.1.u : V) ∈ q.1.p.1.support := by simpa [h_support_eq] using hp_mem
+    have hp_mem_f : (p.1.u : V) ∈ (f p).support := by simp [f, H, hp_mem]
+    have hq_mem_f : (p.1.u : V) ∈ (f q).support := by
+      exact hpq ▸ hp_mem_f
+    have hq_mem : (p.1.u : V) ∈ q.1.p.1.support := by simpa [f, H] using hq_mem_f
     exact (Set.disjoint_left.mp hdisj hp_mem) hq_mem
   have h_card : (Set.range f).encard = P.1.encard := by
     rw [show Set.range f = f '' Set.univ from Set.image_univ.symm, h_inj.injOn.encard_image]
@@ -1885,12 +1880,9 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
       have hdisj : Disjoint p.1.support q.1.support := by
         exact P.2 p.2 q.2 (fun h => hpq' (Subtype.ext h))
       have hqmem : (σ p).1 ∈ q.1.support := by
-        simp [hpq] --; exact (σ q).2
+        simp [hpq]
       exact Set.disjoint_left.mp hdisj (σ p).2 hqmem
-    rw [show Schoice σ = (fun p : P.1 => (σ p).1) '' Set.univ by
-      simp [Schoice, Set.image_univ],
-      h_inj.injOn.encard_image]
-    simp
+    simpa [Schoice, Set.image_univ] using (h_inj.injOn.encard_image (s := Set.univ))
   have h_no_global : ∀ σ : C, ¬ G.Separates A B (Schoice σ) := by
     intro σ hsep
     have hk_le : (k : ℕ∞) ≤ (Schoice σ).encard := by
@@ -1928,9 +1920,7 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
   obtain ⟨PH, hPH_card⟩ := restrict_joiner_to_fromEdgeSet G A B P E hPE
   have hH_le : H ≤ G := by
     change (SimpleGraph.fromEdgeSet E) ≤ G
-    refine (SimpleGraph.fromEdgeSet_le (G := G) (s := E)).2 ?_
-    intro e he
-    exact hE_sub (Set.diff_subset he)
+    exact (SimpleGraph.fromEdgeSet_le (G := G) (s := E)).2 (fun _ he => hE_sub (Set.diff_subset he))
   have hHmax_ge : P.1.encard ≤ H.maxflow A B := by
     calc P.1.encard = PH.1.encard := hPH_card.symm
       _ ≤ H.maxflow A B := le_iSup_of_le PH le_rfl
@@ -1965,8 +1955,7 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
     simpa [f] using (show x ∈ (f p).support from hx)
   choose σ hσ using h_hit_SH
   have hSchoice_subset : Schoice σ ⊆ SH.1 := by
-    intro x hx
-    rcases hx with ⟨p, rfl⟩
+    rintro x ⟨p, rfl⟩
     exact hσ p
   have hSchoice_fin : (Schoice σ).Finite := by
     refine Set.encard_ne_top_iff.mp ?_
