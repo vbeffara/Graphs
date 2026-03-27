@@ -1786,8 +1786,6 @@ theorem Menger_strong (hAB : (A ∩ B).Finite) (hG : G.edgeSet.Finite) : G.mincu
 theorem Menger_finite [Fintype V] : G.mincut A B = G.maxflow A B :=
   Menger_strong (Set.toFinite _) (Set.toFinite _)
 
-#print axioms Menger_finite
-
 theorem Menger_infinite (hAB : (A ∩ B).Infinite) : G.mincut A B = G.maxflow A B := by
   have h_top : (A ∩ B).encard = ⊤ := Set.encard_eq_top hAB
   have hmin : G.mincut A B = ⊤ := top_le_iff.mp (h_top ▸ le_mincut)
@@ -1832,22 +1830,6 @@ theorem Menger_equiv [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B
     rw [Set.encard_eq_coe_toFinset_card, Set.toFinset_card] at h_eq
     exact WithTop.coe_injective h_eq
   exact ⟨.ofBijective f ((Fintype.bijective_iff_injective_and_card f).mpr ⟨hf_inj, h_card_eq⟩), hf⟩
-
-/-
-Menger's theorem, combining all cases proved so far.
-The full theorem (without any assumption) is work in progress.
--/
-theorem Menger_so_far
-    (h : Nonempty (Fintype V)
-      ∨ ((A ∩ B).Finite ∧ G.edgeSet.Finite)
-      ∨ (A ∩ B).Infinite
-      ∨ G.mincut A B = ⊤) :
-    G.mincut A B = G.maxflow A B := by
-  rcases h with ⟨hV⟩ | ⟨hAB, hG⟩ | hAB | h
-  · exact @Menger_finite _ _ _ _ hV.some
-  · exact Menger_strong hAB hG
-  · exact Menger_infinite hAB
-  · exact Menger_of_mincut_top h
 
 theorem Menger_finite_mincut
     (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤) :
@@ -2015,5 +1997,15 @@ theorem Menger_finite_mincut
         exact hx_not_SH hxSH
       exact this.elim
     exact le_antisymm (hk' ▸ hk_le_maxflow) maxflow_le_mincut
+
+theorem Menger : G.mincut A B = G.maxflow A B := by
+  by_cases hABinf : (A ∩ B).Infinite
+  · exact Menger_infinite hABinf
+  · have hAB : (A ∩ B).Finite := Set.not_infinite.mp hABinf
+    by_cases hk : G.mincut A B = ⊤
+    · exact Menger_of_mincut_top hk
+    · exact Menger_finite_mincut hAB hk
+
+#print axioms Menger
 
 end SimpleGraph
