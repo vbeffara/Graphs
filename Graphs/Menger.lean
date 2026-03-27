@@ -9,7 +9,7 @@ import Mathlib.Data.Set.Card
 
 set_option maxHeartbeats 0
 
-open Classical
+open Classical Set
 
 variable {V W : Type*} {G : SimpleGraph V} {x y u v : V} {A B : Set V} {n : ℕ}
 
@@ -1616,20 +1616,19 @@ lemma lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) (A B : Set V)
   · show (f '' P).encard = P.encard
     exact hf_inj.encard_image
 
-def abPath_to_fromEdgeSet (G : SimpleGraph V) (A B : Set V)
-    (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edgeSet ⊆ E) :
-    (SimpleGraph.fromEdgeSet E).ABPath A B := by
-  let hp : ∀ e, e ∈ p.p.1.edges → e ∈ (SimpleGraph.fromEdgeSet E).edgeSet := by
+def abPath_to_fromEdgeSet (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edgeSet ⊆ E) :
+    (fromEdgeSet E).ABPath A B := by
+  let hp : ∀ e, e ∈ p.p.1.edges → e ∈ (fromEdgeSet E).edgeSet := by
     intro e he
     rw [SimpleGraph.edgeSet_fromEdgeSet]
     refine ⟨hE he, ?_⟩
     have heG : e ∈ G.edgeSet := p.p.1.edges_subset_edgeSet he
     simpa [Set.mem_compl_iff, Sym2.mem_diagSet] using (G.not_isDiag_of_mem_edgeSet heG)
-  exact ⟨p.u, p.v, p.p.1.transfer (SimpleGraph.fromEdgeSet E) hp, p.p.2.transfer hp⟩
+  exact ⟨p.u, p.v, p.p.1.transfer (fromEdgeSet E) hp, p.p.2.transfer hp⟩
 
 @[simp] lemma support_abPath_to_fromEdgeSet (G : SimpleGraph V) (A B : Set V)
     (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edgeSet ⊆ E) :
-    (abPath_to_fromEdgeSet G A B p E hE).support = p.support := by
+    (abPath_to_fromEdgeSet p E hE).support = p.support := by
   simp [abPath_to_fromEdgeSet, ABPath.support, Walk.support_transfer]
 
 lemma ABPath.edgeSet_finite (p : G.ABPath A B) : p.p.1.edgeSet.Finite := by
@@ -1648,13 +1647,12 @@ lemma exists_abPath_avoiding_of_not_separates (S : Set V) (hS : ¬ G.Separates A
   intro x hx hxS
   exact hw x (Walk.support_toPath_subset w hx) hxS
 
-lemma restrict_joiner_to_fromEdgeSet (G : SimpleGraph V) (A B : Set V)
-    (P : G.Joiner A B) (E : Set (Sym2 V))
+lemma restrict_joiner_to_fromEdgeSet (P : G.Joiner A B) (E : Set (Sym2 V))
     (h_edges : ∀ p ∈ P.1, p.p.1.edgeSet ⊆ E) :
-    ∃ PH : (SimpleGraph.fromEdgeSet E).Joiner A B, PH.1.encard = P.1.encard := by
-  let H : SimpleGraph V := SimpleGraph.fromEdgeSet E
+    ∃ PH : (fromEdgeSet E).Joiner A B, PH.1.encard = P.1.encard := by
+  let H : SimpleGraph V := fromEdgeSet E
   let f : P.1 → H.ABPath A B := fun p => by
-    simpa [H] using abPath_to_fromEdgeSet G A B p.1 E (h_edges p.1 p.2)
+    simpa [H] using abPath_to_fromEdgeSet p.1 E (h_edges p.1 p.2)
   have h_disj : disjointPaths (Set.range f) := by
     rintro p ⟨p', rfl⟩ q ⟨q', rfl⟩ hpq
     have hpq' : p' ≠ q' := fun h => hpq (by simp [h])
@@ -1803,17 +1801,20 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
       (fun A' B' hAB' => ih _ (by rw [hmd] at h_delete_lt; exact WithTop.coe_lt_coe.mp h_delete_lt)
         hAB' hmd)
 
-theorem Menger_strong (hAB : (A ∩ B).Finite) (hG : G.edgeSet.Finite) : G.mincut A B = G.maxflow A B :=
-  le_antisymm (Menger_strong_aux hAB hG.encard_eq_coe) maxflow_le_mincut
-
-theorem Menger_finite [Fintype V] : G.mincut A B = G.maxflow A B :=
-  Menger_strong (Set.toFinite _) (Set.toFinite _)
-
 theorem Menger_infinite (hAB : (A ∩ B).Infinite) : G.mincut A B = G.maxflow A B := by
   have h_top : (A ∩ B).encard = ⊤ := Set.encard_eq_top hAB
   have hmin : G.mincut A B = ⊤ := top_le_iff.mp (h_top ▸ le_mincut)
   have hmax : G.maxflow A B = ⊤ := top_le_iff.mp (h_top ▸ le_maxflow)
   rw [hmin, hmax]
+
+theorem Menger_strong (hG : G.edgeSet.Finite) :
+    G.mincut A B = G.maxflow A B := by
+  by_cases hAB : (A ∩ B).Finite
+  · exact le_antisymm (Menger_strong_aux hAB hG.encard_eq_coe) maxflow_le_mincut
+  · exact Menger_infinite hAB
+
+theorem Menger_finite [Fintype V] : G.mincut A B = G.maxflow A B :=
+  Menger_strong (Set.toFinite _)
 
 /-
 Menger's theorem: there exist a separator set `S` between `A` and `B` and a set
@@ -1854,24 +1855,23 @@ theorem Menger_equiv [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B
     exact WithTop.coe_injective h_eq
   exact ⟨.ofBijective f ((Fintype.bijective_iff_injective_and_card f).mpr ⟨hf_inj, h_card_eq⟩), hf⟩
 
-theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤) :
-    G.mincut A B = G.maxflow A B := by
+theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxflow A B := by
   refine le_antisymm ?_ maxflow_le_mincut
-  obtain ⟨k, hk'⟩ : ∃ k : ℕ, (k : ℕ∞) = G.mincut A B :=
-    WithTop.ne_top_iff_exists.mp hk
+  obtain ⟨k, hk'⟩ : ∃ k : ℕ, (k : ℕ∞) = G.mincut A B := WithTop.ne_top_iff_exists.mp hk
   have hmax_lt_top : G.maxflow A B < ⊤ := by
     exact lt_of_le_of_lt maxflow_le_mincut (hk' ▸ (by simp : (k : ℕ∞) < ⊤))
   rw [← hk']
-  obtain ⟨P, hP⟩ := ENat.exists_eq_iSup_of_lt_top hmax_lt_top
+  obtain ⟨P, (hP : P.1.encard = G.maxflow A B)⟩ := ENat.exists_eq_iSup_of_lt_top hmax_lt_top
   by_contra! hk_gt
   have hP_lt : P.1.encard < (k : ℕ∞) := by simpa [hP] using hk_gt
   have hP_fin : P.1.Finite := Set.encard_ne_top_iff.mp (ne_of_lt (lt_of_lt_of_le hP_lt le_top))
   haveI : Fintype P.1 := hP_fin.fintype
-  let C := (p : P.1) → {x : V // x ∈ p.1.support}
+  -- `C` is the type of choice functions picking one vertex from each path in `P`
+  let C := ∀ p : P.1, {x : V // x ∈ p.1.support}
   haveI : ∀ p : P.1, Fintype {x : V // x ∈ (p.1 : G.ABPath A B).support} := fun p =>
     (Set.Finite.ofFinset (p.1.p.1.support.toFinset) (by simp [ABPath.support])).fintype
   haveI : Fintype C := inferInstance
-  let Schoice (σ : C) : Set V := Set.range fun p : P.1 => (σ p).1
+  let Schoice (σ : C) : Set V := Set.range (fun p : P.1 => σ p)
   have hSchoice_card : ∀ σ : C, (Schoice σ).encard = P.1.encard := by
     intro σ
     have h_inj : Function.Injective (fun p : P.1 => (σ p).1) := by
@@ -1898,29 +1898,21 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
   let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
   let EQ : Set (Sym2 V) := ⋃ σ : C, (q σ).p.1.edgeSet
   let E : Set (Sym2 V) := EP ∪ EQ
-  let H : SimpleGraph V := SimpleGraph.fromEdgeSet E
-  have hEP_fin : EP.Finite := by
-    unfold EP
-    exact Set.Finite.biUnion hP_fin (fun p _ => (p : G.ABPath A B).edgeSet_finite)
-  have hEQ_fin : EQ.Finite := by
-    unfold EQ
-    exact Set.finite_iUnion fun σ => (q σ).edgeSet_finite
-  have hE_fin : E.Finite := hEP_fin.union hEQ_fin
+  let H : SimpleGraph V := fromEdgeSet E
+  have hE_fin : E.Finite := by
+    have hEP_fin : EP.Finite := hP_fin.biUnion (fun p _ => (p : G.ABPath A B).edgeSet_finite)
+    have hEQ_fin : EQ.Finite := Set.finite_iUnion fun σ => (q σ).edgeSet_finite
+    exact hEP_fin.union hEQ_fin
   have hE_sub : E ⊆ G.edgeSet := by
-    intro e he
-    rcases he with he | he
-    · rcases Set.mem_iUnion.mp he with ⟨p, hp⟩
-      rcases Set.mem_iUnion.mp hp with ⟨hpP, hep⟩
-      exact (p : G.ABPath A B).edgeSet_subset_graphEdgeSet hep
-    · rcases Set.mem_iUnion.mp he with ⟨σ, hσ⟩
-      exact (q σ).edgeSet_subset_graphEdgeSet hσ
+    apply union_subset
+    · apply iUnion₂_subset ; grind [ABPath.edgeSet_subset_graphEdgeSet]
+    · apply iUnion_subset ; grind [ABPath.edgeSet_subset_graphEdgeSet]
   have hPE : ∀ p ∈ P.1, p.p.1.edgeSet ⊆ E := by
     intro p hp e he
     exact Or.inl (Set.mem_iUnion.mpr ⟨p, Set.mem_iUnion.mpr ⟨hp, he⟩⟩)
-  obtain ⟨PH, hPH_card⟩ := restrict_joiner_to_fromEdgeSet G A B P E hPE
+  obtain ⟨PH, hPH_card⟩ := restrict_joiner_to_fromEdgeSet P E hPE
   have hH_le : H ≤ G := by
-    change (SimpleGraph.fromEdgeSet E) ≤ G
-    exact (SimpleGraph.fromEdgeSet_le (G := G) (s := E)).2 (fun _ he => hE_sub (Set.diff_subset he))
+    exact (fromEdgeSet_le (G := G) (s := E)).2 (fun _ he => hE_sub (Set.diff_subset he))
   have hHmax_ge : P.1.encard ≤ H.maxflow A B := by
     calc P.1.encard = PH.1.encard := hPH_card.symm
       _ ≤ H.maxflow A B := le_iSup_of_le PH le_rfl
@@ -1934,22 +1926,15 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
   have hHmax_eq : H.maxflow A B = P.1.encard :=
     le_antisymm hHmax_le hHmax_ge
   have hHedge_fin : H.edgeSet.Finite := by
-    change (SimpleGraph.fromEdgeSet E).edgeSet.Finite
+    change (fromEdgeSet E).edgeSet.Finite
     rw [SimpleGraph.edgeSet_fromEdgeSet]
     exact hE_fin.subset Set.diff_subset
-  have hHmenger : H.mincut A B = H.maxflow A B := Menger_strong (G := H) hAB hHedge_fin
+  have hHmenger : H.mincut A B = H.maxflow A B := Menger_strong hHedge_fin
   obtain ⟨SH, hSH⟩ := ENat.exists_eq_iInf
     (fun S : H.Separator A B => S.1.encard)
-  have hSH_card : SH.1.encard = P.1.encard := by
-    calc SH.1.encard = H.mincut A B := by simpa [SimpleGraph.mincut] using hSH
-      _ = H.maxflow A B := hHmenger
-      _ = P.1.encard := hHmax_eq
-  let f : P.1 → H.ABPath A B := fun p =>
-    by
-      simpa [H] using (abPath_to_fromEdgeSet G A B p.1 E (hPE p.1 p.2))
-  have h_hit_SH :
-      ∀ p : P.1, ∃ x : {x : V // x ∈ (p.1 : G.ABPath A B).support}, x.1 ∈ SH.1 := by
-    intro p
+  have hSH_card : SH.1.encard = P.1.encard := by rw [hSH, ← hHmax_eq, ← hHmenger, mincut]
+  let f (p : P.1) : H.ABPath A B := abPath_to_fromEdgeSet p.1 E (hPE p.1 p.2)
+  have h_hit_SH (p : P.1) : ∃ x : {x : V // x ∈ (p.1 : G.ABPath A B).support}, x.1 ∈ SH.1 := by
     obtain ⟨x, hx, hxSH⟩ := SH.2 (f p).u (f p).u.2 (f p).v (f p).v.2 (f p).p.1
     refine ⟨⟨x, ?_⟩, hxSH⟩
     simpa [f] using (show x ∈ (f p).support from hx)
@@ -1967,7 +1952,7 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
   have hqE : (q σ).p.1.edgeSet ⊆ E := by
     intro e he
     exact Or.inr (Set.mem_iUnion.mpr ⟨σ, he⟩)
-  let qH : H.ABPath A B := by simpa [H] using (abPath_to_fromEdgeSet G A B (q σ) E hqE)
+  let qH : H.ABPath A B := by simpa [H] using (abPath_to_fromEdgeSet (q σ) E hqE)
   obtain ⟨x, hxqH, hxSH⟩ := SH.2 qH.u qH.u.2 qH.v qH.v.2 qH.p.1
   have hxq : x ∈ (q σ).support := by
     simpa [qH] using (show x ∈ qH.support from hxqH)
@@ -1980,10 +1965,9 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
       $A$ from $B$ in a graph $G$ is equal to the maximum number of disjoint
       $A--B$ paths in $G$. -/)]
 theorem Menger : G.mincut A B = G.maxflow A B := by
-  wlog h1 : (A ∩ B).Finite ; exact Menger_infinite $ Set.not_finite.mp h1
-  by_cases h2 : G.mincut A B = ⊤
-  · exact Menger_of_mincut_top h2
-  · exact Menger_finite_mincut h1 h2
+  by_cases h : G.mincut A B = ⊤
+  · exact Menger_of_mincut_top h
+  · exact Menger_finite_mincut h
 
 #print axioms Menger
 
