@@ -1779,10 +1779,6 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
 theorem Menger_strong (hAB : (A ∩ B).Finite) (hG : G.edgeSet.Finite) : G.mincut A B = G.maxflow A B :=
   le_antisymm (Menger_strong_aux hAB hG.encard_eq_coe) maxflow_le_mincut
 
-@[blueprint "thm:menger"
-  (statement := /-- Menger's theorem: The minimum number of vertices separating
-      $A$ from $B$ in a finite graph $G$ is equal to the maximum number of disjoint
-      $A--B$ paths in $G$. -/)]
 theorem Menger_finite [Fintype V] : G.mincut A B = G.maxflow A B :=
   Menger_strong (Set.toFinite _) (Set.toFinite _)
 
@@ -1993,13 +1989,15 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
     exact this.elim
   exact le_antisymm (hk' ▸ hk_le_maxflow) maxflow_le_mincut
 
+@[blueprint "thm:menger"
+  (statement := /-- Menger's theorem: The minimum number of vertices separating
+      $A$ from $B$ in a graph $G$ is equal to the maximum number of disjoint
+      $A--B$ paths in $G$. -/)]
 theorem Menger : G.mincut A B = G.maxflow A B := by
-  by_cases hABinf : (A ∩ B).Infinite
-  · exact Menger_infinite hABinf
-  · have hAB : (A ∩ B).Finite := Set.not_infinite.mp hABinf
-    by_cases hk : G.mincut A B = ⊤
-    · exact Menger_of_mincut_top hk
-    · exact Menger_finite_mincut hAB hk
+  wlog h1 : (A ∩ B).Finite ; exact Menger_infinite $ Set.not_finite.mp h1
+  by_cases h2 : G.mincut A B = ⊤
+  · exact Menger_of_mincut_top h2
+  · exact Menger_finite_mincut h1 h2
 
 #print axioms Menger
 
