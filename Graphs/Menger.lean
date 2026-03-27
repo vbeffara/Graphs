@@ -1808,4 +1808,31 @@ theorem Menger_so_far
   · exact Menger_infinite hAB
   · exact Menger_of_mincut_top h
 
+theorem Menger_finite_mincut
+    (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤) :
+    G.mincut A B = G.maxflow A B := by
+  by_cases hG : G.edgeSet.Finite
+  · exact Menger_strong hAB hG
+  · -- Erdős finite-order case: finite `(A ∩ B)`, finite `mincut`, infinite edge set.
+    obtain ⟨k, hk'⟩ : ∃ k : ℕ, (k : ℕ∞) = G.mincut A B :=
+      WithTop.ne_top_iff_exists.mp hk
+    have hmax_lt_top : G.maxflow A B < ⊤ := by
+      exact lt_of_le_of_lt maxflow_le_mincut (hk' ▸ (by simp : (k : ℕ∞) < ⊤))
+    obtain ⟨X, hX⟩ := ENat.exists_eq_iInf (fun S : G.Separator A B => S.1.encard)
+    have hX_card : X.1.encard = (k : ℕ∞) := by
+      simpa [mincut, hk'] using hX
+    have hX_fin : X.1.Finite := Set.encard_ne_top_iff.mp (hX_card ▸ WithTop.coe_ne_top)
+    have hk_le_maxflow : (k : ℕ∞) ≤ G.maxflow A B := by
+      by_contra hk_gt
+      have hk_gt' : G.maxflow A B < (k : ℕ∞) := lt_of_not_ge hk_gt
+      obtain ⟨P, hP⟩ := ENat.exists_eq_iSup_of_lt_top hmax_lt_top
+      have hP_lt : P.1.encard < (k : ℕ∞) := by simpa [hP] using hk_gt'
+      -- Remaining Erdős finite-order argument:
+      -- from a minimum separator `X` of size `k` and a maximum joiner `P` of size `< k`,
+      -- derive a contradiction (augmenting-family/compactness argument).
+      have : False := by
+        sorry
+      exact this.elim
+    exact le_antisymm (hk' ▸ hk_le_maxflow) maxflow_le_mincut
+
 end SimpleGraph
