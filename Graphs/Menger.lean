@@ -1632,6 +1632,22 @@ def abPath_to_fromEdgeSet (G : SimpleGraph V) (A B : Set V)
     (abPath_to_fromEdgeSet G A B p E hE).support = p.support := by
   simp [abPath_to_fromEdgeSet, ABPath.support, Walk.support_transfer]
 
+lemma ABPath.edgeSet_finite (p : G.ABPath A B) : p.p.1.edgeSet.Finite := by
+  exact Set.Finite.ofFinset (p.p.1.edges.toFinset) (by simp [SimpleGraph.Walk.edgeSet])
+
+lemma ABPath.edgeSet_subset_graphEdgeSet (p : G.ABPath A B) : p.p.1.edgeSet ⊆ G.edgeSet := by
+  intro e he
+  have he_edges : e ∈ p.p.1.edges := by simpa [SimpleGraph.Walk.edgeSet] using he
+  exact p.p.1.edges_subset_edgeSet he_edges
+
+lemma exists_abPath_avoiding_of_not_separates (S : Set V) (hS : ¬ G.Separates A B S) :
+    ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ S := by
+  simp [SimpleGraph.Separates] at hS
+  rcases hS with ⟨u, hu, v, hv, w, hw⟩
+  refine ⟨⟨⟨u, hu⟩, ⟨v, hv⟩, w.toPath⟩, ?_⟩
+  intro x hx hxS
+  exact hw x (Walk.support_toPath_subset w hx) hxS
+
 lemma restrict_joiner_to_fromEdgeSet (G : SimpleGraph V) (A B : Set V)
     (P : G.Joiner A B) (E : Set (Sym2 V))
     (h_edges : ∀ p ∈ P.1, p.p.1.edgeSet ⊆ E) :
@@ -1850,10 +1866,6 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
     WithTop.ne_top_iff_exists.mp hk
   have hmax_lt_top : G.maxflow A B < ⊤ := by
     exact lt_of_le_of_lt maxflow_le_mincut (hk' ▸ (by simp : (k : ℕ∞) < ⊤))
-  obtain ⟨X, hX⟩ := ENat.exists_eq_iInf (fun S : G.Separator A B => S.1.encard)
-  have hX_card : X.1.encard = (k : ℕ∞) := by
-    simpa [mincut, hk'] using hX
-  have hX_fin : X.1.Finite := Set.encard_ne_top_iff.mp (hX_card ▸ WithTop.coe_ne_top)
   rw [← hk']
   obtain ⟨P, hP⟩ := ENat.exists_eq_iSup_of_lt_top hmax_lt_top
   by_contra! hk_gt
@@ -1888,12 +1900,8 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
     exact (not_lt_of_ge hk_le) hlt
   have h_witness : ∀ σ : C, ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ Schoice σ := by
     intro σ
-    have hns := h_no_global σ
-    simp [SimpleGraph.Separates] at hns
-    rcases hns with ⟨u, hu, v, hv, w, hw⟩
-    refine ⟨⟨⟨u, hu⟩, ⟨v, hv⟩, w.toPath⟩, ?_⟩
-    intro x hx hxS
-    exact hw x (Walk.support_toPath_subset w hx) hxS
+    exact exists_abPath_avoiding_of_not_separates (G := G) (A := A) (B := B) (Schoice σ)
+      (h_no_global σ)
   choose q hq using h_witness
   let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
   let EQ : Set (Sym2 V) := ⋃ σ : C, (q σ).p.1.edgeSet
@@ -1901,26 +1909,19 @@ theorem Menger_finite_mincut (hAB : (A ∩ B).Finite) (hk : G.mincut A B ≠ ⊤
   let H : SimpleGraph V := SimpleGraph.fromEdgeSet E
   have hEP_fin : EP.Finite := by
     unfold EP
-    exact Set.Finite.biUnion hP_fin (fun p _ =>
-      Set.Finite.ofFinset ((p : G.ABPath A B).p.1.edges.toFinset) (by
-        simp [SimpleGraph.Walk.edgeSet]))
+    exact Set.Finite.biUnion hP_fin (fun p _ => (p : G.ABPath A B).edgeSet_finite)
   have hEQ_fin : EQ.Finite := by
     unfold EQ
-    exact Set.finite_iUnion fun σ =>
-      Set.Finite.ofFinset ((q σ).p.1.edges.toFinset) (by simp [SimpleGraph.Walk.edgeSet])
+    exact Set.finite_iUnion fun σ => (q σ).edgeSet_finite
   have hE_fin : E.Finite := hEP_fin.union hEQ_fin
   have hE_sub : E ⊆ G.edgeSet := by
     intro e he
     rcases he with he | he
     · rcases Set.mem_iUnion.mp he with ⟨p, hp⟩
       rcases Set.mem_iUnion.mp hp with ⟨hpP, hep⟩
-      have he_edges : e ∈ (p : G.ABPath A B).p.1.edges := by
-        simpa [SimpleGraph.Walk.edgeSet] using (show e ∈ (p : G.ABPath A B).p.1.edgeSet from hep)
-      exact (p.p.1.edges_subset_edgeSet he_edges)
+      exact (p : G.ABPath A B).edgeSet_subset_graphEdgeSet hep
     · rcases Set.mem_iUnion.mp he with ⟨σ, hσ⟩
-      have he_edges : e ∈ (q σ).p.1.edges := by
-        simpa [SimpleGraph.Walk.edgeSet] using (show e ∈ (q σ).p.1.edgeSet from hσ)
-      exact ((q σ).p.1.edges_subset_edgeSet he_edges)
+      exact (q σ).edgeSet_subset_graphEdgeSet hσ
   have hPE : ∀ p ∈ P.1, p.p.1.edgeSet ⊆ E := by
     intro p hp e he
     exact Or.inl (Set.mem_iUnion.mpr ⟨p, Set.mem_iUnion.mpr ⟨hp, he⟩⟩)
