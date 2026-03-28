@@ -1887,8 +1887,12 @@ theorem erdos_graph_finite : (erdos_graph P h).edgeSet.Finite := by
   · exact Set.Finite.biUnion this.finite (by simp [ABPath.edgeSet_finite])
   · exact Set.finite_iUnion (by simp [ABPath.edgeSet_finite])
 
+theorem erdos_graph_le : (erdos_graph P h) ≤ G := by
+  refine (fromEdgeSet_le _).2 (diff_subset.trans $ union_subset ?_ ?_)
+  · apply iUnion₂_subset ; grind [ABPath.edgeSet_subset_graphEdgeSet]
+  · apply iUnion_subset ; grind [ABPath.edgeSet_subset_graphEdgeSet]
+
 private lemma erdos_graph1 (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) :
-    (erdos_graph P h) ≤ G ∧
     (∃ PH : (erdos_graph P h).Joiner A B, PH.1.encard = P.1.encard) ∧
     (∀ SH : (erdos_graph P h).Separator A B, SH.1.encard ≠ P.1.encard) := by
   let C := ∀ p : P.1, {x : V // x ∈ p.1.support}
@@ -1914,10 +1918,6 @@ private lemma erdos_graph1 (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) :
   let E : Set (Sym2 V) := EP ∪ EQ
   have hPE p (hp : p ∈ P.1) : p.p.1.edgeSet ⊆ E := by
     apply (subset_iUnion₂ p hp).trans subset_union_left
-  have hH_le : erdos_graph P h ≤ G := by
-    refine (fromEdgeSet_le _).2 (diff_subset.trans $ union_subset ?_ ?_)
-    · apply iUnion₂_subset ; grind [ABPath.edgeSet_subset_graphEdgeSet]
-    · apply iUnion_subset ; grind [ABPath.edgeSet_subset_graphEdgeSet]
   have hJoiner : ∃ PH : (erdos_graph P h).Joiner A B, PH.1.encard = P.1.encard := by
     simpa using (restrict_joiner_to_fromEdgeSet P E hPE)
   have hNoEq : ∀ SH : (erdos_graph P h).Separator A B, SH.1.encard ≠ P.1.encard := by
@@ -1948,7 +1948,7 @@ private lemma erdos_graph1 (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) :
     have hx_not_Schoice : x ∉ Schoice σ := hq σ x hxq
     have hx_not_SH : x ∉ SH'.1 := by simpa [hSchoice_eq] using hx_not_Schoice
     exact hx_not_SH hxSH
-  exact ⟨hH_le, hJoiner, hNoEq⟩
+  exact ⟨hJoiner, hNoEq⟩
 
 theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxflow A B := by
   refine le_antisymm ?_ maxflow_le_mincut
@@ -1960,8 +1960,8 @@ theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxf
   by_contra! hk_gt
   have P_lt_mincut : P.1.encard < G.mincut A B := by simpa [hP, hk'] using hk_gt
   let H : SimpleGraph V := erdos_graph P P_lt_mincut
-  obtain ⟨hH_le0, hJoiner0, hNoEq0⟩ := erdos_graph1 (P := P) (h := P_lt_mincut)
-  have hH_le : H ≤ G := hH_le0
+  obtain ⟨hJoiner0, hNoEq0⟩ := erdos_graph1 (P := P) (h := P_lt_mincut)
+  have hH_le : H ≤ G := erdos_graph_le
   obtain ⟨PH, hPH_card⟩ := hJoiner0
   have hNoEq : ∀ SH : H.Separator A B, SH.1.encard ≠ P.1.encard := hNoEq0
   have hHmenger : H.mincut A B = H.maxflow A B := Menger_strong erdos_graph_finite
