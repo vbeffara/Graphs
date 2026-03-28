@@ -1855,6 +1855,30 @@ theorem Menger_equiv [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B
     exact WithTop.coe_injective h_eq
   exact ⟨.ofBijective f ((Fintype.bijective_iff_injective_and_card f).mpr ⟨hf_inj, h_card_eq⟩), hf⟩
 
+/-- Create an Erdös-style finite graph from a joiner that is too small. -/
+noncomputable def erdos_graph (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) : SimpleGraph V := by
+  let C := ∀ p : P.1, {x : V // x ∈ p.1.support}
+  let Schoice (σ : C) : Set V := Set.range (fun p : P.1 => σ p)
+  have hSchoice_card (σ : C) : (Schoice σ).encard = P.1.encard := by
+    simp [Schoice]
+    have h_inj : Function.Injective (fun p : P.1 => (σ p).1) := by
+      intro p q (hpq : (σ p).1 = (σ q).1)
+      by_contra hpq'
+      have hdisj : Disjoint p.1.support q.1.support := by
+        exact P.2 p.2 q.2 (fun h => hpq' (Subtype.ext h))
+      have hqmem : (σ p).1 ∈ q.1.support := by simp [hpq]
+      exact Set.disjoint_left.mp hdisj (σ p).2 hqmem
+    simpa [Schoice, Set.image_univ] using (h_inj.injOn.encard_image (s := Set.univ))
+  have h_witness (σ : C) : ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ Schoice σ := by
+    apply exists_abPath_avoiding_of_not_separates (Schoice σ)
+    contrapose! h
+    simpa [← hSchoice_card σ] using (iInf_le_of_le ⟨_, h⟩ (le_rfl : (Schoice σ).encard ≤ _))
+  choose q hq using h_witness
+  let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
+  let EQ : Set (Sym2 V) := ⋃ σ : C, (q σ).p.1.edgeSet
+  let E : Set (Sym2 V) := EP ∪ EQ
+  exact fromEdgeSet E
+
 theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxflow A B := by
   refine le_antisymm ?_ maxflow_le_mincut
   obtain ⟨k, hk'⟩ : ∃ k : ℕ, (k : ℕ∞) = G.mincut A B := WithTop.ne_top_iff_exists.mp hk
@@ -1886,7 +1910,8 @@ theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxf
     apply exists_abPath_avoiding_of_not_separates (Schoice σ)
     contrapose! hP_lt
     simpa [← hSchoice_card σ, hk'] using (iInf_le_of_le ⟨_, hP_lt⟩ (le_rfl : (Schoice σ).encard ≤ _))
-  choose q hq using h_witness
+  let q σ := (h_witness σ).choose
+  let hq σ : ∀ _ ∈ (q _).support, _ := (h_witness σ).choose_spec
 
   -- Collect the edges from the elements of `P` and all the `q σ`
   let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
@@ -1900,7 +1925,9 @@ theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxf
     apply (subset_iUnion₂ p hp).trans subset_union_left
 
   -- Build a graph with finitely many edges from `E`
+  have P_lt_mincut : P.1.encard < G.mincut A B := by grind
   let H : SimpleGraph V := fromEdgeSet E
+  have : H = erdos_graph P P_lt_mincut := rfl
   have hH_le : H ≤ G := by
     refine (fromEdgeSet_le _).2 (diff_subset.trans $ union_subset ?_ ?_)
     · apply iUnion₂_subset ; grind [ABPath.edgeSet_subset_graphEdgeSet]
