@@ -257,21 +257,11 @@ lemma contract_preimage_separates (Y : (G / e).Separator (A / e) (B / e)) :
 @[simp] lemma contract_same {e : G.Adj x y} : (⟦y⟧ : V / e) = ⟦x⟧ := by
   simp [Quotient.eq, contractSetoid]
 
-/-
-A vertex projects to the contracted vertex if and only if it is one of the endpoints of the contracted edge.
--/
-lemma contractEdgeProj_eq_vertex_iff (G : SimpleGraph V) {x y u : V} (e : G.Adj x y) :
-    (⟦u⟧ : V / e) = ⟦x⟧ ↔ u = x ∨ u = y := by
-  simp [contractSetoid, Quotient.eq]
-  grind
+lemma contractEdgeProj_eq_vertex_iff : (⟦u⟧ : V / e) = ⟦x⟧ ↔ u = x ∨ u = y := by
+  simp [contractSetoid, Quotient.eq] ; grind
 
-/-
-If the projections of two vertices are adjacent in the contracted graph and neither projects to the contracted vertex, then the original vertices are adjacent in the original graph.
--/
-lemma contractEdge_adj_lift (G : SimpleGraph V) {x y : V} (e : G.Adj x y) (u v : V)
-  (hu : (⟦u⟧ : V / e) ≠ ⟦x⟧)
-  (hv : (⟦v⟧ : V / e) ≠ ⟦x⟧) :
-  (contract (G := G) (x := x) (y := y) e).Adj ⟦u⟧ ⟦v⟧ → G.Adj u v := by
+lemma contractEdge_adj_lift (u v : V) (hu : (⟦u⟧ : V / e) ≠ ⟦x⟧) (hv : (⟦v⟧ : V / e) ≠ ⟦x⟧) :
+  (G / e).Adj ⟦u⟧ ⟦v⟧ → G.Adj u v := by
     rintro ⟨ a, b, ha, hb, hab ⟩
     · simp_all [ Quotient.eq ]
       unfold contractSetoid at *; aesop
@@ -281,6 +271,8 @@ lemma contractEdge_adj_lift (G : SimpleGraph V) {x y : V} (e : G.Adj x y) (u v :
         unfold contractSetoid at *; aesop
       simp_all [ adj_comm ]
       unfold contract at *; aesop
+
+/---------------- REVIEW ----------------/
 
 /-
 The size of the preimage of a set of vertices in the contracted graph.
@@ -325,7 +317,7 @@ lemma encard_preimage_contractEdge {x y : V} (e : G.Adj x y) (Y : Set (Quotient 
           · right; right; exact hy
           · left; refine ⟨hv_mem, ?_⟩
             intro heq
-            have := contractEdgeProj_eq_vertex_iff (G := G) (x := x) (y := y) e (u := v) |>.mp heq
+            have := contractEdgeProj_eq_vertex_iff (u := v) |>.mp heq
             rcases this with rfl | rfl <;> contradiction
       · rintro (⟨hv_mem, _⟩ | hv_x | hv_y)
         · exact hv_mem
@@ -396,10 +388,9 @@ lemma lift_walk_avoiding_contraction {x y : V} (e : G.Adj x y)
     refine' ⟨ u', v'', Walk.cons _ q, hu'.1, hv''', _, _, _ ⟩ <;> simp_all [ Walk.support_cons ];
     · have h_adj : (contract (G := G) (x := x) (y := y) e).Adj ⟦u'⟧ ⟦v'⟧ := by
         grind
-      apply contractEdge_adj_lift G e u' v'
+      refine contractEdge_adj_lift u' v' ?_ ?_ h_adj
       · grind
       · intro h; simp_all
-      · exact h_adj
     · tauto
     · grind
 
@@ -1067,7 +1058,7 @@ lemma contract_preimage_disjoint_away_from_endpoints {x y : V} (e : G.Adj x y)
     rcases hb with ⟨hb_pre, _⟩
     have hproj_ne : (⟦a⟧ : V/e) ≠ ⟦x⟧ := by
       intro hproj
-      have hxy : a = x ∨ a = y := (contractEdgeProj_eq_vertex_iff (G := G) (x := x) (y := y) (u := a) e).1 hproj
+      have hxy : a = x ∨ a = y := (contractEdgeProj_eq_vertex_iff (G := G) (x := x) (y := y) (u := a)).1 hproj
       exact ha_not (by simpa [Set.mem_insert_iff, Set.mem_singleton_iff] using hxy)
     have ha_s : ⟦a⟧ ∈ s :=
       (mem_contract_preimage (G := G) (x := x) (y := y) (Y := s) (v := a)).1 ha_pre
@@ -1241,8 +1232,9 @@ lemma adjust_path_start_to_A (G : SimpleGraph V) (A : Set V) {x y : V} (e : G.Ad
           · grind
         · simp_all [ contract_image ]
           obtain ⟨ u', hu', hu'' ⟩ := h_liftA
-          have := contractEdgeProj_eq_vertex_iff (G := G) (x := x) (y := y) (u := u') e
-          cases this.mp hu'' <;> simp_all [ Finset.ext_iff ]
+          rw [contractEdgeProj_eq_vertex_iff] at hu''
+          cases hu'' <;> simp_all [ Finset.ext_iff ]
+
 lemma adjust_path_end_to_B (G : SimpleGraph V) (B : Set V) {x y : V} (e : G.Adj x y)
   (u v : V) (p : G.Walk u v) (hp_path : p.IsPath)
   (hv : v = x ∨ v = y)
