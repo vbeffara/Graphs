@@ -1,7 +1,8 @@
 import Mathlib.Combinatorics.SimpleGraph.Subgraph
+import Mathlib.Combinatorics.SimpleGraph.Walks.Operations
 import Mathlib.Order.ConditionallyCompleteLattice.Basic
 
-open Function
+open Function Classical
 
 variable {V V' V'' : Type*} {x y z : V} {x' y' z' : V'} {f : V → V'} {g : V' → V''}
 variable {G G₁ G₂ : SimpleGraph V} {G' G'₁ G'₂ : SimpleGraph V'} {G'' : SimpleGraph V''}
@@ -57,5 +58,14 @@ theorem comap'_monotone : Monotone (comap' f) := by
   rintro G'₁ G'₂ h x y ⟨h1, h2 | h2⟩ <;> refine ⟨h1, ?_⟩
   · exact Or.inl h2
   · exact Or.inr (h h2)
+
+noncomputable def Walk.map' (f : V → V') : ∀ ⦃u v⦄ (p : G.Walk u v),
+    {q : (G.map f).Walk (f u) (f v) // q.support.toFinset ⊆ p.support.toFinset.image f}
+  | _, _, .nil => ⟨Walk.nil, by simp⟩
+  | u, _, .cons h p => by
+    rename_i v'
+    by_cases h : f v' = f u
+    · use .copy (p.map' f) h rfl, by simpa using (p.map' f).2.trans $ Finset.subset_insert _ _
+    · use .cons (by simp [SimpleGraph.map, Relation.Map] ; grind) (p.map' f).1, by simp [(p.map' f).2]
 
 end SimpleGraph
