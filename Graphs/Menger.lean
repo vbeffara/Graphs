@@ -235,12 +235,12 @@ lemma Walk.contract (p : G.Walk u v) (e : G.Adj x y) :
       refine' ⟨ Walk.cons h_adj w, _ ⟩
       simp_all [ Finset.subset_iff ]
 
-noncomputable def contract_preimage (e : G.Adj x y) (Y : Set (V / e)) : Set V := {v | ⟦v⟧ ∈ Y}
+noncomputable def contract_preimage (Y : Set (V / e)) : Set V := {v | ⟦v⟧ ∈ Y}
 
-lemma mem_contract_preimage {Y : Set (V / e)} : v ∈ contract_preimage e Y ↔ ⟦v⟧ ∈ Y := by rfl
+lemma mem_contract_preimage {Y : Set (V / e)} : v ∈ contract_preimage Y ↔ ⟦v⟧ ∈ Y := by rfl
 
 lemma contract_preimage_separates (Y : (G / e).Separator (A / e) (B / e)) :
-    G.Separates A B (contract_preimage e Y.1) := by
+    G.Separates A B (contract_preimage Y.1) := by
   intro u hu v hv p
   obtain ⟨ w, hw ⟩ := Walk.contract p e
   obtain ⟨ z, hzY, hzw ⟩ : ∃ z ∈ Y.1, z ∈ w.support := by
@@ -273,14 +273,14 @@ lemma contractEdge_adj_lift (u v : V) (hu : (⟦u⟧ : V / e) ≠ ⟦x⟧) (hv :
       unfold contract at *; aesop
 
 private lemma quot_injOn_away (Y : Set (V / e)) (hv : ⟦x⟧ ∉ Y) :
-    Set.InjOn (fun v => (⟦v⟧ : V / e)) (contract_preimage e Y) := by
+    Set.InjOn (fun v => (⟦v⟧ : V / e)) (contract_preimage Y) := by
   intro a ha b hb hab
   simp only [contract_preimage, Set.mem_setOf_eq] at ha hb
   simp only [Quotient.eq, contractSetoid] at hab
   grind
 
 @[simp] private lemma quot_image_preimage (Y : Set (V / e)) :
-    (fun v : V => (⟦v⟧ : V / e)) '' (contract_preimage e Y) = Y := by
+    (fun v : V => (⟦v⟧ : V / e)) '' (contract_preimage Y) = Y := by
   ext z
   simp only [Set.mem_image, contract_preimage, Set.mem_setOf_eq]
   constructor
@@ -290,11 +290,11 @@ private lemma quot_injOn_away (Y : Set (V / e)) (hv : ⟦x⟧ ∉ Y) :
 /- --------------- REVIEW --------------- -/
 
 lemma encard_preimage_contractEdge (Y : Set (V / e)) :
-    (contract_preimage e Y).encard = if ⟦x⟧ ∈ Y then Y.encard + 1 else Y.encard := by
+    (contract_preimage Y).encard = if ⟦x⟧ ∈ Y then Y.encard + 1 else Y.encard := by
   split_ifs with hv
   · set Y' := Y \ {⟦x⟧} with hY'_def
     have hv' : ⟦x⟧ ∉ Y' := by simp [Y']
-    have h_pre_eq : contract_preimage e Y = contract_preimage e Y' ∪ {x, y} := by
+    have h_pre_eq : contract_preimage Y = contract_preimage Y' ∪ {x, y} := by
       ext v
       simp only [contract_preimage, Set.mem_setOf_eq, Set.mem_union,
         Set.mem_singleton_iff, Set.mem_insert_iff]
@@ -312,7 +312,7 @@ lemma encard_preimage_contractEdge (Y : Set (V / e)) :
         · exact hv_mem
         · rw [hv_x]; exact hv
         · simpa [hv_y]
-    have h_disj : Disjoint (contract_preimage (G := G) (x := x) (y := y) e Y') ({x, y} : Set V) := by
+    have h_disj : Disjoint (contract_preimage Y') ({x, y} : Set V) := by
       rw [Set.disjoint_left]
       intro v hv_mem hv_xy
       simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hv_xy
@@ -553,9 +553,8 @@ theorem contractEdge_separator_contains_vertex (G : SimpleGraph V) (A B : Set V)
   (hY_card : Y.1.encard < k) :
   ⟦x⟧ ∈ Y.1 := by
     contrapose! hY_card
-    have h_sep : G.Separates A B (contract_preimage (G := G) (x := x) (y := y) e Y.1) := by
-      simpa using contract_preimage_separates (G := G) (x := x) (y := y) Y
-    have h_encard : (contract_preimage (G := G) (x := x) (y := y) e Y.1).encard ≤ Y.1.encard := by
+    have h_sep : G.Separates A B (contract_preimage Y.1) := contract_preimage_separates Y
+    have h_encard : (contract_preimage (G := G) (x := x) (y := y) Y.1).encard ≤ Y.1.encard := by
       apply Set.encard_le_encard_of_injOn (f := (⟦·⟧))
       · intro v hv; exact (mem_contract_preimage (G := G) (x := x) (y := y)).1 hv
       · intro v hv w _ hvw
@@ -567,7 +566,7 @@ theorem contractEdge_separator_contains_vertex (G : SimpleGraph V) (A B : Set V)
         · exact hY_card ((mem_contract_preimage (G := G)).1 hv)
         · exact hY_card ((mem_contract_preimage (G := G)).1 (by assumption))
     calc k = G.mincut A B := h_min.symm
-      _ ≤ (contract_preimage (G := G) (x := x) (y := y) e Y.1).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
+      _ ≤ (contract_preimage (G := G) (x := x) (y := y) Y.1).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
       _ ≤ Y.1.encard := h_encard
 
 /-
@@ -855,7 +854,7 @@ The size of the preimage of a set Y containing the contracted vertex is |Y| + 1.
 lemma contractEdge_separator_lift_card {x y : V} (e : G.Adj x y)
   (Y : Set (Quotient (contractSetoid (G := G) (x := x) (y := y) e)))
   (h_ve : ⟦x⟧ ∈ Y) :
-  (contract_preimage (G := G) (x := x) (y := y) e Y).encard = Y.encard + 1 := by
+  (contract_preimage (G := G) (x := x) (y := y) Y).encard = Y.encard + 1 := by
   simp [encard_preimage_contractEdge (G := G), h_ve]
 
 /-
@@ -920,7 +919,7 @@ lemma lift_path_to_contraction_end (G : SimpleGraph V) (A : Set V) {x y : V} (e 
     u ∈ A ∧
     (v = x ∨ v = y) ∧
     p.IsPath ∧
-    (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) e (↑p'.support.toFinset : Set _) ∧
+    (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset : Set _) ∧
     p.support.toFinset ∩ {x, y} = {v} := by
   obtain ⟨ w', q', hq'_adj, hq'_path, hq'_avoid, hq'_sub ⟩ :=
     Walk.exists_prefix_path_of_path_ne p' hp'_path h_ne
@@ -968,12 +967,12 @@ lemma lift_path_from_contraction_start (G : SimpleGraph V) (B : Set V) {x y : V}
     (u = x ∨ u = y) ∧
     v ∈ B ∧
     p.IsPath ∧
-    (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) e (↑p'.support.toFinset : Set _) ∧
+    (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset : Set _) ∧
     p.support.toFinset ∩ {x, y} = {u} := by
       have h_lift_reversed : ∃ u v : V, ∃ p : G.Walk u v, u ∈ B ∧
         (v = x ∨ v = y) ∧
         p.IsPath ∧
-        (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) e (↑p'.reverse.support.toFinset : Set _) ∧
+        (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p'.reverse.support.toFinset : Set _) ∧
         p.support.toFinset ∩ {x, y} = {v} := by
           apply_rules [ lift_path_to_contraction_end ]
           · exact (Walk.isPath_reverse_iff p').mpr hp'_path
@@ -1039,7 +1038,7 @@ If two sets in the contracted graph are disjoint away from the contracted vertex
 lemma contract_preimage_disjoint_away_from_endpoints {x y : V} (e : G.Adj x y)
   (s t : Set (Quotient (contractSetoid (G := G) (x := x) (y := y) e)))
   (h_disj : Disjoint (s \ {⟦x⟧}) (t \ {⟦x⟧})) :
-  Disjoint (contract_preimage (G := G) (x := x) (y := y) e s \ {x, y}) (contract_preimage (G := G) (x := x) (y := y) e t \ {x, y}) := by
+  Disjoint (contract_preimage (G := G) (x := x) (y := y) s \ {x, y}) (contract_preimage (G := G) (x := x) (y := y) t \ {x, y}) := by
     refine Set.disjoint_left.mpr ?_
     intro a ha hb
     rcases ha with ⟨ha_pre, ha_not⟩
@@ -1076,8 +1075,8 @@ lemma lift_split_paths (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.Adj x 
     u_start ∈ A ∧ v_end ∈ B ∧
     (u_end = x ∨ u_end = y) ∧ (v_start = x ∨ v_start = y) ∧
     p1.IsPath ∧ p2.IsPath ∧
-    (↑p1.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) e (↑p1'.support.toFinset : Set _) ∧
-    (↑p2.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) e (↑p2'.support.toFinset : Set _) ∧
+    (↑p1.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p1'.support.toFinset : Set _) ∧
+    (↑p2.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p2'.support.toFinset : Set _) ∧
     p1.support.toFinset ∩ {x, y} = {u_end} ∧
     p2.support.toFinset ∩ {x, y} = {v_start} ∧
     Disjoint (p1.support.toFinset \ {x, y}) (p2.support.toFinset \ {x, y}) := by
@@ -1099,9 +1098,9 @@ lemma lift_split_paths (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.Adj x 
   rw [Finset.disjoint_left]
   intro z hz1 hz2
   simp only [Finset.mem_sdiff, List.mem_toFinset, Finset.mem_insert, Finset.mem_singleton] at hz1 hz2
-  have hz1_set : z ∈ contract_preimage (G := G) (x := x) (y := y) e (↑p1'.support.toFinset) \ ({x, y} : Set V) :=
+  have hz1_set : z ∈ contract_preimage (G := G) (x := x) (y := y) (↑p1'.support.toFinset) \ ({x, y} : Set V) :=
     ⟨hp1_sub (Finset.mem_coe.mpr (List.mem_toFinset.mpr hz1.1)), by simp [Set.mem_insert_iff]; tauto⟩
-  have hz2_set : z ∈ contract_preimage (G := G) (x := x) (y := y) e (↑p2'.support.toFinset) \ ({x, y} : Set V) :=
+  have hz2_set : z ∈ contract_preimage (G := G) (x := x) (y := y) (↑p2'.support.toFinset) \ ({x, y} : Set V) :=
     ⟨hp2_sub (Finset.mem_coe.mpr (List.mem_toFinset.mpr hz2.1)), by simp [Set.mem_insert_iff]; tauto⟩
   exact Set.disjoint_left.mp h_preimage_disj hz1_set hz2_set
 
@@ -1120,7 +1119,7 @@ lemma lift_path_through_contraction_internal (G : SimpleGraph V) (A B : Set V) {
   ∃ (u v : V) (p : G.Walk u v),
     u ∈ A ∧ v ∈ B ∧
     p.IsPath ∧
-    (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) e (↑p'.support.toFinset : Set _) := by
+    (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset : Set _) := by
       have h_split : ∃ (p1' : (contract (G := G) (x := x) (y := y) e).Walk u' ⟦x⟧)
         (p2' : (contract (G := G) (x := x) (y := y) e).Walk ⟦x⟧ v'),
         p1'.IsPath ∧
@@ -1288,7 +1287,7 @@ lemma lift_path_start_eq_vertex (G : SimpleGraph V) (A B : Set V) {x y : V} (e :
       refine hq'_support.trans ?_
       intro a ha
       rcases Finset.mem_image.mp ha with ⟨w, hw, rfl⟩
-      have hw' : w ∈ contract_preimage (G := G) (x := x) (y := y) e (↑p'.support.toFinset) := hq_pre (Finset.mem_coe.mpr hw)
+      have hw' : w ∈ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset) := hq_pre (Finset.mem_coe.mpr hw)
       exact (mem_contract_preimage (G := G) (x := x) (y := y) (Y := ↑p'.support.toFinset) (v := w)).1 hw'
 
 lemma lift_path_end_eq_vertex (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.Adj x y)
@@ -1308,7 +1307,7 @@ lemma lift_path_end_eq_vertex (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G
         refine hq'.trans ?_
         rw [ Finset.image_subset_iff ]
         intro z hz
-        have hz' : z ∈ contract_preimage (G := G) (x := x) (y := y) e (↑p'.support.toFinset) := hp' (Finset.mem_coe.mpr hz)
+        have hz' : z ∈ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset) := hp' (Finset.mem_coe.mpr hz)
         exact (mem_contract_preimage (G := G) (x := x) (y := y) (Y := ↑p'.support.toFinset) (v := z)).1 hz'
       exact ⟨ ⟨ ⟨ u, hu ⟩, ⟨ v', hv' ⟩, q, hq ⟩, h_final ⟩
 
@@ -1449,16 +1448,16 @@ lemma Menger_case2_exists_X (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.A
   have h_ve : ⟦x⟧ ∈ Y :=
     contractEdge_separator_contains_vertex G A B e k h_min ⟨Y, hY_sep⟩ hY_card
   -- Lift Y to a separator X in G
-  have h_sep : G.Separates A B (contract_preimage (G := G) (x := x) (y := y) e Y) :=
+  have h_sep : G.Separates A B (contract_preimage (G := G) (x := x) (y := y) Y) :=
     contract_preimage_separates (G := G) (x := x) (y := y) ⟨Y, hY_sep⟩
-  have h_lift_card : (contract_preimage (G := G) (x := x) (y := y) e Y).encard = Y.encard + 1 :=
+  have h_lift_card : (contract_preimage (G := G) (x := x) (y := y) Y).encard = Y.encard + 1 :=
     contractEdge_separator_lift_card (G := G) (x := x) (y := y) e Y h_ve
   -- X has encard ≥ k (since it's a separator of G)
-  have h_ge_k : (contract_preimage (G := G) (x := x) (y := y) e Y).encard ≥ k := by
+  have h_ge_k : (contract_preimage (G := G) (x := x) (y := y) Y).encard ≥ k := by
     calc k = G.mincut A B := h_min.symm
-      _ ≤ (contract_preimage (G := G) (x := x) (y := y) e Y).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
+      _ ≤ (contract_preimage (G := G) (x := x) (y := y) Y).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
   -- X has encard ≤ k (since |Y| < k, so |Y| + 1 ≤ k)
-  have h_le_k : (contract_preimage (G := G) (x := x) (y := y) e Y).encard ≤ k := by
+  have h_le_k : (contract_preimage (G := G) (x := x) (y := y) Y).encard ≤ k := by
     rw [h_lift_card]
     have : Y.encard ≠ ⊤ := ne_top_of_lt (lt_of_lt_of_le hY_card le_top)
     exact (ENat.add_one_le_iff this).mpr hY_card
