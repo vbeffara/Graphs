@@ -1898,7 +1898,7 @@ private lemma erdos_graph_joiner : ∃ PH : (erdos_graph P h).Joiner A B, PH.1.e
   refine subset_trans ?_ subset_union_left
   apply subset_iUnion₂ p hp
 
-private lemma erdos_graph1 : ∀ SH : (erdos_graph P h).Separator A B, SH.1.encard ≠ P.1.encard := by
+private lemma erdos_graph_separator : ∀ SH : (erdos_graph P h).Separator A B, SH.1.encard ≠ P.1.encard := by
   let C := ∀ p : P.1, {x : V // x ∈ p.1.support}
   let Schoice (σ : C) : Set V := Set.range (fun p : P.1 => σ p)
   have hSchoice_card (σ : C) : (Schoice σ).encard = P.1.encard := by
@@ -1965,7 +1965,7 @@ theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxf
   let H : SimpleGraph V := erdos_graph P P_lt_mincut
   have hH_le : H ≤ G := erdos_graph_le
   obtain ⟨PH, hPH_card⟩ := erdos_graph_joiner (P := P) (h := P_lt_mincut)
-  have hNoEq : ∀ SH : H.Separator A B, SH.1.encard ≠ P.1.encard := erdos_graph1 (P := P) (h := P_lt_mincut)
+  have hNoEq : ∀ SH : H.Separator A B, SH.1.encard ≠ P.1.encard := erdos_graph_separator (P := P) (h := P_lt_mincut)
   have hHmenger : H.mincut A B = H.maxflow A B := Menger_strong erdos_graph_finite
   obtain ⟨SH, hSH⟩ := ENat.exists_eq_iInf (fun S : H.Separator A B => S.1.encard)
   have hHmax_eq : H.maxflow A B = P.1.encard := by
