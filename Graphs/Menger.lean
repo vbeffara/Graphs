@@ -272,42 +272,31 @@ lemma contractEdge_adj_lift (u v : V) (hu : (⟦u⟧ : V / e) ≠ ⟦x⟧) (hv :
       simp_all [ adj_comm ]
       unfold contract at *; aesop
 
-/---------------- REVIEW ----------------/
-
-/-
-The size of the preimage of a set of vertices in the contracted graph.
--/
-private lemma quot_injOn_away {x y : V} (e : G.Adj x y) (Y : Set (Quotient (contractSetoid (G := G) (x := x) (y := y) e)))
-    (hv : ⟦x⟧ ∉ Y) :
-    Set.InjOn (fun v : V => (⟦v⟧ : Quotient (contractSetoid (G := G) (x := x) (y := y) e)))
-      (contract_preimage (G := G) (x := x) (y := y) e Y) := by
+private lemma quot_injOn_away (Y : Set (V / e)) (hv : ⟦x⟧ ∉ Y) :
+    Set.InjOn (fun v => (⟦v⟧ : V / e)) (contract_preimage e Y) := by
   intro a ha b hb hab
   simp only [contract_preimage, Set.mem_setOf_eq] at ha hb
   simp only [Quotient.eq, contractSetoid] at hab
-  rcases hab with rfl | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
-  · rfl
-  · exact absurd ha hv
-  · exact absurd hb hv
+  grind
 
-private lemma quot_image_preimage {x y : V} (e : G.Adj x y) (Y : Set (Quotient (contractSetoid (G := G) (x := x) (y := y) e))) :
-    (fun v : V => (⟦v⟧ : Quotient (contractSetoid (G := G) (x := x) (y := y) e))) '' (contract_preimage (G := G) (x := x) (y := y) e Y) = Y := by
+@[simp] private lemma quot_image_preimage (Y : Set (V / e)) :
+    (fun v : V => (⟦v⟧ : V / e)) '' (contract_preimage e Y) = Y := by
   ext z
   simp only [Set.mem_image, contract_preimage, Set.mem_setOf_eq]
   constructor
   · rintro ⟨v, hv, rfl⟩; exact hv
   · intro hz; obtain ⟨v, rfl⟩ := Quotient.exists_rep z; exact ⟨v, hz, rfl⟩
 
-lemma encard_preimage_contractEdge {x y : V} (e : G.Adj x y) (Y : Set (Quotient (contractSetoid (G := G) (x := x) (y := y) e))) :
-    (contract_preimage (G := G) (x := x) (y := y) e Y).encard =
-    if ⟦x⟧ ∈ Y then Y.encard + 1 else Y.encard := by
+/- --------------- REVIEW --------------- -/
+
+lemma encard_preimage_contractEdge (Y : Set (V / e)) :
+    (contract_preimage e Y).encard = if ⟦x⟧ ∈ Y then Y.encard + 1 else Y.encard := by
   split_ifs with hv
-  · -- Case: contractEdge_vertex ∈ Y
-    set Y' := Y \ {⟦x⟧} with hY'_def
+  · set Y' := Y \ {⟦x⟧} with hY'_def
     have hv' : ⟦x⟧ ∉ Y' := by simp [Y']
-    -- Preimage decomposes
-    have h_pre_eq : contract_preimage (G := G) (x := x) (y := y) e Y =
-        contract_preimage (G := G) (x := x) (y := y) e Y' ∪ {x, y} := by
-      ext v; simp only [contract_preimage, Set.mem_setOf_eq, Set.mem_union,
+    have h_pre_eq : contract_preimage e Y = contract_preimage e Y' ∪ {x, y} := by
+      ext v
+      simp only [contract_preimage, Set.mem_setOf_eq, Set.mem_union,
         Set.mem_singleton_iff, Set.mem_insert_iff]
       constructor
       · intro hv_mem
@@ -333,8 +322,8 @@ lemma encard_preimage_contractEdge {x y : V} (e : G.Adj x y) (Y : Set (Quotient 
       · simp [hv_y] at hv_mem; exact hv' hv_mem
     rw [h_pre_eq, Set.encard_union_eq h_disj, Set.encard_pair e.ne]
     -- preimage of Y' has encard = Y'.encard (by injectivity + image = Y')
-    have h_inj := quot_injOn_away (G := G) e Y' hv'
-    have h_img := quot_image_preimage (G := G) e Y'
+    have h_inj := quot_injOn_away (G := G) Y' hv'
+    have h_img := quot_image_preimage (G := G) Y'
     have h_encard := h_inj.encard_image
     rw [h_img] at h_encard
     -- h_encard : Y'.encard = (contract_preimage (G := G) (x := x) (y := y) e Y').encard
@@ -350,8 +339,8 @@ lemma encard_preimage_contractEdge {x y : V} (e : G.Adj x y) (Y : Set (Quotient 
     rw [hY_eq, Set.encard_insert_of_notMem hv', ← h_encard]
     ring
   · -- Case: contractEdge_vertex ∉ Y
-    have h_inj := quot_injOn_away (G := G) e Y hv
-    have h_img := quot_image_preimage (G := G) e Y
+    have h_inj := quot_injOn_away (G := G) Y hv
+    have h_img := quot_image_preimage (G := G) Y
     have h_encard := h_inj.encard_image
     rw [h_img] at h_encard
     exact h_encard.symm
@@ -397,14 +386,13 @@ lemma lift_walk_avoiding_contraction {x y : V} (e : G.Adj x y)
 /-
 Define deleting a single edge and prove it reduces edge count if the edge exists.
 -/
-def deleteEdge (G : SimpleGraph V) (x y : V) : SimpleGraph V :=
-  G.deleteEdges {s(x, y)}
+def deleteEdge (G : SimpleGraph V) (_e : G.Adj x y) : SimpleGraph V := G.deleteEdges {s(x, y)}
 
-lemma deleteEdge_edgeSet_encard_lt (h : G.Adj x y) (hfin : G.edgeSet.Finite) :
-    (G.deleteEdge x y).edgeSet.encard < G.edgeSet.encard := by
+infix:60 " - " => deleteEdge
+
+lemma deleteEdge_edgeSet_encard_lt (hfin : G.edgeSet.Finite) : (G - e).edgeSet.encard < G.edgeSet.encard := by
   rw [deleteEdge, edgeSet_deleteEdges]
-  exact (hfin.subset Set.diff_subset).encard_lt_encard (Set.diff_singleton_ssubset.mpr h)
-
+  exact (hfin.subset Set.diff_subset).encard_lt_encard (Set.diff_singleton_ssubset.mpr e)
 
 /-
 A path in the contracted graph avoiding the contracted vertex lifts to a path in the original graph avoiding the contracted edge's endpoints (subset support).
@@ -526,7 +514,7 @@ lemma Walk.exists_path_prefix_avoiding_set {G : SimpleGraph V} {u v : V} (p : G.
 If X separates A and B in G and contains x and y, then any separator of A and X in G-xy is also a separator of A and B in G.
 -/
 lemma separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph V) (A B : Set V)
-    (x y : V) (X : G.Separator A B) (S : (G.deleteEdge x y).Separator A X.1) (hx : x ∈ X.1) (hy : y ∈ X.1)
+    (x y : V) (h : G.Adj x y) (X : G.Separator A B) (S : (G.deleteEdge h).Separator A X.1) (hx : x ∈ X.1) (hy : y ∈ X.1)
     (hxy : x ≠ y) : G.Separates A B S.1 := by
     classical
     intro u hu v hv p
@@ -539,8 +527,8 @@ lemma separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph V) (A B : Se
         Finset.mem_singleton]
       intro z ⟨hz_mem, hz_xy⟩
       exact hq_avoid z hz_mem (by rcases hz_xy with rfl | rfl <;> assumption)
-    have hq_path_G_minus_xy : ∃ q' : (G.deleteEdge x y).Walk u w, q'.IsPath ∧ q'.support.toFinset ⊆ q.support.toFinset := by
-      have : ∀ {u v : V} (q : G.Walk u v), q.IsPath → s(x, y) ∉ q.edges → ∃ q' : (G.deleteEdge x y).Walk u v, q'.IsPath ∧ q'.support.toFinset ⊆ q.support.toFinset := by
+    have hq_path_G_minus_xy : ∃ q' : (G.deleteEdge h).Walk u w, q'.IsPath ∧ q'.support.toFinset ⊆ q.support.toFinset := by
+      have : ∀ {u v : V} (q : G.Walk u v), q.IsPath → s(x, y) ∉ q.edges → ∃ q' : (G.deleteEdge h).Walk u v, q'.IsPath ∧ q'.support.toFinset ⊆ q.support.toFinset := by
         intro u v q hq hq_avoid_xy
         induction' q with u v q ih
         · exact ⟨ Walk.nil, by simp ⟩
@@ -868,7 +856,7 @@ lemma contractEdge_separator_lift_card {x y : V} (e : G.Adj x y)
   (Y : Set (Quotient (contractSetoid (G := G) (x := x) (y := y) e)))
   (h_ve : ⟦x⟧ ∈ Y) :
   (contract_preimage (G := G) (x := x) (y := y) e Y).encard = Y.encard + 1 := by
-  simp [encard_preimage_contractEdge (G := G) e, h_ve]
+  simp [encard_preimage_contractEdge (G := G), h_ve]
 
 /-
 If a walk is a path and the start is not the end, it can be decomposed into a prefix path avoiding the end vertex, and a final edge.
@@ -1483,15 +1471,15 @@ lemma Menger_case2_exists_X (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.A
 If X separates A and B in G and contains x and y, then any separator of X and B in G-xy is also a separator of A and B in G.
 -/
 lemma separator_in_G_of_separator_in_G_delete_edge_right (G : SimpleGraph V) (A B : Set V)
-    (x y : V) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) (hxy : x ≠ y)
-    (S : (G.deleteEdge x y).Separator X.1 B) : G.Separates A B S.1 := by
+    (x y : V) (h : G.Adj x y) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) (hxy : x ≠ y)
+    (S : (G.deleteEdge h).Separator X.1 B) : G.Separates A B S.1 := by
     let X_rev : G.Separator B A := ⟨X.1, fun u hu v hv p => by
       obtain ⟨w, hw, hwX⟩ := X.2 v hv u hu p.reverse
       exact ⟨w, by simpa using hw, hwX⟩⟩
-    let S_rev : (G.deleteEdge x y).Separator B X_rev.1 := ⟨S.1, fun u hu v hv p => by
+    let S_rev : (G.deleteEdge h).Separator B X_rev.1 := ⟨S.1, fun u hu v hv p => by
       obtain ⟨w, hw, hwS⟩ := S.2 v hv u hu p.reverse
       exact ⟨w, by simpa using hw, hwS⟩⟩
-    have := separator_in_G_of_separator_in_G_delete_edge G B A x y X_rev S_rev hx hy hxy
+    have := separator_in_G_of_separator_in_G_delete_edge G B A x y h X_rev S_rev hx hy hxy
     intro u hu v hv p
     obtain ⟨w, hw, hwS⟩ := this v hv u hu p.reverse
     exact ⟨w, by simpa using hw, hwS⟩
@@ -1501,22 +1489,22 @@ If X separates A and B in G and contains x and y, then the minimum separator siz
 -/
 lemma min_sep_delete_ge_k_left (G : SimpleGraph V) (A B : Set V) {x y : V}
   (e : G.Adj x y) (k : ℕ∞) (h_min : G.mincut A B = k) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
-  (G.deleteEdge x y).mincut A X.1 ≥ k := by
+  (G.deleteEdge e).mincut A X.1 ≥ k := by
     rw [← h_min, ge_iff_le, mincut]
     apply le_iInf
     intro S
-    exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge G A B x y X S hx hy e.ne⟩ le_rfl
+    exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge G A B x y e X S hx hy e.ne⟩ le_rfl
 
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of X and B in G-xy is at least k.
 -/
 lemma min_sep_delete_ge_k_right (G : SimpleGraph V) (A B : Set V) {x y : V}
   (e : G.Adj x y) (k : ℕ∞) (h_min : G.mincut A B = k) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
-  (G.deleteEdge x y).mincut X.1 B ≥ k := by
+  (G.deleteEdge e).mincut X.1 B ≥ k := by
     rw [← h_min, ge_iff_le, mincut]
     apply le_iInf
     intro S
-    exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge_right G A B x y X hx hy e.ne S⟩ le_rfl
+    exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge_right G A B x y e X hx hy e.ne S⟩ le_rfl
 
 /-
 If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to a set of disjoint paths in G with the same size.
@@ -1636,16 +1624,16 @@ If there exists a separator X of size k containing x and y, then G has k disjoin
 lemma Menger_case2_imp_paths (G : SimpleGraph V) (A B : Set V) {x y : V}
     (e : G.Adj x y)
     (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B = k) (X : G.Separator A B) (hX_card : X.1.encard = k) (hx : x ∈ X.1)
-    (hy : y ∈ X.1) (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
+    (hy : y ∈ X.1) (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G.deleteEdge e).mincut A' B' ≤ (G.deleteEdge e).maxflow A' B') :
     k ≤ G.maxflow A B := by
   have hX_fin : X.1.Finite := Set.encard_ne_top_iff.mp (hX_card ▸ hk)
-  have h_del_A : k ≤ (G.deleteEdge x y).maxflow A X.1 :=
+  have h_del_A : k ≤ (G.deleteEdge e).maxflow A X.1 :=
     le_trans (min_sep_delete_ge_k_left G A B e k h_min X hx hy)
       (IH_delete A X.1 (hX_fin.inter_of_right _))
-  have h_del_B : k ≤ (G.deleteEdge x y).maxflow X.1 B :=
+  have h_del_B : k ≤ (G.deleteEdge e).maxflow X.1 B :=
     le_trans (min_sep_delete_ge_k_right G A B e k h_min X hx hy)
       (IH_delete X.1 B (hX_fin.inter_of_left _))
-  have h_subgraph : G.deleteEdge x y ≤ G := fun _ _ huv => huv.1
+  have h_subgraph : G.deleteEdge e ≤ G := fun _ _ huv => huv.1
   -- Extract joiner witness from ⨆ using helper
   suffices h : ∃ P : G.Joiner A B, P.1.encard = k by
     obtain ⟨P, hP⟩ := h
@@ -1676,7 +1664,7 @@ lemma Menger_inductive_step (G : SimpleGraph V) (A B : Set V) {x y : V}
     (IH_contract : (contract (G := G) (x := x) (y := y) e).mincut (contract_image (G := G) (x := x) (y := y) A e)
       (contract_image (G := G) (x := x) (y := y) B e) ≤
       (contract (G := G) (x := x) (y := y) e).maxflow (contract_image (G := G) (x := x) (y := y) A e) (contract_image (G := G) (x := x) (y := y) B e))
-    (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G.deleteEdge x y).mincut A' B' ≤ (G.deleteEdge x y).maxflow A' B') :
+    (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G.deleteEdge e).mincut A' B' ≤ (G.deleteEdge e).maxflow A' B') :
     G.mincut A B ≤ G.maxflow A B := by
   by_cases h : (contract (G := G) (x := x) (y := y) e).mincut (contract_image (G := G) (x := x) (y := y) A e) (contract_image (G := G) (x := x) (y := y) B e) < G.mincut A B
   · -- Case 1: contraction has smaller mincut → separator containing both x and y
@@ -1708,8 +1696,8 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
     have hfin : G.edgeSet.Finite := Set.finite_of_encard_eq_coe h_card
     have h_contract_lt : (contract (G := G) (x := x) (y := y) e).edgeSet.encard < ↑n :=
       (contractEdge_edgeSet_encard_lt e hfin).trans_eq h_card
-    have h_delete_lt : (G.deleteEdge x y).edgeSet.encard < ↑n :=
-      (deleteEdge_edgeSet_encard_lt e hfin).trans_eq h_card
+    have h_delete_lt : (G.deleteEdge e).edgeSet.encard < ↑n :=
+      (deleteEdge_edgeSet_encard_lt hfin).trans_eq h_card
     obtain ⟨mc, hmc⟩ := (Set.finite_of_encard_le_coe h_contract_lt.le).exists_encard_eq_coe
     obtain ⟨md, hmd⟩ := (Set.finite_of_encard_le_coe h_delete_lt.le).exists_encard_eq_coe
     have hk : G.mincut A B ≠ ⊤ :=
