@@ -292,10 +292,8 @@ noncomputable def contractEdge_preimage (x y : V)
     (Y : Set (Quotient (contractEdgeSetoid x y))) : Set V :=
   {v | ⟦v⟧ ∈ Y}
 
-lemma mem_contractEdge_preimage {x y : V}
-    {Y : Set (Quotient (contractEdgeSetoid x y))} {v : V} :
-  v ∈ contractEdge_preimage x y Y ↔ ⟦v⟧ ∈ Y := by
-  simp [contractEdge_preimage]
+lemma mem_contractEdge_preimage {x y : V} {Y : Set (Quotient (contractEdgeSetoid x y))} {v : V} :
+  v ∈ contractEdge_preimage x y Y ↔ ⟦v⟧ ∈ Y := by rfl
 
 /-
 If a set of vertices separates A and B in the contracted graph G/e, then its preimage separates A and B in G.
