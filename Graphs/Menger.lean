@@ -14,24 +14,15 @@ variable {V W : Type*} {G : SimpleGraph V} {x y u v : V} {e : G.Adj x y} {A B : 
 
 namespace SimpleGraph
 
-/-
-The set of all vertex sets that separate A from B.
--/
 def Separator (G : SimpleGraph V) (A B : Set V) := { S : Set V // G.Separates A B S }
 
-/-
-The set of separators is nonempty (e.g., A itself is a separator).
--/
-instance Separator.nonempty (G : SimpleGraph V) (A B : Set V) : Nonempty (G.Separator A B) :=
+namespace Separator
+
+instance nonempty (G : SimpleGraph V) (A B : Set V) : Nonempty (G.Separator A B) :=
   ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
 
-/-
-A vertex cover (a set containing at least one endpoint of every edge)
-together with A ∩ B forms a separator.
--/
-lemma Separator.of_vertex_cover (S : Set V)
-    (hS : ∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e) :
-    G.Separates A B (A ∩ B ∪ S) := by
+def of_vertex_cover (S : Set V) (hS : ∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e) : G.Separator A B := by
+  refine ⟨A ∩ B ∪ S, ?_⟩
   intro u hu v hv p
   by_cases hp : p.Nil
   · exact ⟨u, p.start_mem_support, Or.inl ⟨hu, Walk.Nil.eq hp ▸ hv⟩⟩
@@ -44,32 +35,27 @@ lemma Separator.of_vertex_cover (S : Set V)
     · exact ⟨z, Walk.start_mem_support _, Or.inr hz_S⟩
     · exact ⟨z, List.mem_cons_of_mem _ q.start_mem_support, Or.inr hz_S⟩
 
-/-
-There exists a vertex cover with encard at most edgeSet.encard.
--/
-lemma exists_vertex_cover :
-    ∃ S : Set V, (∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e) ∧ S.encard ≤ G.edgeSet.encard := by
+end Separator
+
+lemma exists_vertex_cover : ∃ S : Set V, (∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e) ∧ S.encard ≤ G.edgeSet.encard := by
   refine ⟨(fun e : Sym2 V => (Quot.out e).1) '' G.edgeSet, ?_, Set.encard_image_le _ _⟩
   intro e he
   exact ⟨(Quot.out e).1, ⟨e, he, rfl⟩, Sym2.out_fst_mem e⟩
 
-/-
-An A-B path is a path in G starting in A and ending in B.
--/
 structure ABPath (G : SimpleGraph V) (A B : Set V) where
   u : A
   v : B
   p : G.Path u v
 
-abbrev ABPath.support (P : G.ABPath A B) : Set V := {v | v ∈ P.p.1.support}
+namespace ABPath
 
-/-
-A set of A-B paths is disjoint if any two distinct paths in the set are vertex-disjoint.
--/
+abbrev support (P : G.ABPath A B) : Set V := {v | v ∈ P.p.1.support}
+
+end ABPath
+
 def disjointPaths (P : Set (G.ABPath A B)) : Prop := P.Pairwise (Disjoint ·.support ·.support)
 
-def Joiner (G : SimpleGraph V) (A B : Set V) :=
-  { P : Set (G.ABPath A B) // disjointPaths P }
+def Joiner (G : SimpleGraph V) (A B : Set V) := { P : Set (G.ABPath A B) // disjointPaths P }
 
 namespace Joiner
 
@@ -77,7 +63,7 @@ variable {P : G.Joiner A B}
 
 instance : Nonempty (G.Joiner A B) := ⟨⟨∅, Set.pairwise_empty _⟩⟩
 
-theorem le_sep (P : G.Joiner A B) (S : G.Separator A B) : P.1.encard ≤ S.1.encard := by
+theorem joiner_le_separator (P : G.Joiner A B) (S : G.Separator A B) : P.1.encard ≤ S.1.encard := by
   have key : ∀ p : G.ABPath A B, ∃ x ∈ S.1, x ∈ p.support := by
     intro p
     obtain ⟨x, h1, h2⟩ := S.2 p.u p.u.2 p.v p.v.2 p.p
@@ -89,15 +75,11 @@ theorem le_sep (P : G.Joiner A B) (S : G.Separator A B) : P.1.encard ≤ S.1.enc
     exact Set.disjoint_left.mp (P.2 hp hq h) (hf_supp p) (hpq ▸ hf_supp q)
   exact Set.encard_le_encard_of_injOn (fun _ hp => hf_sep _) hf_inj
 
-theorem encard_le (P : G.Joiner A B) : P.1.encard ≤ A.encard :=
-  P.le_sep ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
+theorem encard_le_A (P : G.Joiner A B) : P.1.encard ≤ A.encard :=
+  P.joiner_le_separator ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
 
 end Joiner
 
-
-/-
-The minimum size of a separator and the maximum number of disjoint paths.
--/
 noncomputable def mincut (G : SimpleGraph V) (A B : Set V) : ℕ∞ :=
   ⨅ S : G.Separator A B, S.1.encard
 
@@ -108,7 +90,7 @@ noncomputable def maxflow (G : SimpleGraph V) (A B : Set V) : ℕ∞ :=
   (statement := /-- The maximum number of disjoint A-B paths is at most the
     minimum size of an A-B separator. -/)]
 theorem maxflow_le_mincut : G.maxflow A B ≤ G.mincut A B := by
-  apply iSup_le; intro P; apply le_iInf; intro S; exact Joiner.le_sep P S
+  apply iSup_le; intro P; apply le_iInf; intro S; exact P.joiner_le_separator S
 
 private lemma exists_new_disjoint_path (P : Set (G.ABPath A B))
     (h_not_sep : ¬ G.Separates A B (⋃ p ∈ P, p.support)) :
@@ -124,16 +106,14 @@ private lemma exists_new_disjoint_path (P : Set (G.ABPath A B))
 private lemma ABPath.support_finite (p : G.ABPath A B) : p.support.Finite :=
   Set.Finite.ofFinset p.p.1.support.toFinset (by simp)
 
-private lemma finite_not_separates_of_mincut_top
-    (h : G.mincut A B = ⊤) (S : Set V) (hS : S.Finite) :
+private lemma finite_not_separates_of_mincut_top (h : G.mincut A B = ⊤) (S : Set V) (hS : S.Finite) :
     ¬ G.Separates A B S := by
   intro h_sep
   have : (⊤ : ℕ∞) ≤ S.encard :=
     h ▸ iInf_le_of_le ⟨S, h_sep⟩ le_rfl
   exact absurd (lt_of_le_of_lt this hS.encard_lt_top) (lt_irrefl _)
 
-private lemma extend_joiner_of_mincut_top (h : G.mincut A B = ⊤)
-    (P : G.Joiner A B) (hP_fin : P.1.Finite) :
+private lemma extend_joiner_of_mincut_top (h : G.mincut A B = ⊤) (P : G.Joiner A B) (hP_fin : P.1.Finite) :
     ∃ Q : G.Joiner A B, P.1.encard + 1 ≤ Q.1.encard := by
   have h_not_sep : ¬ G.Separates A B (⋃ p ∈ P.1, p.support) :=
     finite_not_separates_of_mincut_top h _
@@ -153,11 +133,7 @@ private lemma extend_joiner_of_mincut_top (h : G.mincut A B = ⊤)
     · exact P.2 ha hb hab
   · rw [Set.encard_insert_of_notMem hq_not_mem]
 
-/-
-If the minimum cut is infinite, then so is the maximum flow.
--/
-theorem maxflow_infinite_of_mincut_infinite (h : G.mincut A B = ⊤) :
-    G.maxflow A B = ⊤ := by
+theorem maxflow_infinite_of_mincut_infinite (h : G.mincut A B = ⊤) : G.maxflow A B = ⊤ := by
   rw [maxflow, iSup_eq_top]
   intro b hb
   obtain ⟨n, rfl⟩ := WithTop.ne_top_iff_exists.mp (ne_of_lt hb)
@@ -175,18 +151,13 @@ theorem maxflow_infinite_of_mincut_infinite (h : G.mincut A B = ⊤) :
       obtain ⟨Q, hQ⟩ := extend_joiner_of_mincut_top h P hP_fin
       exact ⟨Q, le_trans (by push_cast; exact add_le_add hP le_rfl) hQ⟩
 
-theorem Menger_of_mincut_top (h : G.mincut A B = ⊤) :
-    G.mincut A B = G.maxflow A B :=
+theorem Menger_of_mincut_top (h : G.mincut A B = ⊤) : G.mincut A B = G.maxflow A B :=
   h ▸ (maxflow_infinite_of_mincut_infinite h).symm
 
-/-
-The minimum separator size is bounded by (A ∩ B).encard + edgeSet.encard:
-a vertex cover (one vertex per edge) together with A ∩ B forms a separator.
--/
-lemma mincut_le : G.mincut A B ≤ (A ∩ B).encard + G.edgeSet.encard := by
-  obtain ⟨S, hS_cover, hS_card⟩ := G.exists_vertex_cover (V := V)
+lemma mincut_le_inter_add_edgeSet : G.mincut A B ≤ (A ∩ B).encard + G.edgeSet.encard := by
+  obtain ⟨S, hS_cover, hS_card⟩ := G.exists_vertex_cover
   exact le_trans
-    (iInf_le_of_le ⟨A ∩ B ∪ S, Separator.of_vertex_cover S hS_cover⟩ le_rfl)
+    (iInf_le_of_le (Separator.of_vertex_cover S hS_cover) le_rfl)
     (le_trans (Set.encard_union_le _ _) (add_le_add_right hS_card _))
 
 lemma inter_subset_separator (S : G.Separator A B) : A ∩ B ⊆ S.1 := by
@@ -194,10 +165,10 @@ lemma inter_subset_separator (S : G.Separator A B) : A ∩ B ⊆ S.1 := by
   obtain ⟨w, hw_supp, hw_S⟩ := S.2 v hv_A v hv_B Walk.nil
   simp at hw_supp; exact hw_supp ▸ hw_S
 
-lemma le_mincut : (A ∩ B).encard ≤ G.mincut A B :=
+lemma inter_le_mincut : (A ∩ B).encard ≤ G.mincut A B :=
   le_iInf fun S => Set.encard_le_encard (inter_subset_separator S)
 
-lemma le_maxflow : (A ∩ B).encard ≤ G.maxflow A B := by
+lemma inter_le_maxflow : (A ∩ B).encard ≤ G.maxflow A B := by
   let γ : ↥(A ∩ B) → G.ABPath A B := fun a =>
     ⟨⟨a, a.2.1⟩, ⟨a, a.2.2⟩, Walk.nil, Walk.IsPath.nil⟩
   have hγ_inj : Function.Injective γ := by
@@ -213,23 +184,14 @@ lemma le_maxflow : (A ∩ B).encard ≤ G.maxflow A B := by
           rw [← Set.image_univ, hγ_inj.encard_image]; simp
     _ ≤ G.maxflow A B := le_iSup_of_le ⟨_, h_joiner⟩ le_rfl
 
-/-
-Base case of Menger's theorem: if G has no edges, the theorem holds.
--/
-lemma Menger_strong_base (G : SimpleGraph V) (A B : Set V) (h : G.edgeSet = ∅) :
-    G.mincut A B ≤ G.maxflow A B := by
+lemma Menger_strong_base (h : G.edgeSet = ∅) : G.mincut A B ≤ G.maxflow A B := by
   simp at h ; subst G
   have h_mincut_le : mincut ⊥ A B ≤ (A ∩ B).encard :=
     iInf_le_of_le ⟨A ∩ B, fun a ha b hb p => ⟨a, p.start_mem_support, by
       have := (show ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v by
         intro u v p; induction p <;> aesop) a b p
       simp [← this] at hb; simp [ha, hb]⟩⟩ le_rfl
-  exact h_mincut_le.trans le_maxflow
-
-noncomputable def merge_to {x y : V} (e : G.Adj x y) (z : V) : {z : V // z ≠ x} :=
-  if h' : z = x then ⟨y, e.ne.symm⟩ else ⟨z, h'⟩
-
-noncomputable def contract (G : SimpleGraph V) {x y : V} (e : G.Adj x y) := G.map (merge_to e)
+  exact h_mincut_le.trans inter_le_maxflow
 
 /-
 Definitions for edge contraction: the setoid identifying the endpoints, the
@@ -1782,7 +1744,7 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
   | _ n ih =>
   intro h_card
   by_cases h_empty : G.edgeSet = ∅
-  · exact Menger_strong_base G A B h_empty
+  · exact Menger_strong_base h_empty
   · obtain ⟨x, y, hxy⟩ : ∃ x y : V, G.Adj x y := by
       obtain ⟨e, he⟩ := Set.nonempty_iff_ne_empty.mpr h_empty
       induction e using Sym2.ind with
@@ -1796,7 +1758,7 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
     obtain ⟨md, hmd⟩ := (Set.finite_of_encard_le_coe h_delete_lt.le).exists_encard_eq_coe
     have hk : G.mincut A B ≠ ⊤ :=
       ne_top_of_le_ne_top (WithTop.add_ne_top.mpr
-        ⟨Set.encard_ne_top_iff.mpr hAB, h_card ▸ WithTop.coe_ne_top⟩) mincut_le
+        ⟨Set.encard_ne_top_iff.mpr hAB, h_card ▸ WithTop.coe_ne_top⟩) mincut_le_inter_add_edgeSet
     have hAB_contract : (contractEdge_image (G := G) (x := x) (y := y) hxy A ∩ contractEdge_image (G := G) (x := x) (y := y) hxy B).Finite := by
       apply Set.Finite.subset ((hAB.image (⟦·⟧)).union (Set.finite_singleton (⟦x⟧)))
       intro q ⟨⟨a, ha, haq⟩, b, hb, hbq⟩
@@ -1818,8 +1780,8 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
 
 theorem Menger_infinite (hAB : (A ∩ B).Infinite) : G.mincut A B = G.maxflow A B := by
   have h_top : (A ∩ B).encard = ⊤ := Set.encard_eq_top hAB
-  have hmin : G.mincut A B = ⊤ := top_le_iff.mp (h_top ▸ le_mincut)
-  have hmax : G.maxflow A B = ⊤ := top_le_iff.mp (h_top ▸ le_maxflow)
+  have hmin : G.mincut A B = ⊤ := top_le_iff.mp (h_top ▸ inter_le_mincut)
+  have hmax : G.maxflow A B = ⊤ := top_le_iff.mp (h_top ▸ inter_le_maxflow)
   rw [hmin, hmax]
 
 theorem Menger_strong (hG : G.edgeSet.Finite) :
@@ -1841,7 +1803,7 @@ This version would actually be true without the `[Fintype S]` assumption.
 theorem Menger_equiv [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B, ∃ φ : P.1 ≃ S.1,
     ∀ p : P.1, (φ p).1 ∈ p.1.p.1.support := by
   have h_maxflow_lt : G.maxflow A B < ⊤ :=
-    lt_of_le_of_lt (iSup_le (fun P => Joiner.encard_le P)) (Set.toFinite A).encard_lt_top
+    lt_of_le_of_lt (iSup_le (fun P => P.encard_le_A)) (Set.toFinite A).encard_lt_top
   obtain ⟨P, hP⟩ := ENat.exists_eq_iSup_of_lt_top h_maxflow_lt
   use P
   obtain ⟨S, hS⟩ := ENat.exists_eq_iInf (fun S : G.Separator A B => S.1.encard)
@@ -1857,7 +1819,7 @@ theorem Menger_equiv [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B
     exact Set.disjoint_left.mp h1 (hf p) (hpq ▸ hf q)
   have hP_fin : P.1.Finite :=
     Set.encard_ne_top_iff.mp (ne_top_of_le_ne_top
-      (Set.encard_ne_top_iff.mpr (Set.toFinite A)) (Joiner.encard_le P))
+      (Set.encard_ne_top_iff.mpr (Set.toFinite A)) (P.encard_le_A))
   haveI : Fintype P.1 := hP_fin.fintype
   haveI : Fintype S.1 := (Set.toFinite S.1).fintype
   have h_card_eq : Fintype.card P.1 = Fintype.card S.1 := by
