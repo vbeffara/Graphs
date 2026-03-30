@@ -38,11 +38,6 @@ def of_vertex_cover (S : Set V) (hS : ∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e)
 
 end Separator
 
-lemma exists_vertex_cover : ∃ S : Set V, (∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e) ∧ S.encard ≤ G.edgeSet.encard := by
-  refine ⟨(fun e : Sym2 V => (Quot.out e).1) '' G.edgeSet, ?_, Set.encard_image_le _ _⟩
-  intro e he
-  exact ⟨(Quot.out e).1, ⟨e, he, rfl⟩, Sym2.out_fst_mem e⟩
-
 structure ABPath (G : SimpleGraph V) (A B : Set V) where
   u : A
   v : B
@@ -64,34 +59,29 @@ variable {P : G.Joiner A B}
 
 instance : Nonempty (G.Joiner A B) := ⟨⟨∅, Set.pairwise_empty _⟩⟩
 
-theorem joiner_le_separator (P : G.Joiner A B) (S : G.Separator A B) : P.1.encard ≤ S.1.encard := by
-  have key : ∀ p : G.ABPath A B, ∃ x ∈ S.1, x ∈ p.support := by
-    intro p
-    obtain ⟨x, h1, h2⟩ := S.2 p.u p.u.2 p.v p.v.2 p.p
-    exact ⟨x, h2, h1⟩
-  choose f hf_sep hf_supp using key
+theorem le_separator (P : G.Joiner A B) (S : G.Separator A B) : P.1.encard ≤ S.1.encard := by
+  have key (p : G.ABPath A B) : ∃ x ∈ p.support, x ∈ S.1 := S.2 p.u p.u.2 p.v p.v.2 p.p
+  choose f hf_supp hf_sep using key
   have hf_inj : Set.InjOn f P.1 := by
     intro p hp q hq hpq
     by_contra h
     exact Set.disjoint_left.mp (P.2 hp hq h) (hf_supp p) (hpq ▸ hf_supp q)
   exact Set.encard_le_encard_of_injOn (fun _ hp => hf_sep _) hf_inj
 
-theorem encard_le_A (P : G.Joiner A B) : P.1.encard ≤ A.encard :=
-  P.joiner_le_separator ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
+theorem le_A (P : G.Joiner A B) : P.1.encard ≤ A.encard :=
+  P.le_separator ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
 
 end Joiner
 
-noncomputable def mincut (G : SimpleGraph V) (A B : Set V) : ℕ∞ :=
-  ⨅ S : G.Separator A B, S.1.encard
+noncomputable def mincut (G : SimpleGraph V) (A B : Set V) := ⨅ S : G.Separator A B, S.1.encard
 
-noncomputable def maxflow (G : SimpleGraph V) (A B : Set V) : ℕ∞ :=
-  ⨆ P : G.Joiner A B, P.1.encard
+noncomputable def maxflow (G : SimpleGraph V) (A B : Set V) := ⨆ P : G.Joiner A B, P.1.encard
 
 @[blueprint "thm:maxflow_le_mincut"
   (statement := /-- The maximum number of disjoint A-B paths is at most the
     minimum size of an A-B separator. -/)]
 theorem maxflow_le_mincut : G.maxflow A B ≤ G.mincut A B := by
-  apply iSup_le; intro P; apply le_iInf; intro S; exact P.joiner_le_separator S
+  apply iSup_le; intro P; apply le_iInf; intro S; exact P.le_separator S
 
 private lemma exists_new_disjoint_path (P : Set (G.ABPath A B))
     (h_not_sep : ¬ G.Separates A B (⋃ p ∈ P, p.support)) :
@@ -156,7 +146,12 @@ theorem Menger_of_mincut_top (h : G.mincut A B = ⊤) : G.mincut A B = G.maxflow
   h ▸ (maxflow_infinite_of_mincut_infinite h).symm
 
 lemma mincut_le_inter_add_edgeSet : G.mincut A B ≤ (A ∩ B).encard + G.edgeSet.encard := by
-  obtain ⟨S, hS_cover, hS_card⟩ := G.exists_vertex_cover
+  have exists_vertex_cover : ∃ S : Set V, (∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e) ∧
+      S.encard ≤ G.edgeSet.encard := by
+    refine ⟨(fun e : Sym2 V => (Quot.out e).1) '' G.edgeSet, ?_, Set.encard_image_le _ _⟩
+    intro e he
+    exact ⟨(Quot.out e).1, ⟨e, he, rfl⟩, Sym2.out_fst_mem e⟩
+  obtain ⟨S, hS_cover, hS_card⟩ := exists_vertex_cover
   exact le_trans
     (iInf_le_of_le (Separator.of_vertex_cover S hS_cover) le_rfl)
     (le_trans (Set.encard_union_le _ _) (add_le_add_right hS_card _))
@@ -235,7 +230,7 @@ lemma Walk.contract (p : G.Walk u v) (e : G.Adj x y) :
       refine' ⟨ Walk.cons h_adj w, _ ⟩
       simp_all [ Finset.subset_iff ]
 
-noncomputable def contract_preimage (Y : Set (V / e)) : Set V := {v | ⟦v⟧ ∈ Y}
+noncomputable abbrev contract_preimage (Y : Set (V / e)) : Set V := {v | ⟦v⟧ ∈ Y}
 
 lemma mem_contract_preimage {Y : Set (V / e)} : v ∈ contract_preimage Y ↔ ⟦v⟧ ∈ Y := by rfl
 
@@ -254,25 +249,24 @@ lemma contract_preimage_separates (Y : (G / e).Separator (A / e) (B / e)) :
   simp only [Finset.mem_image, List.mem_toFinset] at this
   grind [mem_contract_preimage]
 
-@[simp] lemma contract_same {e : G.Adj x y} : (⟦y⟧ : V / e) = ⟦x⟧ := by
+@[simp] lemma contract_same : (⟦y⟧ : V / e) = ⟦x⟧ := by
   simp [Quotient.eq, contractSetoid]
 
 lemma contractEdgeProj_eq_vertex_iff : (⟦u⟧ : V / e) = ⟦x⟧ ↔ u = x ∨ u = y := by
   simp [contractSetoid, Quotient.eq] ; grind
 
-lemma contractEdge_adj_lift (u v : V) (hu : (⟦u⟧ : V / e) ≠ ⟦x⟧) (hv : (⟦v⟧ : V / e) ≠ ⟦x⟧) :
-  (G / e).Adj ⟦u⟧ ⟦v⟧ → G.Adj u v := by
-    rintro ⟨ a, b, ha, hb, hab ⟩
-    · simp_all [ Quotient.eq ]
+lemma contractEdge_adj_lift (hu : (⟦u⟧ : V / e) ≠ ⟦x⟧) (hv : (⟦v⟧ : V / e) ≠ ⟦x⟧) :
+    (G / e).Adj ⟦u⟧ ⟦v⟧ → G.Adj u v := by
+  rintro ⟨ a, b, ha, hb, hab ⟩
+  · simp_all [ Quotient.eq ]
+    unfold contractSetoid at *; aesop
+  · have h_adj : (⟦v⟧ : V / e) ≠ ⟦x⟧ → (⟦u⟧ : V / e) ≠ ⟦x⟧ → (G / e).Adj ⟦v⟧ ⟦u⟧ → G.Adj v u := by
+      simp_all [ Quotient.eq ]
       unfold contractSetoid at *; aesop
-    · -- Apply the lemma that states if the projections of two vertices are adjacent and neither is the contracted vertex, then the original vertices are adjacent.
-      have h_adj : (⟦v⟧ : V/e) ≠ ⟦x⟧ → (⟦u⟧ : V/e) ≠ ⟦x⟧ → (G / e).Adj ⟦v⟧ ⟦u⟧ → G.Adj v u := by
-        simp_all [ Quotient.eq ]
-        unfold contractSetoid at *; aesop
-      simp_all [ adj_comm ]
-      unfold contract at *; aesop
+    simp_all [ adj_comm ]
+    unfold contract at *; aesop
 
-private lemma quot_injOn_away (Y : Set (V / e)) (hv : ⟦x⟧ ∉ Y) :
+private lemma quot_injOn_away {Y : Set (V / e)} (hv : ⟦x⟧ ∉ Y) :
     Set.InjOn (fun v => (⟦v⟧ : V / e)) (contract_preimage Y) := by
   intro a ha b hb hab
   simp only [contract_preimage, Set.mem_setOf_eq] at ha hb
@@ -287,73 +281,27 @@ private lemma quot_injOn_away (Y : Set (V / e)) (hv : ⟦x⟧ ∉ Y) :
   · rintro ⟨v, hv, rfl⟩; exact hv
   · intro hz; obtain ⟨v, rfl⟩ := Quotient.exists_rep z; exact ⟨v, hz, rfl⟩
 
-/- --------------- REVIEW --------------- -/
+@[simp] lemma encard_preimage_contractEdge {Y : Set (V / e)} (hx : ⟦x⟧ ∈ Y) :
+    (contract_preimage Y).encard = Y.encard + 1 := by
+  change (_ ⁻¹' _).encard = _
+  rw [← diff_union_of_subset (singleton_subset_iff.mpr hx)]
+  simp only [preimage_union]
+  rw [encard_union_eq disjoint_sdiff_left, encard_union_eq (by simp [disjoint_sdiff_left]), add_assoc]
+  congr 1
+  · change (contract_preimage _).encard = _
+    nth_rewrite 2 [← quot_image_preimage (Y \ {⟦x⟧})]
+    refine (InjOn.encard_image ?_).symm
+    exact quot_injOn_away (notMem_diff_of_mem rfl)
+  · convert_to ({x, y} : Set V).encard = 2
+    · congr 1 ; ext z ; simp [contractEdgeProj_eq_vertex_iff]
+    · simp +decide
+    · have : x ∉ ({y} : Set V) := e.ne
+      simp +decide [encard_insert_of_notMem this]
 
-lemma encard_preimage_contractEdge (Y : Set (V / e)) :
-    (contract_preimage Y).encard = if ⟦x⟧ ∈ Y then Y.encard + 1 else Y.encard := by
-  split_ifs with hv
-  · set Y' := Y \ {⟦x⟧} with hY'_def
-    have hv' : ⟦x⟧ ∉ Y' := by simp [Y']
-    have h_pre_eq : contract_preimage Y = contract_preimage Y' ∪ {x, y} := by
-      ext v
-      simp only [contract_preimage, Set.mem_setOf_eq, Set.mem_union,
-        Set.mem_singleton_iff, Set.mem_insert_iff]
-      constructor
-      · intro hv_mem
-        by_cases hx : v = x
-        · right; left; exact hx
-        · by_cases hy : v = y
-          · right; right; exact hy
-          · left; refine ⟨hv_mem, ?_⟩
-            intro heq
-            have := contractEdgeProj_eq_vertex_iff (u := v) |>.mp heq
-            rcases this with rfl | rfl <;> contradiction
-      · rintro (⟨hv_mem, _⟩ | hv_x | hv_y)
-        · exact hv_mem
-        · rw [hv_x]; exact hv
-        · simpa [hv_y]
-    have h_disj : Disjoint (contract_preimage Y') ({x, y} : Set V) := by
-      rw [Set.disjoint_left]
-      intro v hv_mem hv_xy
-      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hv_xy
-      simp only [contract_preimage, Set.mem_setOf_eq] at hv_mem
-      rcases hv_xy with hv_x | hv_y
-      · rw [hv_x] at hv_mem; exact hv' hv_mem
-      · simp [hv_y] at hv_mem; exact hv' hv_mem
-    rw [h_pre_eq, Set.encard_union_eq h_disj, Set.encard_pair e.ne]
-    -- preimage of Y' has encard = Y'.encard (by injectivity + image = Y')
-    have h_inj := quot_injOn_away (G := G) Y' hv'
-    have h_img := quot_image_preimage (G := G) Y'
-    have h_encard := h_inj.encard_image
-    rw [h_img] at h_encard
-    -- h_encard : Y'.encard = (contract_preimage (G := G) (x := x) (y := y) e Y').encard
-    -- Y.encard = Y'.encard + 1
-    have hY_eq : Y = insert ⟦x⟧ Y' := by
-      ext z; constructor
-      · intro hz; by_cases hze : z = ⟦x⟧
-        · exact hze ▸ Set.mem_insert _ _
-        · exact Set.mem_insert_of_mem _ ⟨hz, hze⟩
-      · rintro (rfl | ⟨hz, _⟩)
-        · exact hv
-        · exact hz
-    rw [hY_eq, Set.encard_insert_of_notMem hv', ← h_encard]
-    ring
-  · -- Case: contractEdge_vertex ∉ Y
-    have h_inj := quot_injOn_away (G := G) Y hv
-    have h_img := quot_image_preimage (G := G) Y
-    have h_encard := h_inj.encard_image
-    rw [h_img] at h_encard
-    exact h_encard.symm
-
-/-
-A walk in the contracted graph that avoids the contracted vertex can be lifted to a walk in the original graph.
--/
-lemma lift_walk_avoiding_contraction {x y : V} (e : G.Adj x y)
-    {u v : Quotient (contractSetoid (G := G) (x := x) (y := y) e)}
-    (p : (contract (G := G) (x := x) (y := y) e).Walk u v) (hp : ⟦x⟧ ∉ p.support) :
-  ∃ (u' v' : V) (q : G.Walk u' v'), ⟦u'⟧ = u ∧ ⟦v'⟧ = v ∧
-    (q.support.toFinset.image (⟦·⟧)) = p.support.toFinset ∧
-    x ∉ q.support ∧ y ∉ q.support := by
+lemma lift_walk_avoiding_contraction {u v : V / e} (p : (G / e).Walk u v) (hp : ⟦x⟧ ∉ p.support) :
+    ∃ (u' v' : V) (q : G.Walk u' v'), ⟦u'⟧ = u ∧ ⟦v'⟧ = v ∧
+      (q.support.toFinset.image (⟦·⟧)) = p.support.toFinset ∧
+      x ∉ q.support ∧ y ∉ q.support := by
   induction' p with u v p ih
   · obtain ⟨ u', rfl ⟩ := Quotient.exists_rep u
     have hu_not_x : u' ≠ x := by
@@ -364,11 +312,8 @@ lemma lift_walk_avoiding_contraction {x y : V} (e : G.Adj x y)
       intro huy
       apply hp
       simp [huy]
-    refine ⟨u', u', Walk.nil, rfl, rfl, by simp, ?_, ?_⟩
-    · simpa using hu_not_x.symm
-    · simpa using hu_not_y.symm
+    refine ⟨u', u', Walk.nil, rfl, rfl, by simp, ?_, ?_⟩ <;> aesop
   · rename_i h₁ h₂
-    -- Since v is not the contracted vertex, there exists a unique u' in V such that contractEdgeProj x y u' = v.
     obtain ⟨u', hu'⟩ : ∃ u' : V, ⟦u'⟧ = v ∧ u' ≠ x ∧ u' ≠ y := by
       rcases Quotient.exists_rep v with ⟨ u', rfl ⟩
       refine' ⟨ u', rfl, _, _ ⟩ <;> contrapose! hp <;> simp_all
@@ -377,15 +322,12 @@ lemma lift_walk_avoiding_contraction {x y : V} (e : G.Adj x y)
     refine' ⟨ u', v'', Walk.cons _ q, hu'.1, hv''', _, _, _ ⟩ <;> simp_all [ Walk.support_cons ];
     · have h_adj : (contract (G := G) (x := x) (y := y) e).Adj ⟦u'⟧ ⟦v'⟧ := by
         grind
-      refine contractEdge_adj_lift u' v' ?_ ?_ h_adj
+      refine contractEdge_adj_lift ?_ ?_ h_adj
       · grind
       · intro h; simp_all
     · tauto
     · grind
 
-/-
-Define deleting a single edge and prove it reduces edge count if the edge exists.
--/
 def deleteEdge (G : SimpleGraph V) (_e : G.Adj x y) : SimpleGraph V := G.deleteEdges {s(x, y)}
 
 infix:60 " - " => deleteEdge
@@ -397,16 +339,11 @@ lemma deleteEdge_edgeSet_encard_lt (hfin : G.edgeSet.Finite) : (G - e).edgeSet.e
 /-
 A path in the contracted graph avoiding the contracted vertex lifts to a path in the original graph avoiding the contracted edge's endpoints (subset support).
 -/
-lemma lift_path_avoiding_contraction_AB (G : SimpleGraph V) (A B : Set V) {x y : V}
-    (e : G.Adj x y) {u v : Quotient (contractSetoid (G := G) (x := x) (y := y) e)} (p : (contract (G := G) (x := x) (y := y) e).Walk u v)
-    (hp_avoid : ⟦x⟧ ∉ p.support)
-    (hu : u ∈ contract_image (G := G) (x := x) (y := y) A e) (hv : v ∈ contract_image (G := G) (x := x) (y := y) B e) :
-  ∃ (u' v' : V) (q : G.Walk u' v'), u' ∈ A ∧ v' ∈ B ∧
-    ⟦u'⟧ = u ∧ ⟦v'⟧ = v ∧ q.IsPath ∧
-    (q.support.toFinset.image (⟦·⟧)) ⊆ p.support.toFinset ∧
-    x ∉ q.support ∧ y ∉ q.support := by
-  have := @lift_walk_avoiding_contraction V G x y e u v p hp_avoid
-  obtain ⟨ u', v', q, hu', hv', hq ⟩ := this
+lemma lift_path_avoiding_contraction_AB (A B : Set V) {u v : V / e} (p : (G / e).Walk u v)
+      (hp_avoid : ⟦x⟧ ∉ p.support) (hu : u ∈ A / e) (hv : v ∈ B / e) :
+    ∃ (u' v' : V) (q : G.Walk u' v'), u' ∈ A ∧ v' ∈ B ∧ ⟦u'⟧ = u ∧ ⟦v'⟧ = v ∧ q.IsPath ∧
+      (q.support.toFinset.image (⟦·⟧)) ⊆ p.support.toFinset ∧ x ∉ q.support ∧ y ∉ q.support := by
+  obtain ⟨u', v', q, hu', hv', hq⟩ := @lift_walk_avoiding_contraction V G x y e u v p hp_avoid
   refine' ⟨ u', v', q.toPath, _, _, hu', hv', _, _, _ ⟩
   · simp [contract_image] at hu
     obtain ⟨ w, hw, rfl ⟩ := hu
@@ -418,26 +355,22 @@ lemma lift_path_avoiding_contraction_AB (G : SimpleGraph V) (A B : Set V) {x y :
     have h_inj : ∀ a b : V, (⟦a⟧ : V / e) = ⟦b⟧ → a = b ∨ a = x ∧ b = y ∨ a = y ∧ b = x := by
       intro a b hab; erw [ Quotient.eq ] at hab; aesop
     cases h_inj _ _ ( hv'.trans hw.2.symm ) <;> aesop;
-  · simp_all [ Walk.isPath_def ]
+  · exact q.toPath.isPath
   · rw [ ← hq.1 ]
     simp [ Finset.subset_iff ]
     intro a ha
     exact ⟨ a, by simpa using Walk.support_toPath_subset q ha, rfl ⟩
-  · exact ⟨ fun h => hq.2.1 <| by simpa using q.support_bypass_subset h, fun h => hq.2.2 <| by simpa using q.support_bypass_subset h ⟩
+  · exact ⟨ fun h => hq.2.1 <| by simpa using q.support_bypass_subset h, fun h => hq.2.2 <|
+      by simpa using q.support_bypass_subset h ⟩
 
-/-
-If a vertex is adjacent to the contracted vertex in the quotient graph, then it is adjacent to one of the endpoints of the contracted edge in the original graph.
--/
-lemma contractEdge_adj_lift_vertex (G : SimpleGraph V) {x y : V} (e : G.Adj x y) (u : V)
-  (hu : (⟦u⟧ : V/e) ≠ ⟦x⟧) :
-  (contract (G := G) (x := x) (y := y) e).Adj ⟦u⟧ ⟦x⟧ → G.Adj u x ∨ G.Adj u y := by
-    rintro ⟨ a, ha ⟩
-    rcases ha with ( ⟨ a', b', ha', hb', hab ⟩ | ⟨ a', b', ha', hb', hab ⟩ )
-    · simp_all [ Quotient.eq ]
-      unfold contractSetoid at *; aesop
-    · rw [ eq_comm ] at ha' hb'
-      cases eq_or_ne a' x <;> cases eq_or_ne a' y <;> cases eq_or_ne b' x <;> cases eq_or_ne b' y
-      all_goals simp_all [ Quotient.eq, contractSetoid, adj_comm ]
+lemma contractEdge_adj_lift_vertex (hu : (⟦u⟧ : V / e) ≠ ⟦x⟧) : (G / e).Adj ⟦u⟧ ⟦x⟧ → G.Adj u x ∨ G.Adj u y := by
+  rintro ⟨ a, ⟨ a', b', ha', hb', hab ⟩ | ⟨ a', b', ha', hb', hab ⟩ ⟩
+  · simp [ Quotient.eq, contractSetoid ] at * ; grind
+  · rw [ eq_comm ] at ha' hb'
+    cases eq_or_ne a' x <;> cases eq_or_ne a' y <;> cases eq_or_ne b' x <;> cases eq_or_ne b' y
+    all_goals { simp [ Quotient.eq, contractSetoid, adj_comm ] at * ; grind }
+
+/- --------------- REVIEW --------------- -/
 
 lemma contractEdge_edgeSet_encard_lt {x y : V} (e : G.Adj x y) (hfin : G.edgeSet.Finite) :
     (contract (G := G) (x := x) (y := y) e).edgeSet.encard < G.edgeSet.encard := by
@@ -849,15 +782,6 @@ theorem disjoint_paths_join (G : SimpleGraph V) (A B : Set V) (X : G.Separator A
   exact ⟨⟨Set.range joinPath, h_disj⟩, h_card⟩
 
 /-
-The size of the preimage of a set Y containing the contracted vertex is |Y| + 1.
--/
-lemma contractEdge_separator_lift_card {x y : V} (e : G.Adj x y)
-  (Y : Set (Quotient (contractSetoid (G := G) (x := x) (y := y) e)))
-  (h_ve : ⟦x⟧ ∈ Y) :
-  (contract_preimage (G := G) (x := x) (y := y) Y).encard = Y.encard + 1 := by
-  simp [encard_preimage_contractEdge (G := G), h_ve]
-
-/-
 If a walk is a path and the start is not the end, it can be decomposed into a prefix path avoiding the end vertex, and a final edge.
 -/
 lemma Walk.exists_prefix_path_of_path_ne {G : SimpleGraph V}
@@ -893,7 +817,7 @@ lemma lift_path_extension_step (G : SimpleGraph V) {x y : V} (e : G.Adj x y)
     p.support.toFinset ⊆ q.support.toFinset ∪ {v} ∧
     p.support.toFinset ∩ {x, y} = {v} := by
       have h_w_adj : G.Adj w x ∨ G.Adj w y := by
-        have := contractEdge_adj_lift_vertex G e w ?_ hw_proj_adj <;> aesop;
+        have := contractEdge_adj_lift_vertex ?_ hw_proj_adj <;> aesop;
       cases' h_w_adj with h h
       · refine' ⟨ x, q.append ( Walk.cons h Walk.nil ), Or.inl rfl, _, _, _ ⟩ <;> simp_all [ Walk.isPath_def ];
         · simp_all [ Walk.support_append ]
@@ -929,7 +853,7 @@ lemma lift_path_to_contraction_end (G : SimpleGraph V) (A : Set V) {x y : V} (e 
       u ∈ A ∧ ⟦u⟧ = u' ∧ ⟦w⟧ = w' ∧ q.IsPath ∧ (∀ z, z ∈ q.support → ⟦z⟧ ∈ q'.support) ∧
       x ∉ q.support ∧ y ∉ q.support := by
     obtain ⟨u, w, q, hu, _, hw1, hw2, hq_path, hq_img, hx, hy⟩ :=
-      lift_path_avoiding_contraction_AB G A Set.univ e q' hq'_avoid hu'
+      lift_path_avoiding_contraction_AB A Set.univ q' hq'_avoid hu'
         ⟨Classical.choose (Quotient.exists_rep w'), trivial, Classical.choose_spec (Quotient.exists_rep w')⟩
     simp only [Finset.subset_iff, Finset.mem_image, List.mem_toFinset] at hq_img
     exact ⟨u, w, q, hu, hw1, hw2, hq_path, fun z hz => hq_img ⟨z, hz, rfl⟩, hx, hy⟩
@@ -1160,7 +1084,7 @@ lemma exists_lifted_ABPath_avoiding (G : SimpleGraph V) (A B : Set V) {x y : V} 
       obtain ⟨u, v, q, hu, hv, hq_isPath, hq_support⟩ : ∃ u v : V, ∃ q : G.Walk u v, (u ∈ A ∧ v ∈ B ∧
       ⟦u⟧ = p'.u.1 ∧ ⟦v⟧ = p'.v.1 ∧ q.IsPath ∧ (q.support.toFinset.image (⟦·⟧)) ⊆ p'.p.1.support.toFinset ∧ x ∉ q.support ∧ y ∉ q.support) := by
         rcases p' with ⟨ u', v', p', hp'_path ⟩
-        obtain ⟨ u, v, q, hq ⟩ := lift_path_avoiding_contraction_AB G A B e p' hp'_avoid u'.2 v'.2
+        obtain ⟨ u, v, q, hq ⟩ := lift_path_avoiding_contraction_AB A B p' hp'_avoid u'.2 v'.2
         exact ⟨ u, v, q, hq ⟩
       refine ⟨⟨⟨u, hu⟩, ⟨v, hv⟩, q, hq_support.2.1⟩, ?_, ?_, ?_, ?_⟩ <;> aesop
 
@@ -1451,7 +1375,7 @@ lemma Menger_case2_exists_X (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.A
   have h_sep : G.Separates A B (contract_preimage (G := G) (x := x) (y := y) Y) :=
     contract_preimage_separates (G := G) (x := x) (y := y) ⟨Y, hY_sep⟩
   have h_lift_card : (contract_preimage (G := G) (x := x) (y := y) Y).encard = Y.encard + 1 :=
-    contractEdge_separator_lift_card (G := G) (x := x) (y := y) e Y h_ve
+    encard_preimage_contractEdge h_ve
   -- X has encard ≥ k (since it's a separator of G)
   have h_ge_k : (contract_preimage (G := G) (x := x) (y := y) Y).encard ≥ k := by
     calc k = G.mincut A B := h_min.symm
@@ -1746,7 +1670,7 @@ This version would actually be true without the `[Fintype S]` assumption.
 theorem Menger_equiv [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B, ∃ φ : P.1 ≃ S.1,
     ∀ p : P.1, (φ p).1 ∈ p.1.p.1.support := by
   have h_maxflow_lt : G.maxflow A B < ⊤ :=
-    lt_of_le_of_lt (iSup_le (fun P => P.encard_le_A)) (Set.toFinite A).encard_lt_top
+    lt_of_le_of_lt (iSup_le (fun P => P.le_A)) (Set.toFinite A).encard_lt_top
   obtain ⟨P, hP⟩ := ENat.exists_eq_iSup_of_lt_top h_maxflow_lt
   use P
   obtain ⟨S, hS⟩ := ENat.exists_eq_iInf (fun S : G.Separator A B => S.1.encard)
@@ -1762,7 +1686,7 @@ theorem Menger_equiv [Fintype V] : ∃ P : G.Joiner A B, ∃ S : G.Separator A B
     exact Set.disjoint_left.mp h1 (hf p) (hpq ▸ hf q)
   have hP_fin : P.1.Finite :=
     Set.encard_ne_top_iff.mp (ne_top_of_le_ne_top
-      (Set.encard_ne_top_iff.mpr (Set.toFinite A)) (P.encard_le_A))
+      (Set.encard_ne_top_iff.mpr (Set.toFinite A)) (P.le_A))
   haveI : Fintype P.1 := hP_fin.fintype
   haveI : Fintype S.1 := (Set.toFinite S.1).fintype
   have h_card_eq : Fintype.card P.1 = Fintype.card S.1 := by
