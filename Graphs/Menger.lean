@@ -11,7 +11,7 @@ set_option maxHeartbeats 0
 
 open Classical Set
 
-variable {V W : Type*} {G : SimpleGraph V} {x y u v w : V} {e : G.Adj x y} {A B : Set V} {n : ℕ}
+variable {V W : Type*} {G : SimpleGraph V} {x y u v w : V} {e : G.Adj x y} {A B X : Set V} {n : ℕ}
 
 namespace SimpleGraph
 
@@ -415,7 +415,7 @@ theorem firstVisit_mem_X {X : Set V} {p : G.Walk u v} {hp : ∃ w ∈ p.support,
     p.firstVisit X hp ∈ X := by
   induction' p ; simpa [Walk.firstVisit] using hp ; grind [Walk.firstVisit]
 
-theorem firstVisit_mem_takeUntil {X : Set V} {p : G.Walk u v} {h1 : w ∈ p.support} {h2 : w ∈ X} :
+theorem firstVisit_mem_takeUntil {X : Set V} {p : G.Walk u v} (h1 : w ∈ p.support) (h2 : w ∈ X) :
     p.firstVisit X ⟨w, h1, h2⟩ ∈ (p.takeUntil _ h1).support := by
   induction' p with u u ; simp [Walk.firstVisit, Walk.takeUntil]
   by_cases h3 : u ∈ X ; simp [Walk.firstVisit, Walk.takeUntil, h3]
@@ -429,94 +429,47 @@ theorem takeUntilFirst_subset_support {X : Set V} {p : G.Walk u v} {hp : ∃ w �
     (p.takeUntilFirst X hp).support ⊆ p.support :=
   (Walk.isSubwalk_takeUntil _ _).support_subset
 
-/- --------------- REVIEW --------------- -/
-
--- TODO: no toFinset in the statement
 lemma Walk.exists_walk_prefix_avoiding_set {X : Set V} {p : G.Walk u v} (hp : ∃ w ∈ p.support, w ∈ X) :
-    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.support.toFinset ⊆ p.support.toFinset ∧
-      (∀ z ∈ q.support, z ∈ X → z = w) := by
-  refine ⟨p.firstVisit X hp, p.takeUntilFirst X hp, firstVisit_mem_X, ?_, ?_⟩
-  · intro a ; simp ; apply takeUntilFirst_subset_support
-  · intro z hz hzX
-    have hz' : z ∈ p.support := takeUntilFirst_subset_support hz
-    contrapose hz
-    apply Walk.notMem_support_takeUntil_support_takeUntil_subset
-    · grind
-    · convert firstVisit_mem_takeUntil <;> assumption
+    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.support ⊆ p.support ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
+  refine ⟨p.firstVisit X hp, p.takeUntilFirst X hp, firstVisit_mem_X, takeUntilFirst_subset_support, ?_⟩
+  intro z hz hzX
+  have hz' : z ∈ p.support := takeUntilFirst_subset_support hz
+  contrapose! hz
+  apply Walk.notMem_support_takeUntil_support_takeUntil_subset hz.symm hz'
+  exact firstVisit_mem_takeUntil hz' hzX
 
 lemma Walk.exists_path_prefix_avoiding_set {X : Set V} {p : G.Walk u v} (h : ∃ w ∈ p.support, w ∈ X) :
-    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧
-      (∀ z ∈ q.support, z ∈ X → z = w) := by
-    obtain ⟨w', q, hw'X, hq_support, hq_unique⟩ := p.exists_walk_prefix_avoiding_set h
-    refine ⟨w', q.bypass, hw'X, q.bypass_isPath, ?_, ?_⟩
-    · simp [Finset.subset_iff] at hq_support ⊢
-      grind [q.support_bypass_subset]
-    · grind [q.support_bypass_subset]
+    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support ⊆ p.support ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
+  obtain ⟨w', q, hw'X, hq_support, hq_unique⟩ := p.exists_walk_prefix_avoiding_set h
+  refine ⟨w', q.bypass, hw'X, q.bypass_isPath, ?_, ?_⟩ <;> grind [q.support_bypass_subset]
 
-/-
-If X separates A and B in G and contains x and y, then any separator of A and X in G-xy is also a separator of A and B in G.
--/
-lemma separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph V) (A B : Set V)
-    (x y : V) (h : G.Adj x y) (X : G.Separator A B) (S : (G.deleteEdge h).Separator A X.1) (hx : x ∈ X.1) (hy : y ∈ X.1)
-    (hxy : x ≠ y) : G.Separates A B S.1 := by
-    classical
-    intro u hu v hv p
-    have h_sep := X.2 u hu v hv p
-    obtain ⟨w, q, hwX, hqpath, hq_support, hq_avoid⟩ := Walk.exists_path_prefix_avoiding_set h_sep
-    have hq_avoid_xy : s(x, y) ∉ q.edges := by
-      apply Walk.edges_no_xy_of_support_inter_subset_one hxy
-      simp only [Finset.subset_iff, Finset.mem_inter, List.mem_toFinset, Finset.mem_insert,
-        Finset.mem_singleton]
-      intro z ⟨hz_mem, hz_xy⟩
-      exact hq_avoid z hz_mem (by rcases hz_xy with rfl | rfl <;> assumption)
-    have hq_path_G_minus_xy : ∃ q' : (G.deleteEdge h).Walk u w, q'.IsPath ∧ q'.support.toFinset ⊆ q.support.toFinset := by
-      have : ∀ {u v : V} (q : G.Walk u v), q.IsPath → s(x, y) ∉ q.edges → ∃ q' : (G.deleteEdge h).Walk u v, q'.IsPath ∧ q'.support.toFinset ⊆ q.support.toFinset := by
-        intro u v q hq hq_avoid_xy
-        induction' q with u v q ih
-        · exact ⟨ Walk.nil, by simp ⟩
-        · rename_i h₁ h₂ h₃
-          simp_all [ Walk.cons_isPath_iff ]
-          obtain ⟨ q', hq'_path, hq'_support ⟩ := h₃
-          refine' ⟨ Walk.cons _ q', _, _ ⟩ <;> simp_all [ Finset.subset_iff ];
-          · unfold deleteEdge; aesop
-          · exact fun h => hq.2 ( by simpa using hq'_support ( by simpa using h ) )
-          · intro a ha; specialize hq'_support ( List.mem_toFinset.mpr ha ) ; aesop
-      exact this q hqpath hq_avoid_xy
-    obtain ⟨ q', hq'_path, hq'_support ⟩ := hq_path_G_minus_xy
-    have := S.2 u hu w hwX q';  simp_all [ Walk.isPath_def ]
-    obtain ⟨ z, hz₁, hz₂ ⟩ := this; exact ⟨ z, by simpa using hq'_support ( by simpa using hz₁ ) |> fun h => hq_support h, hz₂ ⟩
+lemma separates_of_separates_delete (A B : Set V) (e : G.Adj x y) (X : G.Separator A B)
+    (S : (G - e).Separator A X.1) (hx : x ∈ X.1) (hy : y ∈ X.1) : G.Separates A B S.1 := by
+  intro u hu v hv p
+  have h_sep := X.2 u hu v hv p
+  obtain ⟨w, q, hwX, hqpath, hq_support, hq_avoid⟩ := Walk.exists_path_prefix_avoiding_set h_sep
+  have hq_avoid_xy : s(x, y) ∉ q.edges := by
+    grind [Walk.edges_no_xy_of_support_inter_subset_one e.ne, List.mem_toFinset]
+  let q' := q.toDeleteEdge _ hq_avoid_xy
+  have h2 : q'.support ⊆ q.support := by simp [q', Walk.toDeleteEdge, Walk.toDeleteEdges]
+  have h3 := S.2 u hu w hwX q'
+  grind
 
-/-
-If a separator in the contracted graph has size strictly less than the minimum separator size of the original graph, then it must contain the contracted vertex.
--/
-theorem contractEdge_separator_contains_vertex (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.Adj x y) (k : ℕ∞)
-  (h_min : G.mincut A B = k)
-  (Y : (contract (G := G) (x := x) (y := y) e).Separator (contract_image (G := G) (x := x) (y := y) A e) (contract_image (G := G) (x := x) (y := y) B e))
-  (hY_card : Y.1.encard < k) :
-  ⟦x⟧ ∈ Y.1 := by
-    contrapose! hY_card
-    have h_sep : G.Separates A B (contract_preimage Y.1) := contract_preimage_separates Y
-    have h_encard : (contract_preimage (G := G) (x := x) (y := y) Y.1).encard ≤ Y.1.encard := by
-      apply Set.encard_le_encard_of_injOn (f := (⟦·⟧))
-      · intro v hv; exact (mem_contract_preimage (G := G) (x := x) (y := y)).1 hv
-      · intro v hv w _ hvw
-        by_contra h_ne
-        have h_rel := Quotient.exact hvw
-        simp at h_rel
-        rcases h_rel with rfl | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
-        · exact h_ne rfl
-        · exact hY_card ((mem_contract_preimage (G := G)).1 hv)
-        · exact hY_card ((mem_contract_preimage (G := G)).1 (by assumption))
-    calc k = G.mincut A B := h_min.symm
-      _ ≤ (contract_preimage (G := G) (x := x) (y := y) Y.1).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
-      _ ≤ Y.1.encard := h_encard
+theorem vertex_mem_contract_separator (Y : (G / e).Separator (A / e) (B / e))
+    (hY_card : Y.1.encard < G.mincut A B) : ⟦x⟧ ∈ Y.1 := by
+  contrapose! hY_card
+  have h_sep : G.Separates A B (contract_preimage Y.1) := contract_preimage_separates Y
+  have h_encard : (contract_preimage Y.1).encard ≤ Y.1.encard := by
+    apply Set.encard_le_encard_of_injOn (f := (⟦·⟧))
+    · intro ; grind
+    · rintro v hv w - hvw ; simp [Quotient.eq, contractSetoid] at hvw ; aesop
+  calc G.mincut A B ≤ (contract_preimage Y.1).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
+    _ ≤ Y.1.encard := h_encard
 
-/-
-If P is a set of disjoint paths from A to X with size equal to X, then every vertex in X is the endpoint of exactly one path in P, and that path intersects X only at its endpoint.
--/
-lemma disjoint_paths_prop (G : SimpleGraph V) (A X : Set V) (hX_fin : X.Finite)
-    (P : G.Joiner A X) (hP_card : P.1.encard = X.encard) :
-  ∀ x ∈ X, ∃! p ∈ P.1, p.v = x ∧ p.support ∩ X = {x} := by
+/- --------------- REVIEW --------------- -/
+
+lemma disjoint_paths_prop (hX_fin : X.Finite) {P : G.Joiner A X} (hP_card : P.1.encard = X.encard) :
+    ∀ x ∈ X, ∃! p ∈ P.1, p.v = x ∧ p.support ∩ X = {x} := by
   have h_inj : Set.InjOn (fun p : G.ABPath A X => p.v.1) P.1 := by
     intro p hp q hq (h_eq : p.v.1 = q.v.1)
     by_contra hneq
@@ -722,7 +675,7 @@ theorem disjoint_paths_join (G : SimpleGraph V) (A B : Set V) (X : G.Separator A
   (hX_fin : X.1.Finite)
   (hX_card : X.1.encard = k) (P_A : G.Joiner A X.1) (hP_A_card : P_A.1.encard = k) (P_B : G.Joiner X.1 B)
   (hP_B_card : P_B.1.encard = k) : ∃ P : G.Joiner A B, P.1.encard = k := by
-  have h_end := disjoint_paths_prop G A X.1 hX_fin P_A (hP_A_card.trans hX_card.symm)
+  have h_end := disjoint_paths_prop hX_fin (hP_A_card.trans hX_card.symm)
   have h_start := disjoint_paths_prop_start G X.1 B hX_fin P_B (hP_B_card.trans hX_card.symm)
   have h_end_ex : ∀ x ∈ X.1, ∃ p ∈ P_A.1, (p : G.ABPath A X.1).v.1 = x ∧ p.support ∩ X.1 = {x} :=
     fun x hx => let ⟨p, ⟨hp1, hp2, hp3⟩, _⟩ := h_end x hx; ⟨p, hp1, hp2, hp3⟩
@@ -1379,7 +1332,7 @@ lemma Menger_case2_exists_X (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.A
     exact absurd (le_iInf h_all) (not_le.mpr h_contract_min)
   -- The contracted vertex must be in Y
   have h_ve : ⟦x⟧ ∈ Y :=
-    contractEdge_separator_contains_vertex G A B e k h_min ⟨Y, hY_sep⟩ hY_card
+    vertex_mem_contract_separator ⟨Y, hY_sep⟩ (h_min ▸ hY_card)
   -- Lift Y to a separator X in G
   have h_sep : G.Separates A B (contract_preimage (G := G) (x := x) (y := y) Y) :=
     contract_preimage_separates (G := G) (x := x) (y := y) ⟨Y, hY_sep⟩
@@ -1403,7 +1356,7 @@ lemma Menger_case2_exists_X (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.A
 If X separates A and B in G and contains x and y, then any separator of X and B in G-xy is also a separator of A and B in G.
 -/
 lemma separator_in_G_of_separator_in_G_delete_edge_right (G : SimpleGraph V) (A B : Set V)
-    (x y : V) (h : G.Adj x y) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) (hxy : x ≠ y)
+    (x y : V) (h : G.Adj x y) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1)
     (S : (G.deleteEdge h).Separator X.1 B) : G.Separates A B S.1 := by
     let X_rev : G.Separator B A := ⟨X.1, fun u hu v hv p => by
       obtain ⟨w, hw, hwX⟩ := X.2 v hv u hu p.reverse
@@ -1411,7 +1364,7 @@ lemma separator_in_G_of_separator_in_G_delete_edge_right (G : SimpleGraph V) (A 
     let S_rev : (G.deleteEdge h).Separator B X_rev.1 := ⟨S.1, fun u hu v hv p => by
       obtain ⟨w, hw, hwS⟩ := S.2 v hv u hu p.reverse
       exact ⟨w, by simpa using hw, hwS⟩⟩
-    have := separator_in_G_of_separator_in_G_delete_edge G B A x y h X_rev S_rev hx hy hxy
+    have := separates_of_separates_delete B A h X_rev S_rev hx hy
     intro u hu v hv p
     obtain ⟨w, hw, hwS⟩ := this v hv u hu p.reverse
     exact ⟨w, by simpa using hw, hwS⟩
@@ -1425,7 +1378,7 @@ lemma min_sep_delete_ge_k_left (G : SimpleGraph V) (A B : Set V) {x y : V}
     rw [← h_min, ge_iff_le, mincut]
     apply le_iInf
     intro S
-    exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge G A B x y e X S hx hy e.ne⟩ le_rfl
+    exact iInf_le_of_le ⟨S.1, separates_of_separates_delete A B e X S hx hy⟩ le_rfl
 
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of X and B in G-xy is at least k.
@@ -1436,7 +1389,7 @@ lemma min_sep_delete_ge_k_right (G : SimpleGraph V) (A B : Set V) {x y : V}
     rw [← h_min, ge_iff_le, mincut]
     apply le_iInf
     intro S
-    exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge_right G A B x y e X hx hy e.ne S⟩ le_rfl
+    exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge_right G A B x y e X hx hy S⟩ le_rfl
 
 /-
 If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to a set of disjoint paths in G with the same size.
