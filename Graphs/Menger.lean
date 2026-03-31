@@ -11,7 +11,7 @@ set_option maxHeartbeats 0
 
 open Classical Set
 
-variable {V W : Type*} {G : SimpleGraph V} {x y u v : V} {e : G.Adj x y} {A B : Set V} {n : ℕ}
+variable {V W : Type*} {G : SimpleGraph V} {x y u v w : V} {e : G.Adj x y} {A B : Set V} {n : ℕ}
 
 namespace SimpleGraph
 
@@ -403,42 +403,55 @@ lemma Walk.edges_no_xy_of_support_inter_subset_one {p : G.Walk u v} (hxy : x ≠
   simp [ Finset.eq_singleton_iff_unique_mem ]
   aesop
 
-/- --------------- REVIEW --------------- -/
-
 noncomputable def Walk.firstVisit (X : Set V) : ∀ {u v} (p : G.Walk u v), (∃ w ∈ p.support, w ∈ X) → V
   | u, _, Walk.nil, hp => u
   | u, v, Walk.cons h p, hp => if h : u ∈ X then u else p.firstVisit X (by grind)
 
-/-
-If a walk intersects X, there is a prefix walk ending in X that avoids X internally.
--/
-lemma Walk.exists_walk_prefix_avoiding_set (p : G.Walk u v) (X : Set V) (hp : ∃ w ∈ p.support, w ∈ X) :
+theorem firstVisit_mem_support {X : Set V} {p : G.Walk u v} {hp : ∃ w ∈ p.support, w ∈ X} :
+    p.firstVisit X hp ∈ p.support := by
+  induction' p ; simp [Walk.firstVisit] ; grind [Walk.firstVisit]
+
+theorem firstVisit_mem_X {X : Set V} {p : G.Walk u v} {hp : ∃ w ∈ p.support, w ∈ X} :
+    p.firstVisit X hp ∈ X := by
+  induction' p ; simpa [Walk.firstVisit] using hp ; grind [Walk.firstVisit]
+
+theorem firstVisit_mem_takeUntil {X : Set V} {p : G.Walk u v} {h1 : w ∈ p.support} {h2 : w ∈ X} :
+    p.firstVisit X ⟨w, h1, h2⟩ ∈ (p.takeUntil _ h1).support := by
+  induction' p with u u ; simp [Walk.firstVisit, Walk.takeUntil]
+  by_cases h3 : u ∈ X ; simp [Walk.firstVisit, Walk.takeUntil, h3]
+  grind [Walk.firstVisit, Walk.takeUntil]
+
+noncomputable def Walk.takeUntilFirst (X : Set V) (p : G.Walk u v) (hp : ∃ w ∈ p.support, w ∈ X) :
+    G.Walk u (p.firstVisit X hp) :=
+  p.takeUntil _ firstVisit_mem_support
+
+theorem takeUntilFirst_subset_support {X : Set V} {p : G.Walk u v} {hp : ∃ w ∈ p.support, w ∈ X} :
+    (p.takeUntilFirst X hp).support ⊆ p.support :=
+  (Walk.isSubwalk_takeUntil _ _).support_subset
+
+/- --------------- REVIEW --------------- -/
+
+-- TODO: no toFinset in the statement
+lemma Walk.exists_walk_prefix_avoiding_set {X : Set V} {p : G.Walk u v} (hp : ∃ w ∈ p.support, w ∈ X) :
     ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.support.toFinset ⊆ p.support.toFinset ∧
       (∀ z ∈ q.support, z ∈ X → z = w) := by
-  induction' p with u v p ih
-  · simp_all [ Walk.support ]
-    exact ⟨ u, hp, Walk.nil, by simp ⟩
-  · rename_i h₁ h₂ h₃
-    by_cases h : v ∈ X
-    · refine' ⟨ v, Walk.nil, h, _, _ ⟩ <;> simp [ h ];
-    · rcases h₃ ( by cases hp; aesop ) with ⟨ w, q, hw, hq₁, hq₂ ⟩ ; use w, cons h₁ q ; aesop
+  refine ⟨p.firstVisit X hp, p.takeUntilFirst X hp, firstVisit_mem_X, ?_, ?_⟩
+  · intro a ; simp ; apply takeUntilFirst_subset_support
+  · intro z hz hzX
+    have hz' : z ∈ p.support := takeUntilFirst_subset_support hz
+    contrapose hz
+    apply Walk.notMem_support_takeUntil_support_takeUntil_subset
+    · grind
+    · convert firstVisit_mem_takeUntil <;> assumption
 
-/-
-If a path intersects X, there is a prefix path ending in X that avoids X internally.
--/
-lemma Walk.exists_path_prefix_avoiding_set {G : SimpleGraph V} {u v : V} (p : G.Walk u v)
-    (X : Set V) (h : ∃ w ∈ p.support, w ∈ X) :
-    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
-    obtain ⟨w, hw₁, hw₂⟩ := h
-    obtain ⟨w', q, hw'X, hq_support, hq_unique⟩ :=
-      p.exists_walk_prefix_avoiding_set X ⟨w, hw₁, hw₂⟩
-    refine ⟨w', q.toPath, hw'X, ?_, ?_, ?_⟩
-    · simp
-    · refine subset_trans ?_ hq_support
-      simp [toPath, Finset.subset_iff]
-      exact fun x hx => Walk.support_bypass_subset q hx
-    · intro z hz hzX
-      exact hq_unique z (by simpa using q.support_bypass_subset hz) hzX
+lemma Walk.exists_path_prefix_avoiding_set {X : Set V} {p : G.Walk u v} (h : ∃ w ∈ p.support, w ∈ X) :
+    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support.toFinset ⊆ p.support.toFinset ∧
+      (∀ z ∈ q.support, z ∈ X → z = w) := by
+    obtain ⟨w', q, hw'X, hq_support, hq_unique⟩ := p.exists_walk_prefix_avoiding_set h
+    refine ⟨w', q.bypass, hw'X, q.bypass_isPath, ?_, ?_⟩
+    · simp [Finset.subset_iff] at hq_support ⊢
+      grind [q.support_bypass_subset]
+    · grind [q.support_bypass_subset]
 
 /-
 If X separates A and B in G and contains x and y, then any separator of A and X in G-xy is also a separator of A and B in G.
@@ -449,8 +462,7 @@ lemma separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph V) (A B : Se
     classical
     intro u hu v hv p
     have h_sep := X.2 u hu v hv p
-    obtain ⟨w, q, hwX, hqpath, hq_support, hq_avoid⟩ :=
-      Walk.exists_path_prefix_avoiding_set p X.1 h_sep
+    obtain ⟨w, q, hwX, hqpath, hq_support, hq_avoid⟩ := Walk.exists_path_prefix_avoiding_set h_sep
     have hq_avoid_xy : s(x, y) ∉ q.edges := by
       apply Walk.edges_no_xy_of_support_inter_subset_one hxy
       simp only [Finset.subset_iff, Finset.mem_inter, List.mem_toFinset, Finset.mem_insert,
