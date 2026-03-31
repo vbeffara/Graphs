@@ -405,6 +405,10 @@ lemma Walk.edges_no_xy_of_support_inter_subset_one {p : G.Walk u v} (hxy : x ≠
 
 /- --------------- REVIEW --------------- -/
 
+noncomputable def Walk.firstVisit (X : Set V) : ∀ {u v} (p : G.Walk u v), (∃ w ∈ p.support, w ∈ X) → V
+  | u, _, Walk.nil, hp => u
+  | u, v, Walk.cons h p, hp => if h : u ∈ X then u else p.firstVisit X (by grind)
+
 /-
 If a walk intersects X, there is a prefix walk ending in X that avoids X internally.
 -/

@@ -1,4 +1,4 @@
-import Untitled.Graphs.Contraction
+import Graphs.Contraction
 
 set_option autoImplicit false
 
@@ -74,7 +74,7 @@ lemma init₀_subset_of_support_prefix {p' : G.Walk a c} (h : p'.support <+: p.s
 
 end Walk
 
-noncomputable def push_Walk {a b} (f : V → V') : G.Walk a b → (G.map' f).Walk (f a) (f b)
+noncomputable def push_Walk {a b} (f : V → V') : G.Walk a b → (G.map f).Walk (f a) (f b)
 | Walk.nil => Walk.nil
 | Walk.cons e p => by
   rename_i c
@@ -138,7 +138,7 @@ lemma push_eq_nil {x y} (f : V → V') (w : V') (p : G.Walk x y) (hp : ∀ z ∈
   simp [tata.mp <| push_eq_nil' hp]
 
 noncomputable def pwa2 (f : V → V') (hf : G.Adapted f) (x y : V) (x' y' : V') (hx : f x = x')
-    (hy : f y = y') (p' : (G.map' f).Walk x' y') :
+    (hy : f y = y') (p' : (G.map f).Walk x' y') :
     {q : G.Walk x y // (push_Walk f q).copy hx hy = p'} := by
   induction p' generalizing x y with
   | nil =>
@@ -156,22 +156,22 @@ noncomputable def pwa2 (f : V → V') (hf : G.Adapted f) (x y : V) (x' y' : V') 
     simp [Walk.copy_cons]
 
 noncomputable def pwa' (f : V → V') (hf : G.Adapted f) (x y : V)
-    (p' : (G.map' f).Walk (f x) (f y)) : G.Walk x y :=
+    (p' : (G.map f).Walk (f x) (f y)) : G.Walk x y :=
   pwa2 f hf x y (f x) (f y) rfl rfl p'
 
 example (f : V → V') (hf : G.Adapted f) (x y : V)
-    (p' : (G.map' f).Walk (f x) (f y)) : push_Walk f (pwa' f hf x y p') = p' :=
+    (p' : (G.map f).Walk (f x) (f y)) : push_Walk f (pwa' f hf x y p') = p' :=
   (pwa2 f hf x y (f x) (f y) rfl rfl p').prop
 
 noncomputable def pull_Walk_aux (f : V → V') (hf : G.Adapted f) (x y : V)
-    (p' : (G.map' f).Walk (f x) (f y)) : {w : G.Walk x y // push_Walk f w = p'} := by
+    (p' : (G.map f).Walk (f x) (f y)) : {w : G.Walk x y // push_Walk f w = p'} := by
   exact pwa2 f hf x y (f x) (f y) rfl rfl p'
 
 noncomputable def pull_Walk (f : V → V') (hf : G.Adapted f) (x y : V)
-    (p' : (G.map' f).Walk (f x) (f y)) : G.Walk x y :=
+    (p' : (G.map f).Walk (f x) (f y)) : G.Walk x y :=
   pull_Walk_aux f hf x y p'
 
-@[simp] lemma pull_Walk_push {hf x y} {p' : (G.map' f).Walk (f x) (f y)} :
+@[simp] lemma pull_Walk_push {hf x y} {p' : (G.map f).Walk (f x) (f y)} :
     push_Walk f (pull_Walk f hf x y p') = p' :=
   (pull_Walk_aux f hf x y p').prop
 
