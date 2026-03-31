@@ -370,13 +370,9 @@ lemma contractEdge_adj_lift_vertex (hu : (⟦u⟧ : V / e) ≠ ⟦x⟧) : (G / e
     cases eq_or_ne a' x <;> cases eq_or_ne a' y <;> cases eq_or_ne b' x <;> cases eq_or_ne b' y
     all_goals { simp [ Quotient.eq, contractSetoid, adj_comm ] at * ; grind }
 
-/- --------------- REVIEW --------------- -/
-
-lemma contractEdge_edgeSet_encard_lt {x y : V} (e : G.Adj x y) (hfin : G.edgeSet.Finite) :
-    (contract (G := G) (x := x) (y := y) e).edgeSet.encard < G.edgeSet.encard := by
-  have hxy : (⟦x⟧ : V / e) = ⟦y⟧ :=
-    Quotient.sound (Or.inr (Or.inl ⟨rfl, rfl⟩))
-  have h_sub : (contract (G := G) (x := x) (y := y) e).edgeSet ⊆ Sym2.map (⟦·⟧) '' (G.edgeSet \ {s(x, y)}) := by
+lemma contract_encard_lt (hfin : G.edgeSet.Finite) : (G / e).edgeSet.encard < G.edgeSet.encard := by
+  have hxy : (⟦x⟧ : V / e) = ⟦y⟧ := by simp
+  have h_sub : (G / e).edgeSet ⊆ Sym2.map (⟦·⟧) '' (G.edgeSet \ {s(x, y)}) := by
     intro e he
     induction e using Sym2.ind with
     | _ a b =>
@@ -392,39 +388,36 @@ lemma contractEdge_edgeSet_encard_lt {x y : V} (e : G.Adj x y) (hfin : G.edgeSet
           · exact hxy.symm
         rw [← ha', ← hb']
         first | exact this | exact this.symm }
-  calc (contract (G := G) (x := x) (y := y) e).edgeSet.encard
+  calc (G / e).edgeSet.encard
     ≤ (Sym2.map (⟦·⟧) '' (G.edgeSet \ {s(x, y)})).encard := Set.encard_le_encard h_sub
     _ ≤ (G.edgeSet \ {s(x, y)}).encard := Set.encard_image_le _ _
     _ < G.edgeSet.encard :=
         (hfin.subset Set.diff_subset).encard_lt_encard (Set.diff_singleton_ssubset.mpr e)
 
-/-
-If a walk's support intersects {x, y} only at v (or not at all), then the walk does not use the edge xy.
--/
-lemma Walk.edges_no_xy_of_support_inter_subset_one {G : SimpleGraph V}
-  {u v : V} (p : G.Walk u v) (x y : V) (hxy : x ≠ y)
-  (h : p.support.toFinset ∩ {x, y} ⊆ {v}) :
-  s(x, y) ∉ p.edges := by
-    contrapose! h
-    simp_all [ Finset.eq_singleton_iff_unique_mem ]
-    have h_support : x ∈ p.support ∧ y ∈ p.support := by
-      induction p <;> aesop;
-    aesop
+lemma Walk.edges_no_xy_of_support_inter_subset_one {p : G.Walk u v} (hxy : x ≠ y)
+    (h : p.support.toFinset ∩ {x, y} ⊆ {v}) :
+    s(x, y) ∉ p.edges := by
+  contrapose! h
+  have h1 := p.fst_mem_support_of_mem_edges h
+  have h2 := p.snd_mem_support_of_mem_edges h
+  simp [ Finset.eq_singleton_iff_unique_mem ]
+  aesop
+
+/- --------------- REVIEW --------------- -/
 
 /-
 If a walk intersects X, there is a prefix walk ending in X that avoids X internally.
 -/
-lemma Walk.exists_walk_prefix_avoiding_set {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (X : Set V) (h : ∃ w ∈ p.support, w ∈ X) :
-  ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.support.toFinset ⊆ p.support.toFinset ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
-    revert h p
-    intro p hp
-    induction' p with u v p ih
-    · simp_all [ Walk.support ]
-      exact ⟨ u, hp, Walk.nil, by simp ⟩
-    · rename_i h₁ h₂ h₃
-      by_cases h : v ∈ X
-      · refine' ⟨ v, Walk.nil, h, _, _ ⟩ <;> simp [ h ];
-      · rcases h₃ ( by cases hp; aesop ) with ⟨ w, q, hw, hq₁, hq₂ ⟩ ; use w, cons h₁ q ; aesop
+lemma Walk.exists_walk_prefix_avoiding_set (p : G.Walk u v) (X : Set V) (hp : ∃ w ∈ p.support, w ∈ X) :
+    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.support.toFinset ⊆ p.support.toFinset ∧
+      (∀ z ∈ q.support, z ∈ X → z = w) := by
+  induction' p with u v p ih
+  · simp_all [ Walk.support ]
+    exact ⟨ u, hp, Walk.nil, by simp ⟩
+  · rename_i h₁ h₂ h₃
+    by_cases h : v ∈ X
+    · refine' ⟨ v, Walk.nil, h, _, _ ⟩ <;> simp [ h ];
+    · rcases h₃ ( by cases hp; aesop ) with ⟨ w, q, hw, hq₁, hq₂ ⟩ ; use w, cons h₁ q ; aesop
 
 /-
 If a path intersects X, there is a prefix path ending in X that avoids X internally.
@@ -455,7 +448,7 @@ lemma separator_in_G_of_separator_in_G_delete_edge (G : SimpleGraph V) (A B : Se
     obtain ⟨w, q, hwX, hqpath, hq_support, hq_avoid⟩ :=
       Walk.exists_path_prefix_avoiding_set p X.1 h_sep
     have hq_avoid_xy : s(x, y) ∉ q.edges := by
-      apply Walk.edges_no_xy_of_support_inter_subset_one q x y hxy
+      apply Walk.edges_no_xy_of_support_inter_subset_one hxy
       simp only [Finset.subset_iff, Finset.mem_inter, List.mem_toFinset, Finset.mem_insert,
         Finset.mem_singleton]
       intro z ⟨hz_mem, hz_xy⟩
@@ -1618,7 +1611,7 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
       | _ a b => exact ⟨a, b, he⟩
     have hfin : G.edgeSet.Finite := Set.finite_of_encard_eq_coe h_card
     have h_contract_lt : (contract (G := G) (x := x) (y := y) e).edgeSet.encard < ↑n :=
-      (contractEdge_edgeSet_encard_lt e hfin).trans_eq h_card
+      (contract_encard_lt hfin).trans_eq h_card
     have h_delete_lt : (G.deleteEdge e).edgeSet.encard < ↑n :=
       (deleteEdge_edgeSet_encard_lt hfin).trans_eq h_card
     obtain ⟨mc, hmc⟩ := (Set.finite_of_encard_le_coe h_contract_lt.le).exists_encard_eq_coe
