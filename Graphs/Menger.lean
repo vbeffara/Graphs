@@ -1369,24 +1369,18 @@ lemma separator_in_G_of_separator_in_G_delete_edge_right (G : SimpleGraph V) (A 
     obtain ⟨w, hw, hwS⟩ := this v hv u hu p.reverse
     exact ⟨w, by simpa using hw, hwS⟩
 
-/-
-If X separates A and B in G and contains x and y, then the minimum separator size of A and X in G-xy is at least k.
--/
-lemma min_sep_delete_ge_k_left (G : SimpleGraph V) (A B : Set V) {x y : V}
-  (e : G.Adj x y) (k : ℕ∞) (h_min : G.mincut A B = k) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
-  (G.deleteEdge e).mincut A X.1 ≥ k := by
-    rw [← h_min, ge_iff_le, mincut]
-    apply le_iInf
-    intro S
-    exact iInf_le_of_le ⟨S.1, separates_of_separates_delete A B e X S hx hy⟩ le_rfl
+lemma min_sep_delete_ge_k_left (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
+    G.mincut A B ≤ (G - e).mincut A X.1 := by
+  apply le_iInf
+  intro S
+  exact iInf_le_of_le ⟨S.1, separates_of_separates_delete A B e X S hx hy⟩ le_rfl
 
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of X and B in G-xy is at least k.
 -/
-lemma min_sep_delete_ge_k_right (G : SimpleGraph V) (A B : Set V) {x y : V}
-  (e : G.Adj x y) (k : ℕ∞) (h_min : G.mincut A B = k) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
-  (G.deleteEdge e).mincut X.1 B ≥ k := by
-    rw [← h_min, ge_iff_le, mincut]
+lemma min_sep_delete_ge_k_right (k : ℕ∞) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
+  (G.deleteEdge e).mincut X.1 B ≥ G.mincut A B := by
+    rw [ge_iff_le, mincut]
     apply le_iInf
     intro S
     exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge_right G A B x y e X hx hy S⟩ le_rfl
@@ -1506,17 +1500,15 @@ private lemma exists_le_of_le_iSup {ι : Type*} [Nonempty ι] (f : ι → ℕ∞
 /-
 If there exists a separator X of size k containing x and y, then G has k disjoint A-B paths.
 -/
-lemma Menger_case2_imp_paths (G : SimpleGraph V) (A B : Set V) {x y : V}
-    (e : G.Adj x y)
-    (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B = k) (X : G.Separator A B) (hX_card : X.1.encard = k) (hx : x ∈ X.1)
+lemma Menger_case2_imp_paths (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B = k) (X : G.Separator A B) (hX_card : X.1.encard = k) (hx : x ∈ X.1)
     (hy : y ∈ X.1) (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G.deleteEdge e).mincut A' B' ≤ (G.deleteEdge e).maxflow A' B') :
     k ≤ G.maxflow A B := by
   have hX_fin : X.1.Finite := Set.encard_ne_top_iff.mp (hX_card ▸ hk)
   have h_del_A : k ≤ (G.deleteEdge e).maxflow A X.1 :=
-    le_trans (min_sep_delete_ge_k_left G A B e k h_min X hx hy)
+    le_trans (h_min ▸ min_sep_delete_ge_k_left X hx hy)
       (IH_delete A X.1 (hX_fin.inter_of_right _))
   have h_del_B : k ≤ (G.deleteEdge e).maxflow X.1 B :=
-    le_trans (min_sep_delete_ge_k_right G A B e k h_min X hx hy)
+    le_trans (h_min ▸ min_sep_delete_ge_k_right k X hx hy)
       (IH_delete X.1 B (hX_fin.inter_of_left _))
   have h_subgraph : G.deleteEdge e ≤ G := fun _ _ huv => huv.1
   -- Extract joiner witness from ⨆ using helper
@@ -1544,20 +1536,14 @@ lemma Menger_case2_imp_paths (G : SimpleGraph V) (A B : Set V) {x y : V}
 /-
 Inductive step for Menger's theorem.
 -/
-lemma Menger_inductive_step (G : SimpleGraph V) (A B : Set V) {x y : V}
-    (e : G.Adj x y) (hk : G.mincut A B ≠ ⊤)
-    (IH_contract : (contract (G := G) (x := x) (y := y) e).mincut (contract_image (G := G) (x := x) (y := y) A e)
-      (contract_image (G := G) (x := x) (y := y) B e) ≤
-      (contract (G := G) (x := x) (y := y) e).maxflow (contract_image (G := G) (x := x) (y := y) A e) (contract_image (G := G) (x := x) (y := y) B e))
-    (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G.deleteEdge e).mincut A' B' ≤ (G.deleteEdge e).maxflow A' B') :
+lemma Menger_inductive_step (hk : G.mincut A B ≠ ⊤)
+    (IH_contract : (G / e).mincut (A / e) (B / e) ≤ (G / e).maxflow (A / e) (B / e))
+    (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G - e).mincut A' B' ≤ (G - e).maxflow A' B') :
     G.mincut A B ≤ G.maxflow A B := by
-  by_cases h : (contract (G := G) (x := x) (y := y) e).mincut (contract_image (G := G) (x := x) (y := y) A e) (contract_image (G := G) (x := x) (y := y) B e) < G.mincut A B
-  · -- Case 1: contraction has smaller mincut → separator containing both x and y
-    obtain ⟨⟨X, hX_sep⟩, hX_card, hx_mem, hy_mem⟩ :=
-      Menger_case2_exists_X G A B e (G.mincut A B) rfl h
-    exact Menger_case2_imp_paths G A B e (G.mincut A B) hk rfl ⟨X, hX_sep⟩ hX_card hx_mem hy_mem IH_delete
-  · -- Case 2: contraction mincut ≥ G.mincut → lift paths from contracted graph
-    push_neg at h
+  by_cases h : (G / e).mincut (A / e) (B / e) < G.mincut A B
+  · obtain ⟨⟨X, hX_sep⟩, hX_card, hx_mem, hy_mem⟩ := Menger_case2_exists_X G A B e (G.mincut A B) rfl h
+    exact Menger_case2_imp_paths (G.mincut A B) hk rfl ⟨X, hX_sep⟩ hX_card hx_mem hy_mem IH_delete
+  · push_neg at h
     obtain ⟨P', hP'⟩ := exists_le_of_le_iSup _ hk (le_trans h IH_contract)
     obtain ⟨P, hP⟩ := exists_disjoint_paths_lift G A B e P'
     calc G.mincut A B ≤ P'.1.encard := hP'
@@ -1567,10 +1553,8 @@ lemma Menger_inductive_step (G : SimpleGraph V) (A B : Set V) {x y : V}
 /-
 Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edges, proved by strong induction on n.
 -/
-theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
-  G.edgeSet.encard = ↑n → G.mincut A B ≤ G.maxflow A B := by
-  induction n using Nat.strongRecOn generalizing V with
-  | _ n ih =>
+theorem Menger_strong_aux (hAB : (A ∩ B).Finite) : G.edgeSet.encard = ↑n → G.mincut A B ≤ G.maxflow A B := by
+  induction' n using Nat.strongRecOn with n ih generalizing V
   intro h_card
   by_cases h_empty : G.edgeSet = ∅
   · exact Menger_strong_base h_empty
@@ -1579,10 +1563,8 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
       induction e using Sym2.ind with
       | _ a b => exact ⟨a, b, he⟩
     have hfin : G.edgeSet.Finite := Set.finite_of_encard_eq_coe h_card
-    have h_contract_lt : (contract (G := G) (x := x) (y := y) e).edgeSet.encard < ↑n :=
-      (contract_encard_lt hfin).trans_eq h_card
-    have h_delete_lt : (G.deleteEdge e).edgeSet.encard < ↑n :=
-      (deleteEdge_edgeSet_encard_lt hfin).trans_eq h_card
+    have h_contract_lt : (G / e).edgeSet.encard < n := (contract_encard_lt hfin).trans_eq h_card
+    have h_delete_lt : (G - e).edgeSet.encard < ↑n := (deleteEdge_edgeSet_encard_lt hfin).trans_eq h_card
     obtain ⟨mc, hmc⟩ := (Set.finite_of_encard_le_coe h_contract_lt.le).exists_encard_eq_coe
     obtain ⟨md, hmd⟩ := (Set.finite_of_encard_le_coe h_delete_lt.le).exists_encard_eq_coe
     have hk : G.mincut A B ≠ ⊤ :=
@@ -1601,7 +1583,7 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) :
         · exact absurd rfl hab
         · rfl
         · grind
-    exact Menger_inductive_step G A B e hk
+    exact Menger_inductive_step hk
       (ih _ (by rw [hmc] at h_contract_lt; exact WithTop.coe_lt_coe.mp h_contract_lt)
         hAB_contract hmc)
       (fun A' B' hAB' => ih _ (by rw [hmd] at h_delete_lt; exact WithTop.coe_lt_coe.mp h_delete_lt)
