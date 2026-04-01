@@ -1378,7 +1378,7 @@ lemma min_sep_delete_ge_k_left (X : G.Separator A B) (hx : x ∈ X.1) (hy : y �
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of X and B in G-xy is at least k.
 -/
-lemma min_sep_delete_ge_k_right (k : ℕ∞) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
+lemma min_sep_delete_ge_k_right (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
   (G.deleteEdge e).mincut X.1 B ≥ G.mincut A B := by
     rw [ge_iff_le, mincut]
     apply le_iInf
@@ -1487,15 +1487,9 @@ Helper: if k ≤ ⨆ f and k ≠ ⊤, there exists i with k ≤ f i.
 -/
 private lemma exists_le_of_le_iSup {ι : Type*} [Nonempty ι] (f : ι → ℕ∞) {k : ℕ∞} (hk : k ≠ ⊤)
     (h : k ≤ ⨆ i, f i) : ∃ i, k ≤ f i := by
-  by_contra h_all; push_neg at h_all
-  obtain ⟨n, rfl⟩ : ∃ n : ℕ, ↑n = k := WithTop.ne_top_iff_exists.mp hk
-  cases n with
-  | zero => exact absurd (h_all (Classical.arbitrary ι)) (not_lt.mpr (zero_le _))
-  | succ m =>
-    have hle : ∀ i, f i ≤ ↑m := fun i =>
-      (ENat.lt_add_one_iff (by exact WithTop.coe_ne_top)).mp (by exact_mod_cast h_all i)
-    exact absurd h (not_le.mpr (lt_of_le_of_lt (iSup_le hle)
-      (ENat.coe_lt_coe.mpr (Nat.lt_succ_of_le le_rfl))))
+  obtain (h' | h') := eq_top_or_lt_top (⨆ i, f i)
+  · grind [iSup_eq_top, lt_top_iff_ne_top.2 hk]
+  · grind [ENat.exists_eq_iSup_of_lt_top h']
 
 /-
 If there exists a separator X of size k containing x and y, then G has k disjoint A-B paths.
@@ -1508,7 +1502,7 @@ lemma Menger_case2_imp_paths (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B
     le_trans (h_min ▸ min_sep_delete_ge_k_left X hx hy)
       (IH_delete A X.1 (hX_fin.inter_of_right _))
   have h_del_B : k ≤ (G.deleteEdge e).maxflow X.1 B :=
-    le_trans (h_min ▸ min_sep_delete_ge_k_right k X hx hy)
+    le_trans (h_min ▸ min_sep_delete_ge_k_right X hx hy)
       (IH_delete X.1 B (hX_fin.inter_of_left _))
   have h_subgraph : G.deleteEdge e ≤ G := fun _ _ huv => huv.1
   -- Extract joiner witness from ⨆ using helper
