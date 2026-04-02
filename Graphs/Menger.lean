@@ -528,22 +528,12 @@ lemma ABPath_prefix_avoids_X (G : SimpleGraph V) (A X : Set V) (X_fin : Set V)
 /-
 If a walk is a path, and we drop the prefix until a vertex w (where w is not the start), then the start vertex is not in the remaining suffix.
 -/
-lemma Walk.start_notMem_support_dropUntil {G : SimpleGraph V}
-  {u v w : V} {p : G.Walk u v} (hp : p.IsPath) (hw : w ∈ p.support) (h : u ≠ w) :
-  u ∉ (p.dropUntil w hw).support := by
-    have h_no_repeat : ∀ v ∈ p.support, v = u → v ∉ (p.dropUntil w hw).support := by
-      have h_support : ∀ v ∈ p.support, v = u → v ∉ (p.dropUntil w hw).support := by
-        intro v hv hvu
-        have h_lift : ∀ w' ∈ p.support, w' ∉ (p.dropUntil w hw).support → w' = u → v ∉ (p.dropUntil w hw).support := by
-          aesop
-        exact h_lift u ( by simp ) ( by
-          induction p <;> simp_all [ Walk.dropUntil ];
-          · cases hw
-            · contradiction
-            · contradiction
-          · exact fun h => hp.2 ( Walk.support_dropUntil_subset _ _ h ) ) rfl
-      exact h_support
-    exact h_no_repeat u ( p.start_mem_support ) rfl
+lemma Walk.start_notMem_support_dropUntil {p : G.Walk u v} (hp : p.IsPath) (hw : w ∈ p.support) (h : u ≠ w) :
+    u ∉ (p.dropUntil w hw).support := by
+  cases p with
+  | nil => simp at hw ; grind
+  | cons e p =>
+    contrapose hp ; simp [Walk.dropUntil, h] at hp ; simp [h.symm] at hw ; simp [p.support_dropUntil_subset hw hp]
 
 /-
 If an X-B path intersects X only at its start point, then any suffix starting at a vertex not in X avoids X entirely.

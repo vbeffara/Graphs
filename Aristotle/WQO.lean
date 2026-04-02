@@ -16,7 +16,7 @@ import Graphs.WQO
 
 open List
 
-variable {α : Type*} [PartialOrder α] {s t : Finset α} {l1 l2 : List α}
+variable {α : Type*} [Preorder α] {s t : Finset α} {l1 l2 : List α}
 
 lemma lemma_1 (h : SublistForall₂ (· ≤ ·) l1 l2) : ∃ f : Fin l1.length ↪ Fin l2.length,
     StrictMono f ∧ ∀ i, l1[i] ≤ l2[f i] := by
