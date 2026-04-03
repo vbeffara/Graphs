@@ -84,8 +84,11 @@ noncomputable def mincut (G : SimpleGraph V) (A B : Set V) := ⨅ S : G.Separato
 
 noncomputable def maxflow (G : SimpleGraph V) (A B : Set V) := ⨆ P : G.Joiner A B, P.1.encard
 
+lemma mincut_le_encard (S : G.Separator A B) : G.mincut A B ≤ S.1.encard :=
+  iInf_le_of_le S le_rfl
+
 lemma mincut_le_encard_of_separates (hS : G.Separates A B X) : G.mincut A B ≤ X.encard :=
-  iInf_le_of_le ⟨X, hS⟩ le_rfl
+  mincut_le_encard ⟨X, hS⟩
 
 lemma encard_le_maxflow_of_joiner (P : G.Joiner A B) : P.1.encard ≤ G.maxflow A B :=
   le_iSup_of_le P le_rfl
@@ -172,7 +175,7 @@ lemma mincut_le_inter_add_edgeSet : G.mincut A B ≤ (A ∩ B).encard + G.edgeSe
     exact ⟨(Quot.out e).1, ⟨e, he, rfl⟩, Sym2.out_fst_mem e⟩
   obtain ⟨S, hS_cover, hS_card⟩ := exists_vertex_cover
   exact le_trans
-    (iInf_le_of_le (Separator.of_vertex_cover S hS_cover) le_rfl)
+    (mincut_le_encard (Separator.of_vertex_cover S hS_cover))
     (le_trans (Set.encard_union_le _ _) (add_le_add_right hS_card _))
 
 lemma inter_subset_separator (S : G.Separator A B) : A ∩ B ⊆ S.1 := by
@@ -202,10 +205,10 @@ lemma inter_le_maxflow : (A ∩ B).encard ≤ G.maxflow A B := by
 lemma Menger_strong_base (h : G.edgeSet = ∅) : G.mincut A B ≤ G.maxflow A B := by
   simp at h ; subst G
   have h_mincut_le : mincut ⊥ A B ≤ (A ∩ B).encard :=
-    iInf_le_of_le ⟨A ∩ B, fun a ha b hb p => ⟨a, p.start_mem_support, by
+    mincut_le_encard ⟨A ∩ B, fun a ha b hb p => ⟨a, p.start_mem_support, by
       have := (show ∀ u v, (⊥ : SimpleGraph V).Walk u v → u = v by
         intro u v p; induction p <;> aesop) a b p
-      simp [← this] at hb; simp [ha, hb]⟩⟩ le_rfl
+      simp [← this] at hb; simp [ha, hb]⟩⟩
   exact h_mincut_le.trans inter_le_maxflow
 
 /-
@@ -233,6 +236,8 @@ lemma contract_eq_map (e : G.Adj x y) : G / e = G.map (⟦·⟧) := by
 def contract_image (S : Set V) (e : G.Adj x y) : Set (V / e) := (⟦·⟧) '' S
 
 infix:60 " / " => contract_image
+
+@[simp] lemma mem_contract_image {S : Set V} {q : V / e} : q ∈ S / e ↔ ∃ v ∈ S, ⟦v⟧ = q := by rfl
 
 lemma finite_inter_contract_image (hAB : (A ∩ B).Finite) : ((A / e) ∩ (B / e)).Finite := by
   apply Set.Finite.subset ((hAB.image (⟦·⟧)).union (Set.finite_singleton (⟦x⟧)))
@@ -379,12 +384,12 @@ lemma lift_path_avoiding_contraction_AB (A B : Set V) {u v : V / e} (p : (G / e)
       (q.support.toFinset.image (⟦·⟧)) ⊆ p.support.toFinset ∧ x ∉ q.support ∧ y ∉ q.support := by
   obtain ⟨u', v', q, hu', hv', hq⟩ := @lift_walk_avoiding_contraction V G x y e u v p hp_avoid
   refine' ⟨ u', v', q.toPath, _, _, hu', hv', _, _, _ ⟩
-  · simp [contract_image] at hu
+  · simp at hu
     obtain ⟨ w, hw, rfl ⟩ := hu
     cases h1 : eq_or_ne u' x <;> cases h2 : eq_or_ne u' y <;> cases h3 : eq_or_ne w x <;> cases h4 : eq_or_ne w y
     all_goals subst_eqs
     all_goals simp_all [Quotient.eq, contractSetoid ]
-  · simp [contract_image] at hv
+  · simp at hv
     obtain ⟨ w, hw ⟩ := hv
     have h_inj : ∀ a b : V, (⟦a⟧ : V / e) = ⟦b⟧ → a = b ∨ a = x ∧ b = y ∨ a = y ∧ b = x := by
       intro a b hab; erw [ Quotient.eq ] at hab; aesop
@@ -790,7 +795,7 @@ lemma Walk.exists_prefix_path_of_path_ne {G : SimpleGraph V}
 /-
 If a path ends at a vertex whose projection is adjacent to the contracted vertex, and the path avoids the contracted edge's endpoints, it can be extended to one of the endpoints.
 -/
-lemma lift_path_extension_step (G : SimpleGraph V) {x y : V} (e : G.Adj x y)
+lemma lift_path_extension_step {x y : V} (e : G.Adj x y)
   (u w : V) (q : G.Walk u w)
   (hq_path : q.IsPath)
   (hx_avoid : x ∉ q.support) (hy_avoid : y ∉ q.support)
@@ -817,8 +822,8 @@ lemma lift_path_extension_step (G : SimpleGraph V) {x y : V} (e : G.Adj x y)
 /-
 A path in the contracted graph ending at the contracted vertex can be lifted to a path in the original graph ending at one of the contracted edge's endpoints.
 -/
-lemma lift_path_to_contraction_end (G : SimpleGraph V) (A : Set V) {x y : V} (e : G.Adj x y)
-  (u' : Quotient (contractSetoid (G := G) (x := x) (y := y) e))
+lemma lift_path_to_contraction_end (A : Set V) {x y : V} (e : G.Adj x y)
+  (u' : V / e)
   (p' : (G / e).Walk u' ⟦x⟧)
   (hp'_path : p'.IsPath)
   (hu' : u' ∈ A / e)
@@ -827,7 +832,7 @@ lemma lift_path_to_contraction_end (G : SimpleGraph V) (A : Set V) {x y : V} (e 
     u ∈ A ∧
     (v = x ∨ v = y) ∧
     p.IsPath ∧
-    (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset : Set _) ∧
+    (↑p.support.toFinset : Set V) ⊆ contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) ∧
     p.support.toFinset ∩ {x, y} = {v} := by
   obtain ⟨ w', q', hq'_adj, hq'_path, hq'_avoid, hq'_sub ⟩ :=
     Walk.exists_prefix_path_of_path_ne p' hp'_path h_ne
@@ -842,7 +847,7 @@ lemma lift_path_to_contraction_end (G : SimpleGraph V) (A : Set V) {x y : V} (e 
     simp only [Finset.subset_iff, Finset.mem_image, List.mem_toFinset] at hq_img
     exact ⟨u, w, q, hu, hw1, hw2, hq_path, fun z hz => hq_img ⟨z, hz, rfl⟩, hx, hy⟩
   obtain ⟨v, p, hv, hp_path, hp_support, hp_xy⟩ : ∃ v : V, ∃ p : G.Walk u v, (v = x ∨ v = y) ∧ p.IsPath ∧ p.support.toFinset ⊆ q.support.toFinset ∪ {v} ∧ p.support.toFinset ∩ {x, y} = {v} := by
-    have := lift_path_extension_step G e u w q hq_support.1 hq_support.2.2.1 hq_support.2.2.2 ?_ <;> aesop;
+    have := lift_path_extension_step e u w q hq_support.1 hq_support.2.2.1 hq_support.2.2.2 ?_ <;> aesop;
   refine ⟨u, v, p, hu, hv, hp_path, ?_, hp_xy⟩
   -- Show support subset of preimage
   intro z hz
@@ -865,8 +870,8 @@ lemma lift_path_to_contraction_end (G : SimpleGraph V) (A : Set V) {x y : V} (e 
 /-
 A path in the contracted graph starting at the contracted vertex can be lifted to a path in the original graph starting at one of the contracted edge's endpoints.
 -/
-lemma lift_path_from_contraction_start (G : SimpleGraph V) (B : Set V) {x y : V} (e : G.Adj x y)
-  (v' : Quotient (contractSetoid (G := G) (x := x) (y := y) e))
+lemma lift_path_from_contraction_start (B : Set V) {x y : V} (e : G.Adj x y)
+  (v' : V / e)
   (p' : (G / e).Walk ⟦x⟧ v')
   (hp'_path : p'.IsPath)
   (hv' : v' ∈ B / e)
@@ -875,12 +880,12 @@ lemma lift_path_from_contraction_start (G : SimpleGraph V) (B : Set V) {x y : V}
     (u = x ∨ u = y) ∧
     v ∈ B ∧
     p.IsPath ∧
-    (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset : Set _) ∧
+    (↑p.support.toFinset : Set V) ⊆ contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) ∧
     p.support.toFinset ∩ {x, y} = {u} := by
       have h_lift_reversed : ∃ u v : V, ∃ p : G.Walk u v, u ∈ B ∧
         (v = x ∨ v = y) ∧
         p.IsPath ∧
-        (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p'.reverse.support.toFinset : Set _) ∧
+        (↑p.support.toFinset : Set V) ⊆ contract_preimage (Y := (↑p'.reverse.support.toFinset : Set (V / e))) ∧
         p.support.toFinset ∩ {x, y} = {v} := by
           apply_rules [ lift_path_to_contraction_end ]
           · exact (Walk.isPath_reverse_iff p').mpr hp'_path
@@ -889,7 +894,7 @@ lemma lift_path_from_contraction_start (G : SimpleGraph V) (B : Set V) {x y : V}
 /-
 Two paths ending and starting at the endpoints of an edge can be joined into a single path if they are otherwise disjoint and avoid the edge's endpoints internally.
 -/
-lemma join_paths_through_edge (G : SimpleGraph V) {x y : V} (e : G.Adj x y)
+lemma join_paths_through_edge {x y : V} (e : G.Adj x y)
   {u_start u_end v_start v_end : V}
   (p1 : G.Walk u_start u_end) (p2 : G.Walk v_start v_end)
   (hp1_path : p1.IsPath) (hp2_path : p2.IsPath)
@@ -944,9 +949,9 @@ lemma Walk.split_at_vertex {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (hp : 
 If two sets in the contracted graph are disjoint away from the contracted vertex, their preimages in the original graph are disjoint away from the endpoints of the contracted edge.
 -/
 lemma contract_preimage_disjoint_away_from_endpoints {x y : V} (e : G.Adj x y)
-  (s t : Set (Quotient (contractSetoid (G := G) (x := x) (y := y) e)))
+  (s t : Set (V / e))
   (h_disj : Disjoint (s \ {⟦x⟧}) (t \ {⟦x⟧})) :
-  Disjoint (contract_preimage (G := G) (x := x) (y := y) s \ {x, y}) (contract_preimage (G := G) (x := x) (y := y) t \ {x, y}) := by
+  Disjoint (contract_preimage s \ {x, y}) (contract_preimage t \ {x, y}) := by
     refine Set.disjoint_left.mpr ?_
     intro a ha hb
     rcases ha with ⟨ha_pre, ha_not⟩
@@ -955,10 +960,8 @@ lemma contract_preimage_disjoint_away_from_endpoints {x y : V} (e : G.Adj x y)
       intro hproj
       have hxy : a = x ∨ a = y := (contractEdgeProj_eq_vertex_iff (G := G) (x := x) (y := y) (u := a)).1 hproj
       exact ha_not (by simpa [Set.mem_insert_iff, Set.mem_singleton_iff] using hxy)
-    have ha_s : ⟦a⟧ ∈ s :=
-      (mem_contract_preimage (G := G) (x := x) (y := y) (Y := s) (v := a)).1 ha_pre
-    have hb_t : ⟦a⟧ ∈ t :=
-      (mem_contract_preimage (G := G) (x := x) (y := y) (Y := t) (v := a)).1 hb_pre
+    have ha_s : ⟦a⟧ ∈ s := (mem_contract_preimage (Y := s) (v := a)).1 ha_pre
+    have hb_t : ⟦a⟧ ∈ t := (mem_contract_preimage (Y := t) (v := a)).1 hb_pre
     have ha_s' : ⟦a⟧ ∈ s \ {⟦x⟧} :=
       ⟨ha_s, hproj_ne⟩
     have hb_t' : ⟦a⟧ ∈ t \ {⟦x⟧} :=
@@ -968,8 +971,8 @@ lemma contract_preimage_disjoint_away_from_endpoints {x y : V} (e : G.Adj x y)
 /-
 If two paths in the contracted graph meet only at the contracted vertex, they can be lifted to paths in the original graph that are disjoint away from the contracted edge's endpoints.
 -/
-lemma lift_split_paths (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.Adj x y)
-  (u' v' : Quotient (contractSetoid (G := G) (x := x) (y := y) e))
+lemma lift_split_paths (A B : Set V) {x y : V} (e : G.Adj x y)
+  (u' v' : V / e)
   (p1' : (G / e).Walk u' ⟦x⟧)
   (p2' : (G / e).Walk ⟦x⟧ v')
   (hp1'_path : p1'.IsPath)
@@ -983,15 +986,15 @@ lemma lift_split_paths (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.Adj x 
     u_start ∈ A ∧ v_end ∈ B ∧
     (u_end = x ∨ u_end = y) ∧ (v_start = x ∨ v_start = y) ∧
     p1.IsPath ∧ p2.IsPath ∧
-    (↑p1.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p1'.support.toFinset : Set _) ∧
-    (↑p2.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p2'.support.toFinset : Set _) ∧
+    (↑p1.support.toFinset : Set V) ⊆ contract_preimage (Y := (↑p1'.support.toFinset : Set (V / e))) ∧
+    (↑p2.support.toFinset : Set V) ⊆ contract_preimage (Y := (↑p2'.support.toFinset : Set (V / e))) ∧
     p1.support.toFinset ∩ {x, y} = {u_end} ∧
     p2.support.toFinset ∩ {x, y} = {v_start} ∧
     Disjoint (p1.support.toFinset \ {x, y}) (p2.support.toFinset \ {x, y}) := by
   obtain ⟨u_start, u_end, p1, hu_start_A, hu_end_xy, hp1_path, hp1_sub, hp1_xy⟩ :=
-    lift_path_to_contraction_end G A e u' p1' hp1'_path hu' h_u_ne
+    lift_path_to_contraction_end A e u' p1' hp1'_path hu' h_u_ne
   obtain ⟨v_start, v_end, p2, hv_start_xy, hv_end_B, hp2_path, hp2_sub, hp2_xy⟩ :=
-    lift_path_from_contraction_start G B e v' p2' hp2'_path hv' h_v_ne
+    lift_path_from_contraction_start B e v' p2' hp2'_path hv' h_v_ne
   refine ⟨u_start, u_end, p1, v_start, v_end, p2, hu_start_A, hv_end_B, hu_end_xy, hv_start_xy,
     hp1_path, hp2_path, hp1_sub, hp2_sub, hp1_xy, hp2_xy, ?_⟩
   have h_disj_sets : Disjoint ((↑p1'.support.toFinset : Set _) \ {⟦x⟧})
@@ -1006,17 +1009,17 @@ lemma lift_split_paths (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.Adj x 
   rw [Finset.disjoint_left]
   intro z hz1 hz2
   simp only [Finset.mem_sdiff, List.mem_toFinset, Finset.mem_insert, Finset.mem_singleton] at hz1 hz2
-  have hz1_set : z ∈ contract_preimage (G := G) (x := x) (y := y) (↑p1'.support.toFinset) \ ({x, y} : Set V) :=
+  have hz1_set : z ∈ contract_preimage (Y := (↑p1'.support.toFinset : Set (V / e))) \ ({x, y} : Set V) :=
     ⟨hp1_sub (Finset.mem_coe.mpr (List.mem_toFinset.mpr hz1.1)), by simp [Set.mem_insert_iff]; tauto⟩
-  have hz2_set : z ∈ contract_preimage (G := G) (x := x) (y := y) (↑p2'.support.toFinset) \ ({x, y} : Set V) :=
+  have hz2_set : z ∈ contract_preimage (Y := (↑p2'.support.toFinset : Set (V / e))) \ ({x, y} : Set V) :=
     ⟨hp2_sub (Finset.mem_coe.mpr (List.mem_toFinset.mpr hz2.1)), by simp [Set.mem_insert_iff]; tauto⟩
   exact Set.disjoint_left.mp h_preimage_disj hz1_set hz2_set
 
 /-
 A path in the contracted graph passing through the contracted vertex can be lifted to a path in the original graph.
 -/
-lemma lift_path_through_contraction_internal (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.Adj x y)
-  (u' v' : Quotient (contractSetoid (G := G) (x := x) (y := y) e))
+lemma lift_path_through_contraction_internal (A B : Set V) {x y : V} (e : G.Adj x y)
+  (u' v' : V / e)
   (p' : (G / e).Walk u' v')
   (hp'_path : p'.IsPath)
   (h_ve_mem : ⟦x⟧ ∈ p'.support)
@@ -1027,7 +1030,7 @@ lemma lift_path_through_contraction_internal (G : SimpleGraph V) (A B : Set V) {
   ∃ (u v : V) (p : G.Walk u v),
     u ∈ A ∧ v ∈ B ∧
     p.IsPath ∧
-    (↑p.support.toFinset : Set V) ⊆ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset : Set _) := by
+    (↑p.support.toFinset : Set V) ⊆ contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) := by
       have h_split : ∃ (p1' : (G / e).Walk u' ⟦x⟧)
         (p2' : (G / e).Walk ⟦x⟧ v'),
         p1'.IsPath ∧
@@ -1040,9 +1043,9 @@ lemma lift_path_through_contraction_internal (G : SimpleGraph V) (A B : Set V) {
           convert h1 ; convert h2
       obtain ⟨p1', p2', hp1'_path, hp2'_path, h_inter, h_union⟩ := h_split
       obtain ⟨u_start, u_end, p1, v_start, v_end, p2, hp1, hp2, h_disjoint⟩ :=
-        lift_split_paths G A B e u' v' p1' p2' hp1'_path hp2'_path h_inter h_u_ne h_v_ne hu' hv'
+        lift_split_paths A B e u' v' p1' p2' hp1'_path hp2'_path h_inter h_u_ne h_v_ne hu' hv'
       obtain ⟨q, hq⟩ : ∃ q : G.Walk u_start v_end, q.IsPath ∧ q.support.toFinset ⊆ p1.support.toFinset ∪ p2.support.toFinset := by
-        apply join_paths_through_edge G e p1 p2 h_disjoint.2.2.1 h_disjoint.2.2.2.1 h_disjoint.1 h_disjoint.2.1 h_disjoint.2.2.2.2.2.2.1 h_disjoint.2.2.2.2.2.2.2.1 h_disjoint.2.2.2.2.2.2.2.2
+        apply join_paths_through_edge e p1 p2 h_disjoint.2.2.1 h_disjoint.2.2.2.1 h_disjoint.1 h_disjoint.2.1 h_disjoint.2.2.2.2.2.2.1 h_disjoint.2.2.2.2.2.2.2.1 h_disjoint.2.2.2.2.2.2.2.2
       refine ⟨u_start, v_end, q, hp1, hp2, hq.1, ?_⟩
       intro z hz
       simp only [Finset.mem_coe, List.mem_toFinset] at hz
@@ -1077,7 +1080,6 @@ The contracted vertex is in the lifted set of A if and only if x or y is in A.
 -/
 lemma mem_liftSet_contraction_vertex_iff (A : Set V) {x y : V} (e : G.Adj x y) :
   ⟦x⟧ ∈ A / e ↔ x ∈ A ∨ y ∈ A := by
-    unfold contract_image
     constructor <;> intro h;
     · simp at h
       cases' h with z hz
@@ -1099,7 +1101,7 @@ lemma adjust_path_start_to_A (A : Set V) {x y : V} (e : G.Adj x y)
   ∃ (u' : V) (p' : G.Walk u' v),
     u' ∈ A ∧
     p'.IsPath ∧
-    (p'.support.toFinset.image (⟦·⟧) : Finset (Quotient (contractSetoid (G := G) (x := x) (y := y) e)))
+    (p'.support.toFinset.image (⟦·⟧) : Finset (V / e))
       ⊆ p.support.toFinset.image (⟦·⟧) := by
       by_cases hx : x ∈ A
       · rcases hu with ( rfl | rfl )
@@ -1125,7 +1127,7 @@ lemma adjust_path_start_to_A (A : Set V) {x y : V} (e : G.Adj x y)
               exact ⟨ ⟨ x, hp_support.1, by simp_all ⟩,
               fun a ha => ⟨ a, ha, by tauto ⟩ ⟩
           · grind
-        · simp_all [ contract_image ]
+        · simp_all
           obtain ⟨ u', hu', hu'' ⟩ := h_liftA
           rw [contractEdgeProj_eq_vertex_iff] at hu''
           cases hu'' <;> simp_all [ Finset.ext_iff ]
@@ -1138,7 +1140,7 @@ lemma adjust_path_end_to_B (B : Set V) {x y : V} (e : G.Adj x y)
   ∃ (v' : V) (p' : G.Walk u v'),
     v' ∈ B ∧
     p'.IsPath ∧
-    (p'.support.toFinset.image (⟦·⟧) : Finset (Quotient (contractSetoid (G := G) (x := x) (y := y) e)))
+    (p'.support.toFinset.image (⟦·⟧) : Finset (V / e))
       ⊆ p.support.toFinset.image (⟦·⟧) := by
       rcases hv with ( rfl | rfl )
       · by_cases hy : y ∈ B
@@ -1161,7 +1163,7 @@ lemma adjust_path_end_to_B (B : Set V) {x y : V} (e : G.Adj x y)
       · by_cases hv : v ∈ B
         · exact ⟨ v, p, hv, hp_path, Finset.Subset.refl _ ⟩
         · have hx : x ∈ B := by
-            contrapose! h_liftB; simp_all [ contract_image ]
+            contrapose! h_liftB; simp_all
             intro w hw
             rw [ Quotient.eq, contractSetoid ]
             grind
@@ -1173,13 +1175,13 @@ lemma adjust_path_end_to_B (B : Set V) {x y : V} (e : G.Adj x y)
             rintro a ( ha | rfl | rfl )
             · exact ⟨ a, ha, by rfl ⟩
             · exact ⟨ a, by cases p <;> aesop ⟩;
-            · exact ⟨ v, by simp, by simp [Quotient.eq, contractSetoid]⟩
+            · exact ⟨v, by simp, Quotient.sound (Or.inr (Or.inr ⟨rfl, rfl⟩))⟩
 
 /-
 Helper lemma: A path starting at the contracted vertex can be lifted to an A-B path if the contracted vertex is in the lifted set of A.
 -/
 lemma lift_path_start_eq_vertex (A B : Set V) {x y : V} (e : G.Adj x y)
-  (v' : Quotient (contractSetoid (G := G) (x := x) (y := y) e))
+  (v' : V / e)
   (p' : (G / e).Walk ⟦x⟧ v')
   (hp'_path : p'.IsPath)
   (hv' : v' ∈ B / e)
@@ -1188,18 +1190,18 @@ lemma lift_path_start_eq_vertex (A B : Set V) {x y : V} (e : G.Adj x y)
   ∃ p : G.ABPath A B,
     p.p.1.support.toFinset.image (⟦·⟧) ⊆ p'.support.toFinset := by
       obtain ⟨u, v, q, hu_xy, hvB, hq_path, hq_pre, hq_xy⟩ :=
-        lift_path_from_contraction_start G B e v' p' hp'_path hv' h_end_ne
+        lift_path_from_contraction_start B e v' p' hp'_path hv' h_end_ne
       obtain ⟨u', q', hu'A, hq'_path, hq'_support⟩ :=
         adjust_path_start_to_A A e u v q hq_path hu_xy hq_xy h_liftA
       refine ⟨⟨⟨u', hu'A⟩, ⟨v, hvB⟩, q', hq'_path⟩, ?_⟩
       refine hq'_support.trans ?_
       intro a ha
       rcases Finset.mem_image.mp ha with ⟨w, hw, rfl⟩
-      have hw' : w ∈ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset) := hq_pre (Finset.mem_coe.mpr hw)
-      exact (mem_contract_preimage (G := G) (x := x) (y := y) (Y := ↑p'.support.toFinset) (v := w)).1 hw'
+      have hw' : w ∈ contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) := hq_pre (Finset.mem_coe.mpr hw)
+      exact (mem_contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) (v := w)).1 hw'
 
 lemma lift_path_end_eq_vertex (A B : Set V) {x y : V} (e : G.Adj x y)
-  (u' : Quotient (contractSetoid (G := G) (x := x) (y := y) e))
+  (u' : V / e)
   (p' : (G / e).Walk u' ⟦x⟧)
   (hp'_path : p'.IsPath)
   (hu' : u' ∈ A / e)
@@ -1208,15 +1210,15 @@ lemma lift_path_end_eq_vertex (A B : Set V) {x y : V} (e : G.Adj x y)
   ∃ p : G.ABPath A B,
     p.p.1.support.toFinset.image (⟦·⟧) ⊆ p'.support.toFinset := by
       obtain ⟨ u, v, p, hu, hv, hp, hp', hp'' ⟩ :=
-        lift_path_to_contraction_end G A e u' p' hp'_path hu' h_start_ne
+        lift_path_to_contraction_end A e u' p' hp'_path hu' h_start_ne
       obtain ⟨ v', q, hv', hq, hq' ⟩ :=
         adjust_path_end_to_B B e u v p hp hv hp'' h_liftB
       have h_final : Finset.image (⟦·⟧) q.support.toFinset ⊆ p'.support.toFinset := by
         refine hq'.trans ?_
         rw [ Finset.image_subset_iff ]
         intro z hz
-        have hz' : z ∈ contract_preimage (G := G) (x := x) (y := y) (↑p'.support.toFinset) := hp' (Finset.mem_coe.mpr hz)
-        exact (mem_contract_preimage (G := G) (x := x) (y := y) (Y := ↑p'.support.toFinset) (v := z)).1 hz'
+        have hz' : z ∈ contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) := hp' (Finset.mem_coe.mpr hz)
+        exact (mem_contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) (v := z)).1 hz'
       exact ⟨ ⟨ ⟨ u, hu ⟩, ⟨ v', hv' ⟩, q, hq ⟩, h_final ⟩
 
 /-
@@ -1229,7 +1231,7 @@ lemma lift_path_nil_eq_vertex (A B : Set V) {x y : V} (e : G.Adj x y)
   (h_liftB : ⟦x⟧ ∈ B / e) :
   ∃ p : G.ABPath A B,
     p.p.1.support.toFinset.image (⟦·⟧) ⊆ p'.support.toFinset := by
-      simp [contract_image] at h_liftA h_liftB
+      simp at h_liftA h_liftB
       obtain ⟨x_1, hx_1_A, hx_1⟩ := h_liftA
       obtain ⟨x_2, hx_2_B, hx_2⟩ := h_liftB
       have hx_1_eq : x_1 = x ∨ x_1 = y := by
@@ -1295,14 +1297,14 @@ lemma exists_lifted_ABPath_through (A B : Set V) {x y : V} (e : G.Adj x y)
           any_goals tauto
           convert p.1
           all_goals norm_num [ hv' ]
-          · grind
-          · grind
+          · aesop
+          · aesop
         · rename_i hp
-          obtain ⟨ u, v, lifted_p, hp₁, hp₂, hp₃, hp₄ ⟩ := lift_path_through_contraction_internal G A B e u' v' p p.2 hp'_mem hu' hv' u'.2 ‹_›
+          obtain ⟨ u, v, lifted_p, hp₁, hp₂, hp₃, hp₄ ⟩ := lift_path_through_contraction_internal A B e u' v' p p.2 hp'_mem hu' hv' u'.2 ‹_›
           refine ⟨ ⟨ ⟨u, hp₁⟩, ⟨v, hp₂⟩, lifted_p, hp₃ ⟩, ?_ ⟩
           intro a ha; rcases Finset.mem_image.mp ha with ⟨w, hw, rfl⟩
           have := hp₄ (Finset.mem_coe.mpr hw)
-          exact (mem_contract_preimage (G := G) (x := x) (y := y) (Y := ↑p.1.support.toFinset) (v := w)).1 this
+          exact (mem_contract_preimage (Y := (↑p.1.support.toFinset : Set (V / e))) (v := w)).1 this
 
 lemma exists_disjoint_paths_lift (P' : (G / e).Joiner (A / e) (B / e)) :
     ∃ P : G.Joiner A B, P.1.encard = P'.1.encard := by
@@ -1369,7 +1371,7 @@ lemma min_sep_delete_ge_k_left (X : G.Separator A B) (hx : x ∈ X.1) (hy : y �
     G.mincut A B ≤ (G - e).mincut A X.1 := by
   apply le_iInf
   intro S
-  exact iInf_le_of_le ⟨S.1, separates_of_separates_delete A B e X S hx hy⟩ le_rfl
+  exact mincut_le_encard ⟨S.1, separates_of_separates_delete A B e X S hx hy⟩
 
 /-
 If X separates A and B in G and contains x and y, then the minimum separator size of X and B in G-xy is at least k.
@@ -1379,7 +1381,7 @@ lemma min_sep_delete_ge_k_right (X : G.Separator A B) (hx : x ∈ X.1) (hy : y �
   rw [ge_iff_le, mincut]
   apply le_iInf
   intro S
-  exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge_right X hx hy S⟩ le_rfl
+  exact mincut_le_encard ⟨S.1, separator_in_G_of_separator_in_G_delete_edge_right X hx hy S⟩
 
 /-
 If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to a set of disjoint paths in G with the same size.
