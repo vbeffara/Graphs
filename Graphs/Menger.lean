@@ -273,6 +273,14 @@ noncomputable abbrev contract_preimage (Y : Set (V / e)) : Set V := {v | ⟦v⟧
 
 lemma mem_contract_preimage {Y : Set (V / e)} : v ∈ contract_preimage Y ↔ ⟦v⟧ ∈ Y := by rfl
 
+private lemma image_subset_of_contract_preimage_subset
+    {s : Finset V} {t : Finset (V / e)}
+    (hsub : (↑s : Set V) ⊆ contract_preimage (Y := (↑t : Set (V / e)))) :
+    s.image (⟦·⟧) ⊆ t := by
+  intro q hq
+  rcases Finset.mem_image.mp hq with ⟨w, hw, rfl⟩
+  exact (mem_contract_preimage (Y := (↑t : Set (V / e))) (v := w)).1 (hsub (Finset.mem_coe.mpr hw))
+
 lemma contract_preimage_separates (Y : (G / e).Separator (A / e) (B / e)) :
     G.Separates A B (contract_preimage Y.1) := by
   intro u hu v hv p
@@ -1196,11 +1204,7 @@ lemma lift_path_start_eq_vertex {A B : Set V} (e : G.Adj x y)
       obtain ⟨u', q', hu'A, hq'_path, hq'_support⟩ :=
         adjust_path_start_to_A (A := A) e u v q hq_path hu_xy hq_xy h_liftA
       refine ⟨⟨⟨u', hu'A⟩, ⟨v, hvB⟩, q', hq'_path⟩, ?_⟩
-      refine hq'_support.trans ?_
-      intro a ha
-      rcases Finset.mem_image.mp ha with ⟨w, hw, rfl⟩
-      have hw' : w ∈ contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) := hq_pre (Finset.mem_coe.mpr hw)
-      exact (mem_contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) (v := w)).1 hw'
+      exact hq'_support.trans (image_subset_of_contract_preimage_subset (e := e) (hsub := hq_pre))
 
 lemma lift_path_end_eq_vertex {A B : Set V} (e : G.Adj x y)
   (u' : V / e)
@@ -1216,11 +1220,7 @@ lemma lift_path_end_eq_vertex {A B : Set V} (e : G.Adj x y)
       obtain ⟨ v', q, hv', hq, hq' ⟩ :=
         adjust_path_end_to_B (B := B) e u v p hp hv hp'' h_liftB
       have h_final : Finset.image (⟦·⟧) q.support.toFinset ⊆ p'.support.toFinset := by
-        refine hq'.trans ?_
-        rw [ Finset.image_subset_iff ]
-        intro z hz
-        have hz' : z ∈ contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) := hp' (Finset.mem_coe.mpr hz)
-        exact (mem_contract_preimage (Y := (↑p'.support.toFinset : Set (V / e))) (v := z)).1 hz'
+        exact hq'.trans (image_subset_of_contract_preimage_subset (e := e) (hsub := hp'))
       exact ⟨ ⟨ ⟨ u, hu ⟩, ⟨ v', hv' ⟩, q, hq ⟩, h_final ⟩
 
 /-
@@ -1237,9 +1237,7 @@ lemma lift_path_nil_eq_vertex {A B : Set V} (e : G.Adj x y)
   have hx_mem : (⟦x⟧ : V / e) ∈ p'.support.toFinset := by
     exact List.mem_toFinset.mpr p'.end_mem_support
   have h_single : ({(⟦x⟧ : V / e)} : Finset (V / e)) ⊆ p'.support.toFinset := by
-    intro z hz
-    have hzx : z = (⟦x⟧ : V / e) := Finset.mem_singleton.mp hz
-    exact hzx ▸ hx_mem
+    simp [Finset.singleton_subset_iff, hx_mem]
   rcases hA with hxA | hyA <;> rcases hB with hxB | hyB
   · refine ⟨⟨⟨x, hxA⟩, ⟨x, hxB⟩, Walk.nil, Walk.IsPath.nil⟩, ?_⟩
     exact subset_trans (by simp) h_single
@@ -1277,9 +1275,7 @@ lemma exists_lifted_ABPath_through {A B : Set V} (e : G.Adj x y)
         · rename_i hp
           obtain ⟨u, v, lifted_p, hp₁, hp₂, hp₃, hp₄⟩ := lift_path_through_contraction_internal (A := A) (B := B) e u' v' p p.2 hp'_mem hu' hv' u'.2 ‹_›
           refine ⟨ ⟨ ⟨u, hp₁⟩, ⟨v, hp₂⟩, lifted_p, hp₃ ⟩, ?_ ⟩
-          intro a ha; rcases Finset.mem_image.mp ha with ⟨w, hw, rfl⟩
-          have := hp₄ (Finset.mem_coe.mpr hw)
-          exact (mem_contract_preimage (Y := (↑p.1.support.toFinset : Set (V / e))) (v := w)).1 this
+          exact image_subset_of_contract_preimage_subset (e := e) (hsub := hp₄)
 
 lemma exists_disjoint_paths_lift (P' : (G / e).Joiner (A / e) (B / e)) :
     ∃ P : G.Joiner A B, P.1.encard = P'.1.encard := by
@@ -1388,6 +1384,15 @@ lemma lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) {A B : Set V}
     exact hdisj0
   · show (f '' P).encard = P.encard
     exact hf_inj.encard_image
+
+lemma maxflow_le_of_le {G' : SimpleGraph V} (h : G' ≤ G) :
+    G'.maxflow A B ≤ G.maxflow A B := by
+  apply iSup_le
+  intro P
+  obtain ⟨Q, hQ⟩ := lift_disjoint_paths_le G G' h (A := A) (B := B) P
+  calc
+    P.1.encard = Q.1.encard := hQ.symm
+    _ ≤ G.maxflow A B := encard_le_maxflow_of_joiner Q
 
 def abPath_to_fromEdgeSet {A B : Set V} (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edgeSet ⊆ E) :
     (fromEdgeSet E).ABPath A B := by
@@ -1709,11 +1714,7 @@ theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxf
   obtain ⟨SH, hSH⟩ := ENat.exists_eq_iInf (fun S : H.Separator A B => S.1.encard)
   have hHmax_eq : H.maxflow A B = P.1.encard := by
     apply le_antisymm
-    · apply iSup_le
-      intro Q
-      obtain ⟨QG, hQG_card⟩ := lift_disjoint_paths_le G H hH_le (A := A) (B := B) Q
-      calc Q.1.encard = QG.1.encard := hQG_card.symm
-        _ ≤ G.maxflow A B := encard_le_maxflow_of_joiner QG
+    · calc H.maxflow A B ≤ G.maxflow A B := maxflow_le_of_le (G := G) (A := A) (B := B) hH_le
         _ = P.1.encard := hP.symm
     · rw [← hPH_card]
       exact encard_le_maxflow_of_joiner PH
