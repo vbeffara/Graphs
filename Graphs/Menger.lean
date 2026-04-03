@@ -1204,7 +1204,7 @@ lemma lift_path_start_eq_vertex {A B : Set V} (e : G.Adj x y)
       obtain ⟨u', q', hu'A, hq'_path, hq'_support⟩ :=
         adjust_path_start_to_A (A := A) e u v q hq_path hu_xy hq_xy h_liftA
       refine ⟨⟨⟨u', hu'A⟩, ⟨v, hvB⟩, q', hq'_path⟩, ?_⟩
-      exact hq'_support.trans (image_subset_of_contract_preimage_subset (e := e) (hsub := hq_pre))
+      exact hq'_support.trans (image_subset_of_contract_preimage_subset (hsub := hq_pre))
 
 lemma lift_path_end_eq_vertex {A B : Set V} (e : G.Adj x y)
   (u' : V / e)
@@ -1220,7 +1220,7 @@ lemma lift_path_end_eq_vertex {A B : Set V} (e : G.Adj x y)
       obtain ⟨ v', q, hv', hq, hq' ⟩ :=
         adjust_path_end_to_B (B := B) e u v p hp hv hp'' h_liftB
       have h_final : Finset.image (⟦·⟧) q.support.toFinset ⊆ p'.support.toFinset := by
-        exact hq'.trans (image_subset_of_contract_preimage_subset (e := e) (hsub := hp'))
+        exact hq'.trans (image_subset_of_contract_preimage_subset (hsub := hp'))
       exact ⟨ ⟨ ⟨ u, hu ⟩, ⟨ v', hv' ⟩, q, hq ⟩, h_final ⟩
 
 /-
@@ -1232,7 +1232,7 @@ lemma lift_path_nil_eq_vertex {A B : Set V} (e : G.Adj x y)
   (h_liftB : ⟦x⟧ ∈ B / e) :
   ∃ p : G.ABPath A B,
     p.p.1.support.toFinset.image (⟦·⟧) ⊆ p'.support.toFinset := by
-  have hA : x ∈ A ∨ y ∈ A := (mem_liftSet_contraction_vertex_iff (A := A) e).1 h_liftA
+  have hA : x ∈ A ∨ y ∈ A := (mem_liftSet_contraction_vertex_iff e).1 h_liftA
   have hB : x ∈ B ∨ y ∈ B := (mem_liftSet_contraction_vertex_iff (A := B) e).1 h_liftB
   have hx_mem : (⟦x⟧ : V / e) ∈ p'.support.toFinset := by
     exact List.mem_toFinset.mpr p'.end_mem_support
@@ -1257,7 +1257,7 @@ lemma exists_lifted_ABPath_through {A B : Set V} (e : G.Adj x y)
       · by_cases hv' : p'.v = (⟦x⟧ : V/e)
         · have h_lift_nil : ⟦x⟧ ∈ A / e ∧ ⟦x⟧ ∈ B / e := by
             grind
-          obtain ⟨p, hp⟩ := lift_path_nil_eq_vertex (A := A) (B := B) e Walk.nil h_lift_nil.1 h_lift_nil.2
+          obtain ⟨p, hp⟩ := lift_path_nil_eq_vertex e Walk.nil h_lift_nil.1 h_lift_nil.2
           exact ⟨ p, hp.trans ( by simp [ hp'_mem ] ) ⟩
         · cases p'
           have := lift_path_start_eq_vertex (A := A) (B := B) e
@@ -1265,7 +1265,7 @@ lemma exists_lifted_ABPath_through {A B : Set V} (e : G.Adj x y)
       · cases' p' with u' hv' p
         rcases hv' with ⟨ v', hv' ⟩
         by_cases hv' : v' = (⟦x⟧ : V/e)
-        · convert lift_path_end_eq_vertex (A := A) (B := B) e _ _ _ _ _ _
+        · convert lift_path_end_eq_vertex e _ _ _ _ _ _
           rotate_left
           any_goals tauto
           convert p.1
@@ -1273,9 +1273,9 @@ lemma exists_lifted_ABPath_through {A B : Set V} (e : G.Adj x y)
           · aesop
           · aesop
         · rename_i hp
-          obtain ⟨u, v, lifted_p, hp₁, hp₂, hp₃, hp₄⟩ := lift_path_through_contraction_internal (A := A) (B := B) e u' v' p p.2 hp'_mem hu' hv' u'.2 ‹_›
+          obtain ⟨u, v, lifted_p, hp₁, hp₂, hp₃, hp₄⟩ := lift_path_through_contraction_internal e u' v' p p.2 hp'_mem hu' hv' u'.2 ‹_›
           refine ⟨ ⟨ ⟨u, hp₁⟩, ⟨v, hp₂⟩, lifted_p, hp₃ ⟩, ?_ ⟩
-          exact image_subset_of_contract_preimage_subset (e := e) (hsub := hp₄)
+          exact image_subset_of_contract_preimage_subset (hsub := hp₄)
 
 lemma exists_disjoint_paths_lift (P' : (G / e).Joiner (A / e) (B / e)) :
     ∃ P : G.Joiner A B, P.1.encard = P'.1.encard := by
@@ -1283,9 +1283,9 @@ lemma exists_disjoint_paths_lift (P' : (G / e).Joiner (A / e) (B / e)) :
       ∃ p : G.ABPath A B, p.p.1.support.toFinset.image (⟦·⟧) ⊆ p'.p.1.support.toFinset := by
     intro p'
     by_cases hp'_avoid : ⟦x⟧ ∉ p'.p.1.support
-    · rcases exists_lifted_ABPath_avoiding (A := A) (B := B) e p' hp'_avoid with ⟨p, hp⟩
+    · rcases exists_lifted_ABPath_avoiding e p' hp'_avoid with ⟨p, hp⟩
       exact ⟨p, hp.2.2.1⟩
-    · rcases exists_lifted_ABPath_through (A := A) (B := B) e p' (by aesop) with ⟨p, hp⟩
+    · rcases exists_lifted_ABPath_through e p' (by aesop) with ⟨p, hp⟩
       exact ⟨p, hp⟩
   choose f hf using h_lift
   refine ⟨⟨f '' P'.1, ?_⟩, ?_⟩
@@ -1389,7 +1389,7 @@ lemma maxflow_le_of_le {G' : SimpleGraph V} (h : G' ≤ G) :
     G'.maxflow A B ≤ G.maxflow A B := by
   apply iSup_le
   intro P
-  obtain ⟨Q, hQ⟩ := lift_disjoint_paths_le G G' h (A := A) (B := B) P
+  obtain ⟨Q, hQ⟩ := lift_disjoint_paths_le G G' h P
   calc
     P.1.encard = Q.1.encard := hQ.symm
     _ ≤ G.maxflow A B := encard_le_maxflow_of_joiner Q
@@ -1474,7 +1474,7 @@ lemma exists_joiner_of_le_maxflow_of_subgraph {G' : SimpleGraph V} (k : ℕ∞) 
   obtain ⟨P', hP'⟩ := exists_le_of_le_iSup _ hk hmax
   obtain ⟨t, ht_sub, ht_card⟩ := Set.exists_subset_encard_eq hP'
   have ht_disj : disjointPaths t := fun p hp q hq hpq => P'.2 (ht_sub hp) (ht_sub hq) hpq
-  obtain ⟨Q, hQ⟩ := lift_disjoint_paths_le G G' hsub (A := A) (B := B) ⟨t, ht_disj⟩
+  obtain ⟨Q, hQ⟩ := lift_disjoint_paths_le G G' hsub ⟨t, ht_disj⟩
   exact ⟨Q, hQ.trans ht_card⟩
 
 /-
@@ -1492,7 +1492,7 @@ lemma Menger_case2_imp_paths (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B
       (IH_delete X.1 B (hX_fin.inter_of_left _))
   obtain ⟨P_A, hP_A_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G' := G - e) k hk deleteEdge_le h_del_A
   obtain ⟨P_B, hP_B_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G' := G - e) k hk deleteEdge_le h_del_B
-  obtain ⟨P, hP_card⟩ := disjoint_paths_join (A := A) (B := B) X k hX_fin hX_card P_A hP_A_card P_B hP_B_card
+  obtain ⟨P, hP_card⟩ := disjoint_paths_join X k hX_fin hX_card P_A hP_A_card P_B hP_B_card
   exact hP_card ▸ encard_le_maxflow_of_joiner P
 
 /-
@@ -1532,7 +1532,7 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) : G.edgeSet.encard = ↑n →
     have hk : G.mincut A B ≠ ⊤ :=
       ne_top_of_le_ne_top (WithTop.add_ne_top.mpr
         ⟨Set.encard_ne_top_iff.mpr hAB, h_card ▸ WithTop.coe_ne_top⟩) mincut_le_inter_add_edgeSet
-    have hAB_contract : ((A / e) ∩ (B / e)).Finite := finite_inter_contract_image (e := e) hAB
+    have hAB_contract : ((A / e) ∩ (B / e)).Finite := finite_inter_contract_image hAB
     exact Menger_inductive_step hk
       (ih _ (by rw [hmc] at h_contract_lt; exact WithTop.coe_lt_coe.mp h_contract_lt)
         hAB_contract hmc)
@@ -1625,27 +1625,43 @@ private lemma exists_abPath_avoiding_choiceSet (P : G.Joiner A B) (h : P.1.encar
     ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ choiceSet σ := by
   exact exists_abPath_avoiding_of_encard_eq (P := P) h _ (choiceSet_encard (P := P) σ)
 
+private noncomputable abbrev erdosChoicePath (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) :
+    ChoicePoints P → G.ABPath A B := fun σ => (exists_abPath_avoiding_choiceSet (P := P) h σ).choose
+
+private lemma erdosChoicePath_spec (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) (σ : ChoicePoints P) :
+    ∀ x ∈ (erdosChoicePath P h σ).support, x ∉ choiceSet σ :=
+  (exists_abPath_avoiding_choiceSet (P := P) h σ).choose_spec
+
+private def erdosEdgeSetP (P : G.Joiner A B) : Set (Sym2 V) :=
+  ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
+
+private noncomputable def erdosEdgeSetQ (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) : Set (Sym2 V) :=
+  ⋃ σ : ChoicePoints P, (erdosChoicePath P h σ).p.1.edgeSet
+
+private noncomputable def erdosEdgeSet (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) : Set (Sym2 V) :=
+  erdosEdgeSetP P ∪ erdosEdgeSetQ P h
+
 /-- Create an Erdös-style finite graph from a joiner that is too small. -/
 noncomputable def erdos_graph (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) : SimpleGraph V := by
-  let C := ChoicePoints P
-  let q : C → G.ABPath A B := fun σ => (exists_abPath_avoiding_choiceSet (P := P) h σ).choose
-  let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
-  let EQ : Set (Sym2 V) := ⋃ σ : C, (q σ).p.1.edgeSet
-  let E : Set (Sym2 V) := EP ∪ EQ
-  exact fromEdgeSet E
+  exact fromEdgeSet (erdosEdgeSet P h)
 
 variable {P : G.Joiner A B} {h : P.1.encard < G.mincut A B}
 
 theorem erdos_graph_finite : (erdos_graph P h).edgeSet.Finite := by
   haveI : Fintype P.1 := Set.encard_lt_top_iff.mp (lt_top_of_lt h) |>.fintype
-  simp [erdos_graph, ChoicePoints, choiceSet] ; constructor <;> apply Set.Finite.diff
+  simp [erdos_graph, erdosEdgeSet, erdosEdgeSetP, erdosEdgeSetQ, ChoicePoints]
+  constructor <;> apply Set.Finite.diff
   · exact Set.Finite.biUnion this.finite (by simp [ABPath.edgeSet_finite])
   · exact Set.finite_iUnion (by simp [ABPath.edgeSet_finite])
 
 theorem erdos_graph_le : (erdos_graph P h) ≤ G := by
   refine (fromEdgeSet_le _).2 (diff_subset.trans $ union_subset ?_ ?_)
-  · apply iUnion₂_subset ; grind [ABPath.edgeSet_subset_graphEdgeSet]
-  · apply iUnion_subset ; grind [ABPath.edgeSet_subset_graphEdgeSet]
+  · intro e he
+    rcases Set.mem_iUnion₂.mp he with ⟨p, hp, hep⟩
+    exact ABPath.edgeSet_subset_graphEdgeSet p hep
+  · intro e he
+    rcases Set.mem_iUnion.mp he with ⟨σ, hσ⟩
+    exact ABPath.edgeSet_subset_graphEdgeSet (erdosChoicePath P h σ) hσ
 
 private lemma erdos_graph_joiner : ∃ PH : (erdos_graph P h).Joiner A B, PH.1.encard = P.1.encard := by
   apply restrict_joiner_to_fromEdgeSet
@@ -1654,46 +1670,38 @@ private lemma erdos_graph_joiner : ∃ PH : (erdos_graph P h).Joiner A B, PH.1.e
   apply subset_iUnion₂ p hp
 
 private lemma erdos_graph_separator : ∀ SH : (erdos_graph P h).Separator A B, SH.1.encard ≠ P.1.encard := by
-  let C := ChoicePoints P
-  let Schoice : C → Set V := choiceSet
-  have hSchoice_card (σ : C) : (Schoice σ).encard = P.1.encard := by
+  have hSchoice_card (σ : ChoicePoints P) : (choiceSet σ).encard = P.1.encard := by
     exact choiceSet_encard (P := P) σ
-  let q : C → G.ABPath A B := fun σ => (exists_abPath_avoiding_choiceSet (P := P) h σ).choose
-  let hq : ∀ σ : C, ∀ x ∈ (q σ).support, x ∉ Schoice σ := fun σ => (exists_abPath_avoiding_choiceSet (P := P) h σ).choose_spec
-  let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
-  let EQ : Set (Sym2 V) := ⋃ σ : C, (q σ).p.1.edgeSet
-  let E : Set (Sym2 V) := EP ∪ EQ
-  have hPE p (hp : p ∈ P.1) : p.p.1.edgeSet ⊆ E := by
+  have hPE p (hp : p ∈ P.1) : p.p.1.edgeSet ⊆ erdosEdgeSet P h := by
     apply (subset_iUnion₂ p hp).trans subset_union_left
   intro SH hcard
-  let f (p : P.1) : (fromEdgeSet E).ABPath A B := abPath_to_fromEdgeSet p.1 E (hPE p.1 p.2)
+  let f (p : P.1) : (fromEdgeSet (erdosEdgeSet P h)).ABPath A B :=
+    abPath_to_fromEdgeSet p.1 (erdosEdgeSet P h) (hPE p.1 p.2)
   have h_hit_SH (p : P.1) : ∃ x : {x : V // x ∈ (p.1 : G.ABPath A B).support}, x.1 ∈ SH.1 := by
     obtain ⟨x, hx, hxSH⟩ := SH.2 (f p).u (f p).u.2 (f p).v (f p).v.2 (f p).p.1
     refine ⟨⟨x, ?_⟩, hxSH⟩
     simpa [f] using (show x ∈ (f p).support from hx)
   choose σ hσ using h_hit_SH
-  have hSchoice_eq : Schoice σ = SH.1 := by
-    have hSchoice_subset : Schoice σ ⊆ SH.1 := by
+  have hSchoice_eq : choiceSet σ = SH.1 := by
+    have hSchoice_subset : choiceSet σ ⊆ SH.1 := by
       rintro x ⟨p, rfl⟩
       exact hσ p
-    have hSchoice_fin : (Schoice σ).Finite := by
+    have hSchoice_fin : (choiceSet σ).Finite := by
       refine Set.encard_ne_top_iff.mp ?_
       have hP_fin : P.1.Finite := Set.encard_lt_top_iff.mp (lt_top_of_lt h)
       simpa [hSchoice_card σ] using (Set.encard_ne_top_iff.mpr hP_fin)
     apply hSchoice_fin.eq_of_subset_of_encard_le hSchoice_subset
     simp [hcard, hSchoice_card σ]
-  have hqE : (q σ).p.1.edgeSet ⊆ E := by
+  have hqE : (erdosChoicePath P h σ).p.1.edgeSet ⊆ erdosEdgeSet P h := by
     intro e he
     exact Or.inr (Set.mem_iUnion.mpr ⟨σ, he⟩)
-  let qH : (fromEdgeSet E).ABPath A B := abPath_to_fromEdgeSet (q σ) E hqE
+  let qH : (fromEdgeSet (erdosEdgeSet P h)).ABPath A B :=
+    abPath_to_fromEdgeSet (erdosChoicePath P h σ) (erdosEdgeSet P h) hqE
   obtain ⟨x, hxqH, hxSH⟩ := SH.2 qH.u qH.u.2 qH.v qH.v.2 qH.p.1
-  have hxq : x ∈ (q σ).support := by
-    have hsupp : qH.support = (q σ).support := by
-      simp [qH]
-    have hxqH' : x ∈ qH.support := by
-      simpa [ABPath.support] using hxqH
-    simpa [hsupp] using hxqH'
-  have hx_not_Schoice : x ∉ Schoice σ := hq σ x hxq
+  have hxq : x ∈ (erdosChoicePath P h σ).support := by
+    have hxqH' : x ∈ qH.support := by simpa [ABPath.support] using hxqH
+    simpa [qH] using hxqH'
+  have hx_not_Schoice : x ∉ choiceSet σ := erdosChoicePath_spec (P := P) (h := h) σ x hxq
   have hx_not_SH : x ∉ SH.1 := by simpa [hSchoice_eq] using hx_not_Schoice
   exact hx_not_SH hxSH
 
@@ -1714,7 +1722,7 @@ theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxf
   obtain ⟨SH, hSH⟩ := ENat.exists_eq_iInf (fun S : H.Separator A B => S.1.encard)
   have hHmax_eq : H.maxflow A B = P.1.encard := by
     apply le_antisymm
-    · calc H.maxflow A B ≤ G.maxflow A B := maxflow_le_of_le (G := G) (A := A) (B := B) hH_le
+    · calc H.maxflow A B ≤ G.maxflow A B := maxflow_le_of_le (G := G) hH_le
         _ = P.1.encard := hP.symm
     · rw [← hPH_card]
       exact encard_le_maxflow_of_joiner PH
