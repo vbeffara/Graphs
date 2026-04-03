@@ -1389,7 +1389,7 @@ lemma lift_disjoint_paths_le (G G' : SimpleGraph V) (h : G' ≤ G) {A B : Set V}
   · show (f '' P).encard = P.encard
     exact hf_inj.encard_image
 
-def abPath_to_fromEdgeSet (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edgeSet ⊆ E) :
+def abPath_to_fromEdgeSet {A B : Set V} (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edgeSet ⊆ E) :
     (fromEdgeSet E).ABPath A B := by
   let hp : ∀ e, e ∈ p.p.1.edges → e ∈ (fromEdgeSet E).edgeSet := by
     intro e he
@@ -1399,7 +1399,7 @@ def abPath_to_fromEdgeSet (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edge
     simpa [Set.mem_compl_iff, Sym2.mem_diagSet] using (G.not_isDiag_of_mem_edgeSet heG)
   exact ⟨p.u, p.v, p.p.1.transfer (fromEdgeSet E) hp, p.p.2.transfer hp⟩
 
-@[simp] lemma support_abPath_to_fromEdgeSet (A B : Set V)
+@[simp] lemma support_abPath_to_fromEdgeSet {A B : Set V}
     (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edgeSet ⊆ E) :
     (abPath_to_fromEdgeSet p E hE).support = p.support := by
   simp [abPath_to_fromEdgeSet, ABPath.support, Walk.support_transfer]
@@ -1623,9 +1623,7 @@ private lemma exists_abPath_avoiding_choiceSet (P : G.Joiner A B) (h : P.1.encar
 /-- Create an Erdös-style finite graph from a joiner that is too small. -/
 noncomputable def erdos_graph (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) : SimpleGraph V := by
   let C := ChoicePoints P
-  have h_witness (σ : C) : ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ choiceSet σ := by
-    exact exists_abPath_avoiding_choiceSet (P := P) h σ
-  choose q hq using h_witness
+  let q : C → G.ABPath A B := fun σ => (exists_abPath_avoiding_choiceSet (P := P) h σ).choose
   let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
   let EQ : Set (Sym2 V) := ⋃ σ : C, (q σ).p.1.edgeSet
   let E : Set (Sym2 V) := EP ∪ EQ
@@ -1655,10 +1653,8 @@ private lemma erdos_graph_separator : ∀ SH : (erdos_graph P h).Separator A B, 
   let Schoice : C → Set V := choiceSet
   have hSchoice_card (σ : C) : (Schoice σ).encard = P.1.encard := by
     exact choiceSet_encard (P := P) σ
-  have h_witness (σ : C) : ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ Schoice σ := by
-    exact exists_abPath_avoiding_choiceSet (P := P) h σ
-  let q σ := (h_witness σ).choose
-  let hq σ : ∀ x ∈ (q σ).support, x ∉ Schoice σ := (h_witness σ).choose_spec
+  let q : C → G.ABPath A B := fun σ => (exists_abPath_avoiding_choiceSet (P := P) h σ).choose
+  let hq : ∀ σ : C, ∀ x ∈ (q σ).support, x ∉ Schoice σ := fun σ => (exists_abPath_avoiding_choiceSet (P := P) h σ).choose_spec
   let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
   let EQ : Set (Sym2 V) := ⋃ σ : C, (q σ).p.1.edgeSet
   let E : Set (Sym2 V) := EP ∪ EQ
