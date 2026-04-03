@@ -17,10 +17,17 @@ namespace SimpleGraph
 
 def Separator (G : SimpleGraph V) (A B : Set V) := { S : Set V // G.Separates A B S }
 
+lemma Separates.swap (hS : G.Separates A B X) : G.Separates B A X := by
+  intro u hu v hv p
+  obtain ⟨w, hw, hwX⟩ := hS v hv u hu p.reverse
+  exact ⟨w, by simpa using hw, hwX⟩
+
 namespace Separator
 
 instance nonempty (G : SimpleGraph V) (A B : Set V) : Nonempty (G.Separator A B) :=
   ⟨A, fun u hu _ _ p => ⟨u, p.start_mem_support, hu⟩⟩
+
+def swap (S : G.Separator A B) : G.Separator B A := ⟨S.1, S.2.swap⟩
 
 def of_vertex_cover (S : Set V) (hS : ∀ e ∈ G.edgeSet, ∃ v ∈ S, v ∈ e) : G.Separator A B := by
   refine ⟨A ∩ B ∪ S, ?_⟩
@@ -1271,93 +1278,69 @@ lemma exists_lifted_ABPath_through (G : SimpleGraph V) (A B : Set V) {x y : V} (
           intro a ha; rcases Finset.mem_image.mp ha with ⟨w, hw, rfl⟩
           have := hp₄ (Finset.mem_coe.mpr hw)
           exact (mem_contract_preimage (G := G) (x := x) (y := y) (Y := ↑p.1.support.toFinset) (v := w)).1 this
-lemma exists_disjoint_paths_lift (G : SimpleGraph V) (A B : Set V) {x y : V}
-    (e : G.Adj x y)
-    (P' : ((contract (G := G) (x := x) (y := y) e).Joiner (contract_image (G := G) (x := x) (y := y) A e) (contract_image (G := G) (x := x) (y := y) B e))) :
-  ∃ P : G.Joiner A B, P.1.encard = P'.1.encard := by
-    have h_lift : ∀ (p' : (contract (G := G) (x := x) (y := y) e).ABPath (contract_image (G := G) (x := x) (y := y) A e) (contract_image (G := G) (x := x) (y := y) B e)), ∃ p : G.ABPath A B, p.p.1.support.toFinset.image (⟦·⟧) ⊆ p'.p.1.support.toFinset := by
-      intro p'
-      by_cases hp'_avoid : ⟦x⟧ ∉ p'.p.1.support
-      · rcases exists_lifted_ABPath_avoiding G A B e p' hp'_avoid with ⟨p, hp⟩
-        exact ⟨p, hp.2.2.1⟩
-      · rcases exists_lifted_ABPath_through G A B e p' (by aesop) with ⟨p, hp⟩
-        exact ⟨p, hp⟩
-    choose f hf using h_lift
-    refine ⟨⟨f '' P'.1, ?_⟩, ?_⟩
-    · intro p hp q hq hpq
-      rcases (Set.mem_image f P'.1 p).mp hp with ⟨p', hp', rfl⟩
-      rcases (Set.mem_image f P'.1 q).mp hq with ⟨q', hq', rfl⟩
-      have hpq' : p' ≠ q' := fun h' => hpq (by simp [h'])
-      have h_disj := P'.2 hp' hq' hpq'
-      show Disjoint (f p').support (f q').support
-      rw [Set.disjoint_left]
-      intro v hv hv'
-      -- v is in both (f p').support and (f q').support, so ⟦v⟧ is in both p' and q' supports
-      have hfp := hf p' (Finset.mem_image.mpr ⟨v, List.mem_toFinset.mpr hv, rfl⟩)
-      have hfq := hf q' (Finset.mem_image.mpr ⟨v, List.mem_toFinset.mpr hv', rfl⟩)
-      exact Set.disjoint_left.mp h_disj (List.mem_toFinset.mp hfp) (List.mem_toFinset.mp hfq)
-    · exact (Set.InjOn.encard_image (fun p' hp' q' hq' h_eq => by
-        by_contra hneq
-        have h_disj := P'.2 hp' hq' hneq
-        have hfp_start := hf p' (Finset.mem_image.mpr ⟨(f p').u.1, List.mem_toFinset.mpr (f p').p.1.start_mem_support, rfl⟩)
-        have hfq_start : ⟦(f p').u.1⟧ ∈ q'.p.1.support.toFinset := by
-          have h_support_eq : (f p').p.1.support = (f q').p.1.support := by
-            simpa using congrArg (fun r => r.p.1.support) h_eq
-          have : (f p').u.1 ∈ (f q').p.1.support := h_support_eq ▸ (f p').p.1.start_mem_support
-          exact hf q' (Finset.mem_image.mpr ⟨(f p').u.1, List.mem_toFinset.mpr this, rfl⟩)
-        exact Set.disjoint_left.mp h_disj (List.mem_toFinset.mp hfp_start) (List.mem_toFinset.mp hfq_start)))
+
+lemma exists_disjoint_paths_lift (P' : (G / e).Joiner (A / e) (B / e)) :
+    ∃ P : G.Joiner A B, P.1.encard = P'.1.encard := by
+  have h_lift : ∀ p' : (G / e).ABPath (A / e) (B / e),
+      ∃ p : G.ABPath A B, p.p.1.support.toFinset.image (⟦·⟧) ⊆ p'.p.1.support.toFinset := by
+    intro p'
+    by_cases hp'_avoid : ⟦x⟧ ∉ p'.p.1.support
+    · rcases exists_lifted_ABPath_avoiding G A B e p' hp'_avoid with ⟨p, hp⟩
+      exact ⟨p, hp.2.2.1⟩
+    · rcases exists_lifted_ABPath_through G A B e p' (by aesop) with ⟨p, hp⟩
+      exact ⟨p, hp⟩
+  choose f hf using h_lift
+  refine ⟨⟨f '' P'.1, ?_⟩, ?_⟩
+  · intro p hp q hq hpq
+    rcases (Set.mem_image f P'.1 p).mp hp with ⟨p', hp', rfl⟩
+    rcases (Set.mem_image f P'.1 q).mp hq with ⟨q', hq', rfl⟩
+    have hpq' : p' ≠ q' := fun h' => hpq (by simp [h'])
+    have h_disj := P'.2 hp' hq' hpq'
+    show Disjoint (f p').support (f q').support
+    rw [Set.disjoint_left]
+    intro v hv hv'
+    have hfp := hf p' (Finset.mem_image.mpr ⟨v, List.mem_toFinset.mpr hv, rfl⟩)
+    have hfq := hf q' (Finset.mem_image.mpr ⟨v, List.mem_toFinset.mpr hv', rfl⟩)
+    exact Set.disjoint_left.mp h_disj (List.mem_toFinset.mp hfp) (List.mem_toFinset.mp hfq)
+  · exact (Set.InjOn.encard_image (fun p' hp' q' hq' h_eq => by
+      by_contra hneq
+      have h_disj := P'.2 hp' hq' hneq
+      have hfp_start := hf p' (Finset.mem_image.mpr ⟨(f p').u.1, List.mem_toFinset.mpr (f p').p.1.start_mem_support, rfl⟩)
+      have hfq_start : ⟦(f p').u.1⟧ ∈ q'.p.1.support.toFinset := by
+        have h_support_eq : (f p').p.1.support = (f q').p.1.support := by
+          simpa using congrArg (fun r => r.p.1.support) h_eq
+        have : (f p').u.1 ∈ (f q').p.1.support := h_support_eq ▸ (f p').p.1.start_mem_support
+        exact hf q' (Finset.mem_image.mpr ⟨(f p').u.1, List.mem_toFinset.mpr this, rfl⟩)
+      exact Set.disjoint_left.mp h_disj (List.mem_toFinset.mp hfp_start) (List.mem_toFinset.mp hfq_start)))
 
 /-
 If min_sep(G/e) < k, then there exists a separator X in G such that |X|=k, x in X, and y in X.
 -/
-lemma Menger_case2_exists_X (G : SimpleGraph V) (A B : Set V) {x y : V} (e : G.Adj x y)
-  (k : ℕ∞)
-  (h_min : G.mincut A B = k)
-  (h_contract_min : (contract (G := G) (x := x) (y := y) e).mincut (contract_image (G := G) (x := x) (y := y) A e) (contract_image (G := G) (x := x) (y := y) B e) < k) :
-  ∃ X : G.Separator A B, X.1.encard = k ∧ x ∈ X.1 ∧ y ∈ X.1 := by
-  -- Extract a separator Y in G/e with |Y| < k
-  obtain ⟨⟨Y, hY_sep⟩, hY_card⟩ : ∃ Y : (contract (G := G) (x := x) (y := y) e).Separator
-      (contract_image (G := G) (x := x) (y := y) A e) (contract_image (G := G) (x := x) (y := y) B e), Y.1.encard < k := by
+lemma Menger_case2_exists_X (k : ℕ∞) (h_min : G.mincut A B = k) (h_contract_min : (G / e).mincut (A / e) (B / e) < k) :
+    ∃ X : G.Separator A B, X.1.encard = k ∧ x ∈ X.1 ∧ y ∈ X.1 := by
+  obtain ⟨⟨Y, hY_sep⟩, hY_card⟩ : ∃ Y : (G / e).Separator (A / e) (B / e), Y.1.encard < k := by
     by_contra h_all; push_neg at h_all
     exact absurd (le_iInf h_all) (not_le.mpr h_contract_min)
-  -- The contracted vertex must be in Y
-  have h_ve : ⟦x⟧ ∈ Y :=
-    vertex_mem_contract_separator ⟨Y, hY_sep⟩ (h_min ▸ hY_card)
-  -- Lift Y to a separator X in G
-  have h_sep : G.Separates A B (contract_preimage (G := G) (x := x) (y := y) Y) :=
-    contract_preimage_separates (G := G) (x := x) (y := y) ⟨Y, hY_sep⟩
-  have h_lift_card : (contract_preimage (G := G) (x := x) (y := y) Y).encard = Y.encard + 1 :=
-    encard_preimage_contractEdge h_ve
-  -- X has encard ≥ k (since it's a separator of G)
-  have h_ge_k : (contract_preimage (G := G) (x := x) (y := y) Y).encard ≥ k := by
+  have h_ve : ⟦x⟧ ∈ Y := vertex_mem_contract_separator ⟨Y, hY_sep⟩ (h_min ▸ hY_card)
+  have h_sep : G.Separates A B (contract_preimage Y) := contract_preimage_separates ⟨Y, hY_sep⟩
+  have h_lift_card : (contract_preimage Y).encard = Y.encard + 1 := encard_preimage_contractEdge h_ve
+  have h_ge_k : (contract_preimage Y).encard ≥ k := by
     calc k = G.mincut A B := h_min.symm
-      _ ≤ (contract_preimage (G := G) (x := x) (y := y) Y).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
-  -- X has encard ≤ k (since |Y| < k, so |Y| + 1 ≤ k)
-  have h_le_k : (contract_preimage (G := G) (x := x) (y := y) Y).encard ≤ k := by
+      _ ≤ (contract_preimage Y).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
+  have h_le_k : (contract_preimage Y).encard ≤ k := by
     rw [h_lift_card]
     have : Y.encard ≠ ⊤ := ne_top_of_lt (lt_of_lt_of_le hY_card le_top)
     exact (ENat.add_one_le_iff this).mpr hY_card
   refine ⟨⟨_, h_sep⟩, le_antisymm h_le_k h_ge_k, ?_, ?_⟩
-  · exact (mem_contract_preimage (G := G) (x := x) (y := y)).2 h_ve
-  · exact (mem_contract_preimage (G := G) (x := x) (y := y)).2
-      (contract_same (G := G) (x := x) (y := y) (e := e) ▸ h_ve)
+  · exact (mem_contract_preimage (v := x)).2 h_ve
+  · exact (mem_contract_preimage (v := y)).2 (contract_same (G := G) (e := e) ▸ h_ve)
 
 /-
 If X separates A and B in G and contains x and y, then any separator of X and B in G-xy is also a separator of A and B in G.
 -/
-lemma separator_in_G_of_separator_in_G_delete_edge_right (G : SimpleGraph V) (A B : Set V)
-    (x y : V) (h : G.Adj x y) (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1)
-    (S : (G.deleteEdge h).Separator X.1 B) : G.Separates A B S.1 := by
-    let X_rev : G.Separator B A := ⟨X.1, fun u hu v hv p => by
-      obtain ⟨w, hw, hwX⟩ := X.2 v hv u hu p.reverse
-      exact ⟨w, by simpa using hw, hwX⟩⟩
-    let S_rev : (G.deleteEdge h).Separator B X_rev.1 := ⟨S.1, fun u hu v hv p => by
-      obtain ⟨w, hw, hwS⟩ := S.2 v hv u hu p.reverse
-      exact ⟨w, by simpa using hw, hwS⟩⟩
-    have := separates_of_separates_delete B A h X_rev S_rev hx hy
-    intro u hu v hv p
-    obtain ⟨w, hw, hwS⟩ := this v hv u hu p.reverse
-    exact ⟨w, by simpa using hw, hwS⟩
+lemma separator_in_G_of_separator_in_G_delete_edge_right (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1)
+    (S : (G - e).Separator X.1 B) : G.Separates A B S.1 := by
+  exact (separates_of_separates_delete (A := B) (B := A) (e := e) X.swap S.swap hx hy).swap
 
 lemma min_sep_delete_ge_k_left (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
     G.mincut A B ≤ (G - e).mincut A X.1 := by
@@ -1369,11 +1352,11 @@ lemma min_sep_delete_ge_k_left (X : G.Separator A B) (hx : x ∈ X.1) (hy : y �
 If X separates A and B in G and contains x and y, then the minimum separator size of X and B in G-xy is at least k.
 -/
 lemma min_sep_delete_ge_k_right (X : G.Separator A B) (hx : x ∈ X.1) (hy : y ∈ X.1) :
-  (G.deleteEdge e).mincut X.1 B ≥ G.mincut A B := by
-    rw [ge_iff_le, mincut]
-    apply le_iInf
-    intro S
-    exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge_right G A B x y e X hx hy S⟩ le_rfl
+    (G - e).mincut X.1 B ≥ G.mincut A B := by
+  rw [ge_iff_le, mincut]
+  apply le_iInf
+  intro S
+  exact iInf_le_of_le ⟨S.1, separator_in_G_of_separator_in_G_delete_edge_right X hx hy S⟩ le_rfl
 
 /-
 If G' is a subgraph of G, then any set of disjoint paths in G' can be lifted to a set of disjoint paths in G with the same size.
@@ -1481,41 +1464,32 @@ private lemma exists_le_of_le_iSup {ι : Type*} [Nonempty ι] (f : ι → ℕ∞
   · grind [iSup_eq_top, lt_top_iff_ne_top.2 hk]
   · grind [ENat.exists_eq_iSup_of_lt_top h']
 
+lemma exists_joiner_of_le_maxflow_of_subgraph {G' : SimpleGraph V} (k : ℕ∞) (hk : k ≠ ⊤)
+    (hsub : G' ≤ G) (hmax : k ≤ G'.maxflow A B) : ∃ P : G.Joiner A B, P.1.encard = k := by
+  obtain ⟨P', hP'⟩ := exists_le_of_le_iSup _ hk hmax
+  obtain ⟨t, ht_sub, ht_card⟩ := Set.exists_subset_encard_eq hP'
+  have ht_disj : disjointPaths t := fun p hp q hq hpq => P'.2 (ht_sub hp) (ht_sub hq) hpq
+  obtain ⟨Q, hQ⟩ := lift_disjoint_paths_le G G' hsub A B ⟨t, ht_disj⟩
+  exact ⟨Q, hQ.trans ht_card⟩
+
 /-
 If there exists a separator X of size k containing x and y, then G has k disjoint A-B paths.
 -/
 lemma Menger_case2_imp_paths (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B = k) (X : G.Separator A B) (hX_card : X.1.encard = k) (hx : x ∈ X.1)
-    (hy : y ∈ X.1) (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G.deleteEdge e).mincut A' B' ≤ (G.deleteEdge e).maxflow A' B') :
+    (hy : y ∈ X.1) (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G - e).mincut A' B' ≤ (G - e).maxflow A' B') :
     k ≤ G.maxflow A B := by
   have hX_fin : X.1.Finite := Set.encard_ne_top_iff.mp (hX_card ▸ hk)
-  have h_del_A : k ≤ (G.deleteEdge e).maxflow A X.1 :=
+  have h_del_A : k ≤ (G - e).maxflow A X.1 :=
     le_trans (h_min ▸ min_sep_delete_ge_k_left X hx hy)
       (IH_delete A X.1 (hX_fin.inter_of_right _))
-  have h_del_B : k ≤ (G.deleteEdge e).maxflow X.1 B :=
+  have h_del_B : k ≤ (G - e).maxflow X.1 B :=
     le_trans (h_min ▸ min_sep_delete_ge_k_right X hx hy)
       (IH_delete X.1 B (hX_fin.inter_of_left _))
-  have h_subgraph : G.deleteEdge e ≤ G := fun _ _ huv => huv.1
-  -- Extract joiner witness from ⨆ using helper
-  suffices h : ∃ P : G.Joiner A B, P.1.encard = k by
-    obtain ⟨P, hP⟩ := h
-    exact hP ▸ le_iSup_of_le P le_rfl
-  -- Get A→X joiner of size k in G
-  have h_exists_PA : ∃ P_A : G.Joiner A X.1, P_A.1.encard = k := by
-    obtain ⟨P_A', hP_A'⟩ := exists_le_of_le_iSup _ hk h_del_A
-    obtain ⟨t, ht_sub, ht_card⟩ := Set.exists_subset_encard_eq hP_A'
-    have ht_disj : disjointPaths t := fun p hp q hq hpq => P_A'.2 (ht_sub hp) (ht_sub hq) hpq
-    obtain ⟨Q, hQ⟩ := lift_disjoint_paths_le G _ h_subgraph A X.1 ⟨t, ht_disj⟩
-    exact ⟨Q, hQ.trans ht_card⟩
-  -- Get X→B joiner of size k in G
-  have h_exists_PB : ∃ P_B : G.Joiner X.1 B, P_B.1.encard = k := by
-    obtain ⟨P_B', hP_B'⟩ := exists_le_of_le_iSup _ hk h_del_B
-    obtain ⟨t, ht_sub, ht_card⟩ := Set.exists_subset_encard_eq hP_B'
-    have ht_disj : disjointPaths t := fun p hp q hq hpq => P_B'.2 (ht_sub hp) (ht_sub hq) hpq
-    obtain ⟨Q, hQ⟩ := lift_disjoint_paths_le G _ h_subgraph X.1 B ⟨t, ht_disj⟩
-    exact ⟨Q, hQ.trans ht_card⟩
-  obtain ⟨P_A, hP_A_card⟩ := h_exists_PA
-  obtain ⟨P_B, hP_B_card⟩ := h_exists_PB
-  exact disjoint_paths_join G A B X k hX_fin hX_card P_A hP_A_card P_B hP_B_card
+  have h_subgraph : G - e ≤ G := fun _ _ huv => huv.1
+  obtain ⟨P_A, hP_A_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G := G) (G' := G - e) (A := A) (B := X.1) k hk h_subgraph h_del_A
+  obtain ⟨P_B, hP_B_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G := G) (G' := G - e) (A := X.1) (B := B) k hk h_subgraph h_del_B
+  obtain ⟨P, hP_card⟩ := disjoint_paths_join G A B X k hX_fin hX_card P_A hP_A_card P_B hP_B_card
+  exact hP_card ▸ le_iSup_of_le P le_rfl
 
 /-
 Inductive step for Menger's theorem.
@@ -1525,11 +1499,11 @@ lemma Menger_inductive_step (hk : G.mincut A B ≠ ⊤)
     (IH_delete : ∀ (A' B' : Set V), (A' ∩ B').Finite → (G - e).mincut A' B' ≤ (G - e).maxflow A' B') :
     G.mincut A B ≤ G.maxflow A B := by
   by_cases h : (G / e).mincut (A / e) (B / e) < G.mincut A B
-  · obtain ⟨⟨X, hX_sep⟩, hX_card, hx_mem, hy_mem⟩ := Menger_case2_exists_X G A B e (G.mincut A B) rfl h
+  · obtain ⟨⟨X, hX_sep⟩, hX_card, hx_mem, hy_mem⟩ := Menger_case2_exists_X (G.mincut A B) rfl h
     exact Menger_case2_imp_paths (G.mincut A B) hk rfl ⟨X, hX_sep⟩ hX_card hx_mem hy_mem IH_delete
   · push_neg at h
     obtain ⟨P', hP'⟩ := exists_le_of_le_iSup _ hk (le_trans h IH_contract)
-    obtain ⟨P, hP⟩ := exists_disjoint_paths_lift G A B e P'
+    obtain ⟨P, hP⟩ := exists_disjoint_paths_lift (G := G) (A := A) (B := B) (e := e) P'
     calc G.mincut A B ≤ P'.1.encard := hP'
       _ = P.1.encard := hP.symm
       _ ≤ G.maxflow A B := le_iSup_of_le P le_rfl
@@ -1554,7 +1528,7 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) : G.edgeSet.encard = ↑n →
     have hk : G.mincut A B ≠ ⊤ :=
       ne_top_of_le_ne_top (WithTop.add_ne_top.mpr
         ⟨Set.encard_ne_top_iff.mpr hAB, h_card ▸ WithTop.coe_ne_top⟩) mincut_le_inter_add_edgeSet
-    have hAB_contract : (contract_image (G := G) (x := x) (y := y) A e ∩ contract_image (G := G) (x := x) (y := y) B e).Finite := by
+    have hAB_contract : ((A / e) ∩ (B / e)).Finite := by
       apply Set.Finite.subset ((hAB.image (⟦·⟧)).union (Set.finite_singleton (⟦x⟧)))
       intro q ⟨⟨a, ha, haq⟩, b, hb, hbq⟩
       simp at haq hbq
