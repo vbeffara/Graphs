@@ -229,6 +229,8 @@ def contract (G : SimpleGraph V) (e : G.Adj x y) : SimpleGraph (V / e) :=
 
 infix:60 " / " => contract
 
+local notation "π[" e "]" => (fun z => (⟦z⟧ : V / e))
+
 lemma contract_eq_map (e : G.Adj x y) : G / e = G.map (⟦·⟧) := by
   ext a b
   simp [SimpleGraph.map, Relation.Map, contract, Quotient.mk_eq_iff_out]
@@ -258,18 +260,26 @@ lemma finite_inter_contract_image (hAB : (A ∩ B).Finite) : ((A / e) ∩ (B / e
 
 -- TODO use `SimpleGraph.map`
 lemma Walk.contract (p : G.Walk u v) (e : G.Adj x y) :
-    ∃ w : (G / e).Walk ⟦u⟧ ⟦v⟧, w.support.toFinset ⊆ p.support.toFinset.image (⟦·⟧) := by
-  induction' p with u v p ih
-  · exact ⟨Walk.nil, by simp⟩
-  · simp +zetaDelta at *
-    cases' ‹∃ w, _› with w hw
-    by_cases h : (⟦v⟧ : V / e) = ⟦p⟧
-    · grind
-    · have h_adj : (G / e).Adj ⟦v⟧ ⟦p⟧ := by
-        simp [_root_.SimpleGraph.contract]
-        grind
-      refine' ⟨ Walk.cons h_adj w, _ ⟩
-      simp_all [ Finset.subset_iff ]
+    ∃ w : (G / e).Walk ⟦u⟧ ⟦v⟧, w.support ⊆ p.support.map (π[e]) := by
+  have hfin : ∃ w : (G / e).Walk ⟦u⟧ ⟦v⟧, w.support.toFinset ⊆ p.support.toFinset.image (π[e]) := by
+    induction' p with u v p ih
+    · exact ⟨Walk.nil, by simp⟩
+    · simp +zetaDelta at *
+      cases' ‹∃ w, _› with w hw
+      by_cases h : (⟦v⟧ : V / e) = ⟦p⟧
+      · grind
+      · have h_adj : (G / e).Adj ⟦v⟧ ⟦p⟧ := by
+          simp [_root_.SimpleGraph.contract]
+          grind
+        refine' ⟨ Walk.cons h_adj w, _ ⟩
+        simp_all [ Finset.subset_iff ]
+  rcases hfin with ⟨w, hw⟩
+  refine ⟨w, ?_⟩
+  intro z hz
+  have hzfin : z ∈ w.support.toFinset := List.mem_toFinset.mpr hz
+  have hzimg : z ∈ p.support.toFinset.image (π[e]) := hw hzfin
+  rcases Finset.mem_image.mp hzimg with ⟨a, ha, rfl⟩
+  exact List.mem_map.mpr ⟨a, List.mem_toFinset.mp ha, rfl⟩
 
 noncomputable abbrev contract_preimage (Y : Set (V / e)) : Set V := {v | ⟦v⟧ ∈ Y}
 
@@ -285,10 +295,27 @@ private lemma image_subset_of_contract_preimage_subset
 
 private lemma map_subset_of_finset_image_subset {l : List V} {t : List (V / e)}
     (h : l.toFinset.image (⟦·⟧) ⊆ t.toFinset) :
-    l.map (fun z => (⟦z⟧ : V / e)) ⊆ t := by
+    l.map (π[e]) ⊆ t := by
   intro q hq
   rcases List.mem_map.mp hq with ⟨w, hw, rfl⟩
   exact List.mem_toFinset.mp (h (Finset.mem_image.mpr ⟨w, List.mem_toFinset.mpr hw, rfl⟩))
+
+private lemma map_subset_of_finset_image_subset_map {l t : List V}
+    (h : l.toFinset.image (π[e]) ⊆ t.toFinset.image (π[e])) :
+    l.map (π[e]) ⊆ t.map (π[e]) := by
+  intro q hq
+  rcases List.mem_map.mp hq with ⟨w, hw, rfl⟩
+  have hw' : π[e] w ∈ t.toFinset.image (π[e]) :=
+    h (Finset.mem_image.mpr ⟨w, List.mem_toFinset.mpr hw, rfl⟩)
+  rcases Finset.mem_image.mp hw' with ⟨u, hu, huq⟩
+  exact List.mem_map.mpr ⟨u, List.mem_toFinset.mp hu, huq⟩
+
+private lemma map_subset_of_contract_preimage_list {l : List V} {t : List (V / e)}
+    (hsub : ({z | z ∈ l} : Set V) ⊆ contract_preimage (Y := ({q | q ∈ t} : Set (V / e)))) :
+    l.map (π[e]) ⊆ t := by
+  intro q hq
+  rcases List.mem_map.mp hq with ⟨w, hw, rfl⟩
+  exact hsub hw
 
 lemma contract_preimage_separates (Y : (G / e).Separator (A / e) (B / e)) :
     G.Separates A B (contract_preimage Y.1) := by
@@ -302,7 +329,7 @@ lemma contract_preimage_separates (Y : (G / e).Separator (A / e) (B / e)) :
       w.toPath
     exact this |> fun ⟨z, hz₁, hz₂ ⟩ => ⟨ z, hz₂, by simpa using Walk.support_bypass_subset _ hz₁ ⟩
   have := hw ( by simpa using hzw )
-  simp only [Finset.mem_image, List.mem_toFinset] at this
+  simp only [List.mem_map] at this
   grind [mem_contract_preimage]
 
 @[simp] lemma contract_same : (⟦y⟧ : V / e) = ⟦x⟧ := by
@@ -400,7 +427,7 @@ A path in the contracted graph avoiding the contracted vertex lifts to a path in
 lemma lift_path_avoiding_contraction_AB {A B : Set V} {u v : V / e} (p : (G / e).Walk u v)
       (hp_avoid : ⟦x⟧ ∉ p.support) (hu : u ∈ A / e) (hv : v ∈ B / e) :
     ∃ (u' v' : V) (q : G.Walk u' v'), u' ∈ A ∧ v' ∈ B ∧ ⟦u'⟧ = u ∧ ⟦v'⟧ = v ∧ q.IsPath ∧
-      q.support.map (fun z => (⟦z⟧ : V / e)) ⊆ p.support ∧ x ∉ q.support ∧ y ∉ q.support := by
+      q.support.map (π[e]) ⊆ p.support ∧ x ∉ q.support ∧ y ∉ q.support := by
   obtain ⟨u', v', q, hu', hv', hq⟩ := @lift_walk_avoiding_contraction V G x y e u v p hp_avoid
   refine' ⟨ u', v', q.toPath, _, _, hu', hv', _, _, _ ⟩
   · simp at hu
@@ -456,13 +483,14 @@ lemma contract_encard_lt (hfin : G.edgeSet.Finite) : (G / e).edgeSet.encard < G.
         (hfin.subset Set.diff_subset).encard_lt_encard (Set.diff_singleton_ssubset.mpr e)
 
 lemma Walk.edges_no_xy_of_support_inter_subset_one {p : G.Walk u v} (hxy : x ≠ y)
-    (h : p.support.toFinset ∩ {x, y} ⊆ {v}) :
+    (h : ({a | a ∈ p.support} : Set V) ∩ {x, y} ⊆ ({v} : Set V)) :
     s(x, y) ∉ p.edges := by
-  contrapose! h
-  have h1 := p.fst_mem_support_of_mem_edges h
-  have h2 := p.snd_mem_support_of_mem_edges h
-  simp [ Finset.eq_singleton_iff_unique_mem ]
-  aesop
+  intro hxy_mem
+  have hx_support : x ∈ p.support := p.fst_mem_support_of_mem_edges hxy_mem
+  have hy_support : y ∈ p.support := p.snd_mem_support_of_mem_edges hxy_mem
+  have hxv : x = v := Set.mem_singleton_iff.mp (h ⟨hx_support, by simp⟩)
+  have hyv : y = v := Set.mem_singleton_iff.mp (h ⟨hy_support, by simp⟩)
+  exact hxy (hxv.trans hyv.symm)
 
 noncomputable def Walk.firstVisit (X : Set V) : ∀ {u v} (p : G.Walk u v), (∃ w ∈ p.support, w ∈ X) → V
   | u, _, Walk.nil, hp => u
@@ -510,7 +538,7 @@ lemma separates_of_separates_delete (e : G.Adj x y) (X : G.Separator A B)
   have h_sep := X.2 u hu v hv p
   obtain ⟨w, q, hwX, hqpath, hq_support, hq_avoid⟩ := Walk.exists_path_prefix_avoiding_set h_sep
   have hq_avoid_xy : s(x, y) ∉ q.edges := by
-    grind [Walk.edges_no_xy_of_support_inter_subset_one e.ne, List.mem_toFinset]
+    grind [Walk.edges_no_xy_of_support_inter_subset_one e.ne]
   let q' := q.toDeleteEdge _ hq_avoid_xy
   have h2 : q'.support ⊆ q.support := by simp [q', Walk.toDeleteEdge, Walk.toDeleteEdges]
   have h3 := S.2 u hu w hwX q'
@@ -568,11 +596,11 @@ lemma ABPath_prefix_avoids_X {A X : Set V} (p : G.ABPath A X)
   (z : V)
   (hz : z ∈ p.p.1.support)
   (hzX : z ∉ X) :
-  (↑(p.p.1.takeUntil z hz).support.toFinset : Set V) ∩ X = ∅ := by
-    simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, Finset.mem_coe, not_and]
+  ({a | a ∈ (p.p.1.takeUntil z hz).support} : Set V) ∩ X = ∅ := by
+    simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_and]
     intro a ha haX
     have ha_support : a ∈ p.p.1.support :=
-      Walk.support_takeUntil_subset p.p.1 hz (List.mem_toFinset.mp ha)
+      Walk.support_takeUntil_subset p.p.1 hz ha
     have ha_eq : a = p.v.1 := by
       have h1 : a ∈ p.support ∩ X := ⟨ha_support, haX⟩
       rw [hp_X] at h1
@@ -583,7 +611,7 @@ lemma ABPath_prefix_avoids_X {A X : Set V} (p : G.ABPath A X)
       have : p.v.1 ∈ p.support ∩ X := by rw [hp_X]; rfl
       exact hzX this.2
     exact (Walk.endpoint_notMem_support_takeUntil p.p.2 hz hne)
-      (List.mem_toFinset.mp ha)
+      ha
 
 /-
 If a walk is a path, and we drop the prefix until a vertex w (where w is not the start), then the start vertex is not in the remaining suffix.
@@ -603,11 +631,11 @@ lemma ABPath_suffix_avoids_X {B X : Set V} (q : G.ABPath X B)
   (z : V)
   (hz : z ∈ q.p.1.support)
   (hzX : z ∉ X) :
-  (↑(q.p.1.dropUntil z hz).support.toFinset : Set V) ∩ X = ∅ := by
-    simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, Finset.mem_coe, not_and]
+  ({a | a ∈ (q.p.1.dropUntil z hz).support} : Set V) ∩ X = ∅ := by
+    simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_and]
     intro a ha haX
     have ha_support : a ∈ q.p.1.support :=
-      q.p.1.support_dropUntil_subset hz (List.mem_toFinset.mp ha)
+      q.p.1.support_dropUntil_subset hz ha
     have ha_eq : a = q.u.1 := by
       have h1 : a ∈ q.support ∩ X := ⟨ha_support, haX⟩
       rw [hq_X] at h1
@@ -618,7 +646,7 @@ lemma ABPath_suffix_avoids_X {B X : Set V} (q : G.ABPath X B)
       have : q.u.1 ∈ q.support ∩ X := by rw [hq_X]; rfl
       exact hzX this.2
     exact (Walk.start_notMem_support_dropUntil q.p.2 hz this)
-      (List.mem_toFinset.mp ha)
+      ha
 
 /-
 If X separates A and B, and p is an A-X path hitting X only at the end, and q is an X-B path hitting X only at the start, then p and q intersect only at their common endpoint in X (if any).
@@ -626,11 +654,11 @@ If X separates A and B, and p is an A-X path hitting X only at the end, and q is
 lemma path_intersection_of_separator (X : G.Separator A B) (p : G.ABPath A X.1)
     (q : G.ABPath X.1 B) (hp_X : p.support ∩ X.1 = {p.v.1})
     (hq_X : q.support ∩ X.1 = {q.u.1}) :
-    p.p.1.support.toFinset ∩ q.p.1.support.toFinset ⊆ {p.v.1} ∩ {q.u.1} := by
+    ({a | a ∈ p.p.1.support} : Set V) ∩ {a | a ∈ q.p.1.support} ⊆ ({p.v.1} : Set V) ∩ {q.u.1} := by
   intro z hz
-  simp only [Finset.mem_inter, List.mem_toFinset] at hz
+  simp only [Set.mem_inter_iff] at hz
   by_cases hzX : z ∈ X.1
-  · simp only [Finset.mem_inter, Finset.mem_singleton]
+  · simp only [Set.mem_inter_iff, Set.mem_singleton_iff]
     refine ⟨?_, ?_⟩
     · have h1 : z ∈ p.support ∩ X.1 := ⟨hz.1, hzX⟩
       rw [hp_X] at h1; exact h1
@@ -644,12 +672,10 @@ lemma path_intersection_of_separator (X : G.Separator A B) (p : G.ABPath A X.1)
     obtain ⟨w, hw_mem, hw_X⟩ := h_walk
     rw [Walk.support_append] at hw_mem
     rcases List.mem_append.mp hw_mem with hw_mem | hw_mem
-    · have : w ∈ (↑(p.p.1.takeUntil z hz.1).support.toFinset : Set V) ∩ X.1 :=
-        ⟨Finset.mem_coe.mpr (List.mem_toFinset.mpr hw_mem), hw_X⟩
+    · have : w ∈ ({a | a ∈ (p.p.1.takeUntil z hz.1).support} : Set V) ∩ X.1 := ⟨hw_mem, hw_X⟩
       rw [hw1] at this; exact this
     · have hw_supp : w ∈ (q.p.1.dropUntil z hz.2).support := List.tail_subset _ hw_mem
-      have : w ∈ (↑(q.p.1.dropUntil z hz.2).support.toFinset : Set V) ∩ X.1 :=
-        ⟨Finset.mem_coe.mpr (List.mem_toFinset.mpr hw_supp), hw_X⟩
+      have : w ∈ ({a | a ∈ (q.p.1.dropUntil z hz.2).support} : Set V) ∩ X.1 := ⟨hw_supp, hw_X⟩
       rw [hw2] at this; exact this
 
 /-
@@ -693,7 +719,9 @@ lemma Walk.IsPath_append_of_support_inter_subset_one {G : SimpleGraph V}
   (h_inter : p.support.toFinset ∩ q.support.toFinset ⊆ {v}) :
   (p.append q).IsPath := by
     have hpq_distinct : ∀ x ∈ p.support, x ≠ v → x ∉ q.support := by
-      intro x hx hxv hxq; specialize h_inter ( Finset.mem_inter_of_mem ( List.mem_toFinset.mpr hx ) ( List.mem_toFinset.mpr hxq ) ) ; aesop
+      intro x hx hxv hxq
+      specialize h_inter (Finset.mem_inter_of_mem (List.mem_toFinset.mpr hx) (List.mem_toFinset.mpr hxq))
+      aesop
     cases p <;> cases q <;> simp_all [ Walk.isPath_def ];
     simp_all [ Walk.support_append ]
     rw [ List.nodup_append ] ; aesop
@@ -707,12 +735,16 @@ lemma joined_path_is_path
   (p : G.ABPath A X.1) (h_p : p.v = x) (h_p_X : p.support ∩ X.1 = {x})
   (q : G.ABPath X.1 B) (h_q : q.u = x) (h_q_X : q.support ∩ X.1 = {x}) :
   ((p.p.1.copy rfl h_p).append (q.p.1.copy h_q rfl)).IsPath := by
-    have h_support_inter : (p.p.1.copy rfl h_p).support.toFinset ∩ (q.p.1.copy h_q rfl).support.toFinset ⊆ {x} := by
+    have h_support_inter :
+        (p.p.1.copy rfl h_p).support.toFinset ∩ (q.p.1.copy h_q rfl).support.toFinset ⊆ {x} := by
       have h := path_intersection_of_separator X p q
         (by rw [show (p.v : V) = x from h_p]; exact h_p_X)
         (by rw [show (q.u : V) = x from h_q]; exact h_q_X)
-      simp only [Walk.support_copy]
-      exact h.trans (by simp [show (p.v : V) = x from h_p, show (q.u : V) = x from h_q])
+      intro z hz
+      simp only [Finset.mem_inter, List.mem_toFinset] at hz
+      have hz' := h ⟨by simpa [Walk.support_copy] using hz.1, by simpa [Walk.support_copy] using hz.2⟩
+      simp [Set.mem_singleton_iff] at hz' ⊢
+      exact hz'.1.trans (by simpa using h_p)
     apply_rules [ Walk.IsPath_append_of_support_inter_subset_one ]
     · exact (p.p.1.isPath_copy rfl h_p).mpr p.p.2
     · exact (q.p.1.isPath_copy h_q rfl).mpr q.p.2
@@ -773,16 +805,16 @@ theorem disjoint_paths_join (X : G.Separator A B) (k : ℕ∞)
     · have h := path_intersection_of_separator X (pa x hx) (qb y hy)
         (by rw [show ((pa x hx).v : V) = x from hpa_end x hx]; exact hpa_inter x hx)
         (by rw [show ((qb y hy).u : V) = y from hqb_start y hy]; exact hqb_inter y hy)
-      have hz_mem := h (Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hzpx, List.mem_toFinset.mpr hzqy⟩)
-      simp only [Finset.mem_inter, Finset.mem_singleton] at hz_mem
+      have hz_mem := h ⟨hzpx, hzqy⟩
+      simp only [Set.mem_inter_iff, Set.mem_singleton_iff] at hz_mem
       have h1 : z = x := hz_mem.1.trans (hpa_end x hx)
       have h2 : z = y := hz_mem.2.trans (hqb_start y hy)
       exact hxy (h1.symm.trans h2)
     · have h := path_intersection_of_separator X (pa y hy) (qb x hx)
         (by rw [show ((pa y hy).v : V) = y from hpa_end y hy]; exact hpa_inter y hy)
         (by rw [show ((qb x hx).u : V) = x from hqb_start x hx]; exact hqb_inter x hx)
-      have hz_mem := h (Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hzpy, List.mem_toFinset.mpr hzqx⟩)
-      simp only [Finset.mem_inter, Finset.mem_singleton] at hz_mem
+      have hz_mem := h ⟨hzpy, hzqx⟩
+      simp only [Set.mem_inter_iff, Set.mem_singleton_iff] at hz_mem
       have h1 : z = y := hz_mem.1.trans (hpa_end y hy)
       have h2 : z = x := hz_mem.2.trans (hqb_start x hx)
       exact hxy (h2.symm.trans h1)
@@ -801,7 +833,7 @@ lemma Walk.exists_prefix_path_of_path_ne {G : SimpleGraph V}
     G.Adj w v ∧
     q.IsPath ∧
     v ∉ q.support ∧
-    q.support.toFinset ⊆ p.support.toFinset := by
+    q.support ⊆ p.support := by
       simp +zetaDelta at *
       induction' p with u v p ih
       · contradiction
@@ -858,8 +890,6 @@ lemma lift_path_to_contraction_end {A : Set V} (e : G.Adj x y)
     p.support.toFinset ∩ {x, y} = {v} := by
   obtain ⟨ w', q', hq'_adj, hq'_path, hq'_avoid, hq'_sub ⟩ :=
     Walk.exists_prefix_path_of_path_ne p' hp'_path h_ne
-  -- Normalize Finset subset to List level to avoid DecidableEq instance mismatch on quotient
-  simp only [Finset.subset_iff, List.mem_toFinset] at hq'_sub
   obtain ⟨u, w, q, hu, hw, hq_path, hq_support⟩ : ∃ u w : V, ∃ q : G.Walk u w,
       u ∈ A ∧ ⟦u⟧ = u' ∧ ⟦w⟧ = w' ∧ q.IsPath ∧ (∀ z, z ∈ q.support → ⟦z⟧ ∈ q'.support) ∧
       x ∉ q.support ∧ y ∉ q.support := by
@@ -1087,10 +1117,10 @@ lemma exists_lifted_ABPath_avoiding {A B : Set V} (e : G.Adj x y)
   (p' : (G / e).ABPath (A / e) (B / e))
   (hp'_avoid : ⟦x⟧ ∉ p'.p.1.support) :
   ∃ p : G.ABPath A B, ⟦p.u.1⟧ = p'.u.1 ∧ ⟦p.v.1⟧ = p'.v.1 ∧
-    p.p.1.support.map (fun z => (⟦z⟧ : V / e)) ⊆ p'.p.1.support ∧
+    p.p.1.support.map (π[e]) ⊆ p'.p.1.support ∧
     x ∉ p.p.1.support ∧ y ∉ p.p.1.support := by
       obtain ⟨u, v, q, hu, hv, hq_isPath, hq_support⟩ : ∃ u v : V, ∃ q : G.Walk u v, (u ∈ A ∧ v ∈ B ∧
-      ⟦u⟧ = p'.u.1 ∧ ⟦v⟧ = p'.v.1 ∧ q.IsPath ∧ q.support.map (fun z => (⟦z⟧ : V / e)) ⊆ p'.p.1.support ∧ x ∉ q.support ∧ y ∉ q.support) := by
+      ⟦u⟧ = p'.u.1 ∧ ⟦v⟧ = p'.v.1 ∧ q.IsPath ∧ q.support.map (π[e]) ⊆ p'.p.1.support ∧ x ∉ q.support ∧ y ∉ q.support) := by
         rcases p' with ⟨ u', v', p', hp'_path ⟩
         obtain ⟨u, v, q, hq⟩ := lift_path_avoiding_contraction_AB (A := A) (B := B) p' hp'_avoid u'.2 v'.2
         exact ⟨u, v, q, hq.1, hq.2.1, hq.2.2.1, hq.2.2.2.1, hq.2.2.2.2.1, hq.2.2.2.2.2.1, hq.2.2.2.2.2.2.1, hq.2.2.2.2.2.2.2⟩
@@ -1122,36 +1152,40 @@ lemma adjust_path_start_to_A {A : Set V} (e : G.Adj x y)
   ∃ (u' : V) (p' : G.Walk u' v),
     u' ∈ A ∧
     p'.IsPath ∧
-    (p'.support.toFinset.image (⟦·⟧) : Finset (V / e))
-      ⊆ p.support.toFinset.image (⟦·⟧) := by
-      by_cases hx : x ∈ A
-      · rcases hu with ( rfl | rfl )
-        · exact ⟨ u, p, hx, hp_path, Finset.Subset.refl _ ⟩
-        · refine ⟨ x, Walk.cons e p, hx, ?_, ?_ ⟩ <;> simp_all [ Walk.cons_isPath_iff ];
-          · intro hxmem
-            have hx_in : x ∈ p.support.toFinset ∩ {x, u} := by
-              exact Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hxmem, by simp⟩
-            have hx_eq_u : x = u := by
-              have : x ∈ ({u} : Finset V) := by simpa [hp_support] using hx_in
-              simpa using this
-            exact e.ne hx_eq_u
-          · simp_all [ Finset.Subset.antisymm_iff, Finset.subset_iff ]
-            use u
-            exact ⟨ p.start_mem_support, by exact Quotient.sound ( by tauto ) ⟩
-      · by_cases hy : y ∈ A
-        · cases hu <;> simp_all [ Finset.subset_iff ];
-          · refine ⟨ y, hy, ?_, ?_, ?_ ⟩
-            exact Walk.cons e.symm ( p.copy ( by simp [ * ] ) rfl )
-            · replace hp_support := Finset.ext_iff.mp hp_support y; aesop
-            · simp [ Walk.support_cons ]
-              simp [ Finset.eq_singleton_iff_unique_mem] at hp_support ⊢
-              exact ⟨ ⟨ x, hp_support.1, by simp_all ⟩,
-              fun a ha => ⟨ a, ha, by tauto ⟩ ⟩
-          · grind
-        · simp_all
-          obtain ⟨ u', hu', hu'' ⟩ := h_liftA
-          rw [contractEdgeProj_eq_vertex_iff] at hu''
-          cases hu'' <;> simp_all [ Finset.ext_iff ]
+    p'.support.map (π[e]) ⊆ p.support.map (π[e]) := by
+  have hfin : ∃ (u' : V) (p' : G.Walk u' v),
+      u' ∈ A ∧ p'.IsPath ∧
+      (p'.support.toFinset.image (π[e]) : Finset (V / e)) ⊆ p.support.toFinset.image (π[e]) := by
+    by_cases hx : x ∈ A
+    · rcases hu with ( rfl | rfl )
+      · exact ⟨ u, p, hx, hp_path, Finset.Subset.refl _ ⟩
+      · refine ⟨ x, Walk.cons e p, hx, ?_, ?_ ⟩ <;> simp_all [ Walk.cons_isPath_iff ];
+        · intro hxmem
+          have hx_in : x ∈ p.support.toFinset ∩ {x, u} := by
+            exact Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hxmem, by simp⟩
+          have hx_eq_u : x = u := by
+            have : x ∈ ({u} : Finset V) := by simpa [hp_support] using hx_in
+            simpa using this
+          exact e.ne hx_eq_u
+        · simp_all [ Finset.Subset.antisymm_iff, Finset.subset_iff ]
+          use u
+          exact ⟨ p.start_mem_support, by exact Quotient.sound ( by tauto ) ⟩
+    · by_cases hy : y ∈ A
+      · cases hu <;> simp_all [ Finset.subset_iff ];
+        · refine ⟨ y, hy, ?_, ?_, ?_ ⟩
+          exact Walk.cons e.symm ( p.copy ( by simp [ * ] ) rfl )
+          · replace hp_support := Finset.ext_iff.mp hp_support y; aesop
+          · simp [ Walk.support_cons ]
+            simp [ Finset.eq_singleton_iff_unique_mem] at hp_support ⊢
+            exact ⟨ ⟨ x, hp_support.1, by simp_all ⟩,
+            fun a ha => ⟨ a, ha, by tauto ⟩ ⟩
+        · grind
+      · simp_all
+        obtain ⟨ u', hu', hu'' ⟩ := h_liftA
+        rw [contractEdgeProj_eq_vertex_iff] at hu''
+        cases hu'' <;> simp_all [ Finset.ext_iff ]
+  rcases hfin with ⟨u', p', hu'A, hp'path, hp'sub⟩
+  exact ⟨u', p', hu'A, hp'path, map_subset_of_finset_image_subset_map hp'sub⟩
 
 lemma adjust_path_end_to_B {B : Set V} (e : G.Adj x y)
   (u v : V) (p : G.Walk u v) (hp_path : p.IsPath)
@@ -1161,42 +1195,45 @@ lemma adjust_path_end_to_B {B : Set V} (e : G.Adj x y)
   ∃ (v' : V) (p' : G.Walk u v'),
     v' ∈ B ∧
     p'.IsPath ∧
-    (p'.support.toFinset.image (⟦·⟧) : Finset (V / e))
-      ⊆ p.support.toFinset.image (⟦·⟧) := by
-      rcases hv with ( rfl | rfl )
-      · by_cases hy : y ∈ B
-        · refine ⟨ y, ?_, hy, ?_, ?_ ⟩
-          exact p.append ( Walk.cons e Walk.nil )
-          · simp_all [ Finset.ext_iff, Walk.isPath_def ]
-            rw [ Walk.support_append ]
-            simp_all [ List.nodup_append ]
-            intro a ha ha'
-            have hyv : y = v := hp_support a ha ha'
-            exact e.ne hyv.symm
-          · simp [ Finset.subset_iff, Walk.support_append ]
-            use v
-            simp_all [ Finset.eq_singleton_iff_unique_mem ]
-            exact Quotient.sound ( by tauto )
-        · have hvB : v ∈ B := by
-            exact Or.resolve_right
-              ((mem_liftSet_contraction_vertex_iff (A := B) e).1 h_liftB) hy
-          exact ⟨ v, p, hvB, hp_path, Finset.Subset.refl _ ⟩
-      · by_cases hv : v ∈ B
-        · exact ⟨ v, p, hv, hp_path, Finset.Subset.refl _ ⟩
-        · have hx : x ∈ B := by
-            contrapose! h_liftB; simp_all
-            intro w hw
-            rw [ Quotient.eq, contractSetoid ]
-            grind
-          refine ⟨ x, p.append ( Walk.cons e.symm Walk.nil ), hx, ?_, ?_ ⟩
-          · refine Walk.IsPath_append_of_support_inter_subset_one _ _ hp_path ?_ ?_
-            · aesop
-            · rw [ Finset.eq_singleton_iff_unique_mem ] at hp_support ; aesop
-          · simp_all [ Finset.subset_iff ]
-            rintro a ( ha | rfl | rfl )
-            · exact ⟨ a, ha, by rfl ⟩
-            · exact ⟨ a, by cases p <;> aesop ⟩;
-            · exact ⟨v, by simp, Quotient.sound (Or.inr (Or.inr ⟨rfl, rfl⟩))⟩
+    p'.support.map (π[e]) ⊆ p.support.map (π[e]) := by
+  have hfin : ∃ (v' : V) (p' : G.Walk u v'),
+      v' ∈ B ∧ p'.IsPath ∧
+      (p'.support.toFinset.image (π[e]) : Finset (V / e)) ⊆ p.support.toFinset.image (π[e]) := by
+    rcases hv with ( rfl | rfl )
+    · by_cases hy : y ∈ B
+      · refine ⟨ y, ?_, hy, ?_, ?_ ⟩
+        exact p.append ( Walk.cons e Walk.nil )
+        · simp_all [ Finset.ext_iff, Walk.isPath_def ]
+          rw [ Walk.support_append ]
+          simp_all [ List.nodup_append ]
+          intro a ha ha'
+          have hyv : y = v := hp_support a ha ha'
+          exact e.ne hyv.symm
+        · simp [ Finset.subset_iff, Walk.support_append ]
+          use v
+          simp_all [ Finset.eq_singleton_iff_unique_mem ]
+          exact Quotient.sound ( by tauto )
+      · have hvB : v ∈ B := by
+          exact Or.resolve_right ((mem_liftSet_contraction_vertex_iff (A := B) e).1 h_liftB) hy
+        exact ⟨ v, p, hvB, hp_path, Finset.Subset.refl _ ⟩
+    · by_cases hv : v ∈ B
+      · exact ⟨ v, p, hv, hp_path, Finset.Subset.refl _ ⟩
+      · have hx : x ∈ B := by
+          contrapose! h_liftB; simp_all
+          intro w hw
+          rw [ Quotient.eq, contractSetoid ]
+          grind
+        refine ⟨ x, p.append ( Walk.cons e.symm Walk.nil ), hx, ?_, ?_ ⟩
+        · refine Walk.IsPath_append_of_support_inter_subset_one _ _ hp_path ?_ ?_
+          · aesop
+          · rw [ Finset.eq_singleton_iff_unique_mem ] at hp_support ; aesop
+        · simp_all [ Finset.subset_iff ]
+          rintro a ( ha | rfl | rfl )
+          · exact ⟨ a, ha, by rfl ⟩
+          · exact ⟨ a, by cases p <;> aesop ⟩
+          · exact ⟨v, by simp, Quotient.sound (Or.inr (Or.inr ⟨rfl, rfl⟩))⟩
+  rcases hfin with ⟨v', p', hv'B, hp'path, hp'sub⟩
+  exact ⟨v', p', hv'B, hp'path, map_subset_of_finset_image_subset_map hp'sub⟩
 
 /-
 Helper lemma: A path starting at the contracted vertex can be lifted to an A-B path if the contracted vertex is in the lifted set of A.
@@ -1209,14 +1246,17 @@ lemma lift_path_start_eq_vertex {A B : Set V} (e : G.Adj x y)
   (h_end_ne : v' ≠ ⟦x⟧)
   (h_liftA : ⟦x⟧ ∈ A / e) :
   ∃ p : G.ABPath A B,
-    p.p.1.support.map (fun z => (⟦z⟧ : V / e)) ⊆ p'.support := by
+    p.p.1.support.map (π[e]) ⊆ p'.support := by
       obtain ⟨u, v, q, hu_xy, hvB, hq_path, hq_pre, hq_xy⟩ :=
         lift_path_from_contraction_start (B := B) e v' p' hp'_path hv' h_end_ne
       obtain ⟨u', q', hu'A, hq'_path, hq'_support⟩ :=
         adjust_path_start_to_A (A := A) e u v q hq_path hu_xy hq_xy h_liftA
       refine ⟨⟨⟨u', hu'A⟩, ⟨v, hvB⟩, q', hq'_path⟩, ?_⟩
-      exact map_subset_of_finset_image_subset
-        (hq'_support.trans (image_subset_of_contract_preimage_subset (hsub := hq_pre)))
+      have hq_pre_list : q.support.map (π[e]) ⊆ p'.support := by
+        intro z hz
+        rcases List.mem_map.mp hz with ⟨w, hw, rfl⟩
+        exact List.mem_toFinset.mp (hq_pre (List.mem_toFinset.mpr hw))
+      exact hq'_support.trans hq_pre_list
 
 lemma lift_path_end_eq_vertex {A B : Set V} (e : G.Adj x y)
   (u' : V / e)
@@ -1226,14 +1266,16 @@ lemma lift_path_end_eq_vertex {A B : Set V} (e : G.Adj x y)
   (h_start_ne : u' ≠ ⟦x⟧)
   (h_liftB : ⟦x⟧ ∈ B / e) :
   ∃ p : G.ABPath A B,
-    p.p.1.support.map (fun z => (⟦z⟧ : V / e)) ⊆ p'.support := by
+    p.p.1.support.map (π[e]) ⊆ p'.support := by
       obtain ⟨ u, v, p, hu, hv, hp, hp', hp'' ⟩ :=
         lift_path_to_contraction_end (A := A) e u' p' hp'_path hu' h_start_ne
       obtain ⟨ v', q, hv', hq, hq' ⟩ :=
         adjust_path_end_to_B (B := B) e u v p hp hv hp'' h_liftB
-      have h_final : Finset.image (⟦·⟧) q.support.toFinset ⊆ p'.support.toFinset := by
-        exact hq'.trans (image_subset_of_contract_preimage_subset (hsub := hp'))
-      exact ⟨ ⟨ ⟨ u, hu ⟩, ⟨ v', hv' ⟩, q, hq ⟩, map_subset_of_finset_image_subset h_final ⟩
+      have hp'_list : p.support.map (π[e]) ⊆ p'.support := by
+        intro z hz
+        rcases List.mem_map.mp hz with ⟨w, hw, rfl⟩
+        exact List.mem_toFinset.mp (hp' (List.mem_toFinset.mpr hw))
+      exact ⟨ ⟨ ⟨ u, hu ⟩, ⟨ v', hv' ⟩, q, hq ⟩, hq'.trans hp'_list ⟩
 
 /-
 Helper lemma: A nil path at the contracted vertex can be lifted to an A-B path if the contracted vertex is in the lifted sets of A and B.
@@ -1243,28 +1285,33 @@ lemma lift_path_nil_eq_vertex {A B : Set V} (e : G.Adj x y)
   (h_liftA : ⟦x⟧ ∈ A / e)
   (h_liftB : ⟦x⟧ ∈ B / e) :
   ∃ p : G.ABPath A B,
-    p.p.1.support.map (fun z => (⟦z⟧ : V / e)) ⊆ p'.support := by
+    p.p.1.support.map (π[e]) ⊆ p'.support := by
   have hA : x ∈ A ∨ y ∈ A := (mem_liftSet_contraction_vertex_iff e).1 h_liftA
   have hB : x ∈ B ∨ y ∈ B := (mem_liftSet_contraction_vertex_iff (A := B) e).1 h_liftB
-  have hx_mem : (⟦x⟧ : V / e) ∈ p'.support.toFinset := by
-    exact List.mem_toFinset.mpr p'.end_mem_support
-  have h_single : ({(⟦x⟧ : V / e)} : Finset (V / e)) ⊆ p'.support.toFinset := by
-    simp [Finset.singleton_subset_iff, hx_mem]
+  have hx_mem : (⟦x⟧ : V / e) ∈ p'.support := p'.end_mem_support
   rcases hA with hxA | hyA <;> rcases hB with hxB | hyB
   · refine ⟨⟨⟨x, hxA⟩, ⟨x, hxB⟩, Walk.nil, Walk.IsPath.nil⟩, ?_⟩
-    exact map_subset_of_finset_image_subset (subset_trans (by simp) h_single)
+    intro z hz
+    have hzx : z = (⟦x⟧ : V / e) := by simpa using hz
+    exact hzx ▸ hx_mem
   · refine ⟨⟨⟨x, hxA⟩, ⟨y, hyB⟩, Walk.cons e Walk.nil, by simp [Walk.cons_isPath_iff, e.ne]⟩, ?_⟩
-    exact map_subset_of_finset_image_subset (subset_trans (by simp [contract_same]) h_single)
+    intro z hz
+    have hzx : z = (⟦x⟧ : V / e) := by simpa [contract_same] using hz
+    exact hzx ▸ hx_mem
   · refine ⟨⟨⟨y, hyA⟩, ⟨x, hxB⟩, Walk.cons e.symm Walk.nil, by simp [Walk.cons_isPath_iff, e.ne.symm]⟩, ?_⟩
-    exact map_subset_of_finset_image_subset (subset_trans (by simp [contract_same]) h_single)
+    intro z hz
+    have hzx : z = (⟦x⟧ : V / e) := by simpa [contract_same] using hz
+    exact hzx ▸ hx_mem
   · refine ⟨⟨⟨y, hyA⟩, ⟨y, hyB⟩, Walk.nil, Walk.IsPath.nil⟩, ?_⟩
-    exact map_subset_of_finset_image_subset (subset_trans (by simp [contract_same]) h_single)
+    intro z hz
+    have hzx : z = (⟦x⟧ : V / e) := by simpa [contract_same] using hz
+    exact hzx ▸ hx_mem
 
 lemma exists_lifted_ABPath_through {A B : Set V} (e : G.Adj x y)
   (p' : (G / e).ABPath (A / e) (B / e))
   (hp'_mem : ⟦x⟧ ∈ p'.p.1.support) :
   ∃ p : G.ABPath A B,
-    p.p.1.support.map (fun z => (⟦z⟧ : V / e)) ⊆ p'.p.1.support := by
+    p.p.1.support.map (π[e]) ⊆ p'.p.1.support := by
       by_cases hu' : p'.u = (⟦x⟧ : V/e)
       · by_cases hv' : p'.v = (⟦x⟧ : V/e)
         · have h_lift_nil : ⟦x⟧ ∈ A / e ∧ ⟦x⟧ ∈ B / e := by
@@ -1292,7 +1339,7 @@ lemma exists_lifted_ABPath_through {A B : Set V} (e : G.Adj x y)
 lemma exists_disjoint_paths_lift (P' : (G / e).Joiner (A / e) (B / e)) :
     ∃ P : G.Joiner A B, P.1.encard = P'.1.encard := by
   have h_lift : ∀ p' : (G / e).ABPath (A / e) (B / e),
-      ∃ p : G.ABPath A B, p.p.1.support.map (fun z => (⟦z⟧ : V / e)) ⊆ p'.p.1.support := by
+      ∃ p : G.ABPath A B, p.p.1.support.map (π[e]) ⊆ p'.p.1.support := by
     intro p'
     by_cases hp'_avoid : ⟦x⟧ ∉ p'.p.1.support
     · rcases exists_lifted_ABPath_avoiding e p' hp'_avoid with ⟨p, hp⟩
