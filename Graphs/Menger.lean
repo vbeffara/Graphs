@@ -371,6 +371,8 @@ def deleteEdge (G : SimpleGraph V) (_e : G.Adj x y) : SimpleGraph V := G.deleteE
 
 infix:60 " - " => deleteEdge
 
+lemma deleteEdge_le : G - e ≤ G := fun _ _ huv => huv.1
+
 lemma deleteEdge_edgeSet_encard_lt (hfin : G.edgeSet.Finite) : (G - e).edgeSet.encard < G.edgeSet.encard := by
   rw [deleteEdge, edgeSet_deleteEdges]
   exact (hfin.subset Set.diff_subset).encard_lt_encard (Set.diff_singleton_ssubset.mpr e)
@@ -633,7 +635,7 @@ lemma path_intersection_of_separator (X : G.Separator A B) (p : G.ABPath A X.1)
 /-
 If P is a set of disjoint paths from X to B with size equal to X, then every vertex in X is the start of exactly one path in P, and that path intersects X only at its start.
 -/
-lemma disjoint_paths_prop_start (G : SimpleGraph V) (X B : Set V) (hX_fin : X.Finite)
+lemma disjoint_paths_prop_start (X B : Set V) (hX_fin : X.Finite)
     (P : G.Joiner X B) (hP_card : P.1.encard = X.encard) :
   ∀ x ∈ X, ∃! p ∈ P.1, p.u = x ∧ p.support ∩ X = {x} := by
   have h_distinct_start : Set.InjOn (fun p : G.ABPath X B => p.u.1) P.1 := by
@@ -679,7 +681,7 @@ lemma Walk.IsPath_append_of_support_inter_subset_one {G : SimpleGraph V}
 /-
 If p is an A-X path ending at x, and q is an X-B path starting at x, and both intersect X only at x, then their concatenation is a path.
 -/
-lemma joined_path_is_path (G : SimpleGraph V) (A B : Set V)
+lemma joined_path_is_path (A B : Set V)
   (X : G.Separator A B)
   (x : V)
   (p : G.ABPath A X.1) (h_p : p.v = x) (h_p_X : p.support ∩ X.1 = {x})
@@ -698,12 +700,12 @@ lemma joined_path_is_path (G : SimpleGraph V) (A B : Set V)
 /-
 If X separates A and B, and we have k disjoint paths from A to X and k disjoint paths from X to B, then we can combine them to form k disjoint paths from A to B.
 -/
-theorem disjoint_paths_join (G : SimpleGraph V) (A B : Set V) (X : G.Separator A B) (k : ℕ∞)
+theorem disjoint_paths_join (A B : Set V) (X : G.Separator A B) (k : ℕ∞)
   (hX_fin : X.1.Finite)
   (hX_card : X.1.encard = k) (P_A : G.Joiner A X.1) (hP_A_card : P_A.1.encard = k) (P_B : G.Joiner X.1 B)
   (hP_B_card : P_B.1.encard = k) : ∃ P : G.Joiner A B, P.1.encard = k := by
   have h_end := disjoint_paths_prop hX_fin (hP_A_card.trans hX_card.symm)
-  have h_start := disjoint_paths_prop_start G X.1 B hX_fin P_B (hP_B_card.trans hX_card.symm)
+  have h_start := disjoint_paths_prop_start X.1 B hX_fin P_B (hP_B_card.trans hX_card.symm)
   have h_end_ex : ∀ x ∈ X.1, ∃ p ∈ P_A.1, (p : G.ABPath A X.1).v.1 = x ∧ p.support ∩ X.1 = {x} :=
     fun x hx => let ⟨p, ⟨hp1, hp2, hp3⟩, _⟩ := h_end x hx; ⟨p, hp1, hp2, hp3⟩
   have h_start_ex : ∀ x ∈ X.1, ∃ q ∈ P_B.1, (q : G.ABPath X.1 B).u.1 = x ∧ q.support ∩ X.1 = {x} :=
@@ -714,7 +716,7 @@ theorem disjoint_paths_join (G : SimpleGraph V) (A B : Set V) (X : G.Separator A
   let joinPath : X.1 → G.ABPath A B := fun ⟨x, hx⟩ =>
     ⟨(pa x hx).u, (qb x hx).v,
      (pa x hx).p.1.copy rfl (hpa_end x hx) |>.append ((qb x hx).p.1.copy (hqb_start x hx) rfl),
-     joined_path_is_path G A B X x (pa x hx) (hpa_end x hx) (hpa_inter x hx)
+     joined_path_is_path A B X x (pa x hx) (hpa_end x hx) (hpa_inter x hx)
                            (qb x hx) (hqb_start x hx) (hqb_inter x hx)⟩
   -- Membership in join support decomposes into sub-path supports
   have h_mem_join : ∀ (x : V) (hx : x ∈ X.1) (z : V),
@@ -958,7 +960,7 @@ lemma contract_preimage_disjoint_away_from_endpoints {x y : V} (e : G.Adj x y)
     rcases hb with ⟨hb_pre, _⟩
     have hproj_ne : (⟦a⟧ : V/e) ≠ ⟦x⟧ := by
       intro hproj
-      have hxy : a = x ∨ a = y := (contractEdgeProj_eq_vertex_iff (G := G) (x := x) (y := y) (u := a)).1 hproj
+      have hxy : a = x ∨ a = y := (contractEdgeProj_eq_vertex_iff (u := a)).1 hproj
       exact ha_not (by simpa [Set.mem_insert_iff, Set.mem_singleton_iff] using hxy)
     have ha_s : ⟦a⟧ ∈ s := (mem_contract_preimage (Y := s) (v := a)).1 ha_pre
     have hb_t : ⟦a⟧ ∈ t := (mem_contract_preimage (Y := t) (v := a)).1 hb_pre
@@ -1005,7 +1007,7 @@ lemma lift_split_paths (A B : Set V) {x y : V} (e : G.Adj x y)
       Finset.mem_inter.mpr ⟨Finset.mem_coe.mp hz1, Finset.mem_coe.mp hz2⟩
     rw [h_inter] at this
     exact hz_ne (Finset.mem_singleton.mp this ▸ Set.mem_singleton _)
-  have h_preimage_disj := contract_preimage_disjoint_away_from_endpoints (G := G) (x := x) (y := y) e _ _ h_disj_sets
+  have h_preimage_disj := contract_preimage_disjoint_away_from_endpoints e _ _ h_disj_sets
   rw [Finset.disjoint_left]
   intro z hz1 hz2
   simp only [Finset.mem_sdiff, List.mem_toFinset, Finset.mem_insert, Finset.mem_singleton] at hz1 hz2
@@ -1358,7 +1360,7 @@ lemma Menger_case2_exists_X (k : ℕ∞) (h_min : G.mincut A B = k) (h_contract_
     exact (ENat.add_one_le_iff this).mpr hY_card
   refine ⟨⟨_, h_sep⟩, le_antisymm h_le_k h_ge_k, ?_, ?_⟩
   · exact (mem_contract_preimage (v := x)).2 h_ve
-  · exact (mem_contract_preimage (v := y)).2 (contract_same (G := G) (e := e) ▸ h_ve)
+  · exact (mem_contract_preimage (v := y)).2 (contract_same (e := e) ▸ h_ve)
 
 /-
 If X separates A and B in G and contains x and y, then any separator of X and B in G-xy is also a separator of A and B in G.
@@ -1424,7 +1426,7 @@ def abPath_to_fromEdgeSet (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edge
     simpa [Set.mem_compl_iff, Sym2.mem_diagSet] using (G.not_isDiag_of_mem_edgeSet heG)
   exact ⟨p.u, p.v, p.p.1.transfer (fromEdgeSet E) hp, p.p.2.transfer hp⟩
 
-@[simp] lemma support_abPath_to_fromEdgeSet (G : SimpleGraph V) (A B : Set V)
+@[simp] lemma support_abPath_to_fromEdgeSet (A B : Set V)
     (p : G.ABPath A B) (E : Set (Sym2 V)) (hE : p.p.1.edgeSet ⊆ E) :
     (abPath_to_fromEdgeSet p E hE).support = p.support := by
   simp [abPath_to_fromEdgeSet, ABPath.support, Walk.support_transfer]
@@ -1510,10 +1512,9 @@ lemma Menger_case2_imp_paths (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B
   have h_del_B : k ≤ (G - e).maxflow X.1 B :=
     le_trans (h_min ▸ min_sep_delete_ge_k_right X hx hy)
       (IH_delete X.1 B (hX_fin.inter_of_left _))
-  have h_subgraph : G - e ≤ G := fun _ _ huv => huv.1
-  obtain ⟨P_A, hP_A_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G := G) (G' := G - e) (A := A) (B := X.1) k hk h_subgraph h_del_A
-  obtain ⟨P_B, hP_B_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G := G) (G' := G - e) (A := X.1) (B := B) k hk h_subgraph h_del_B
-  obtain ⟨P, hP_card⟩ := disjoint_paths_join G A B X k hX_fin hX_card P_A hP_A_card P_B hP_B_card
+  obtain ⟨P_A, hP_A_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G' := G - e) k hk deleteEdge_le h_del_A
+  obtain ⟨P_B, hP_B_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G' := G - e) k hk deleteEdge_le h_del_B
+  obtain ⟨P, hP_card⟩ := disjoint_paths_join A B X k hX_fin hX_card P_A hP_A_card P_B hP_B_card
   exact hP_card ▸ encard_le_maxflow_of_joiner P
 
 /-
@@ -1528,7 +1529,7 @@ lemma Menger_inductive_step (hk : G.mincut A B ≠ ⊤)
     exact Menger_case2_imp_paths (G.mincut A B) hk rfl ⟨X, hX_sep⟩ hX_card hx_mem hy_mem IH_delete
   · push_neg at h
     obtain ⟨P', hP'⟩ := exists_le_of_le_iSup _ hk (le_trans h IH_contract)
-    obtain ⟨P, hP⟩ := exists_disjoint_paths_lift (G := G) (A := A) (B := B) (e := e) P'
+    obtain ⟨P, hP⟩ := exists_disjoint_paths_lift (e := e) P'
     calc G.mincut A B ≤ P'.1.encard := hP'
       _ = P.1.encard := hP.symm
       _ ≤ G.maxflow A B := encard_le_maxflow_of_joiner P
@@ -1553,7 +1554,7 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) : G.edgeSet.encard = ↑n →
     have hk : G.mincut A B ≠ ⊤ :=
       ne_top_of_le_ne_top (WithTop.add_ne_top.mpr
         ⟨Set.encard_ne_top_iff.mpr hAB, h_card ▸ WithTop.coe_ne_top⟩) mincut_le_inter_add_edgeSet
-    have hAB_contract : ((A / e) ∩ (B / e)).Finite := finite_inter_contract_image (A := A) (B := B) (e := e) hAB
+    have hAB_contract : ((A / e) ∩ (B / e)).Finite := finite_inter_contract_image (e := e) hAB
     exact Menger_inductive_step hk
       (ih _ (by rw [hmc] at h_contract_lt; exact WithTop.coe_lt_coe.mp h_contract_lt)
         hAB_contract hmc)
@@ -1630,16 +1631,27 @@ private lemma exists_abPath_avoiding_of_encard_eq (P : G.Joiner A B) (h : P.1.en
     ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ S := by
   apply exists_abPath_avoiding_of_not_separates (S := S)
   contrapose! h
-  simpa [hS] using mincut_le_encard_of_separates (G := G) (A := A) (B := B) (X := S) h
+  simpa [hS] using mincut_le_encard_of_separates (X := S) h
+
+private abbrev ChoicePoints (P : G.Joiner A B) := ∀ p : P.1, {x : V // x ∈ p.1.support}
+
+private def choiceSet {P : G.Joiner A B} (σ : ChoicePoints P) : Set V :=
+  Set.range (fun p : P.1 => (σ p).1)
+
+private lemma choiceSet_encard (P : G.Joiner A B) (σ : ChoicePoints P) :
+    (choiceSet σ).encard = P.1.encard := by
+  simpa [choiceSet] using encard_range_choice_eq (P := P) σ
+
+private lemma exists_abPath_avoiding_choiceSet (P : G.Joiner A B) (h : P.1.encard < G.mincut A B)
+    (σ : ChoicePoints P) :
+    ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ choiceSet σ := by
+  exact exists_abPath_avoiding_of_encard_eq (P := P) h _ (choiceSet_encard (P := P) σ)
 
 /-- Create an Erdös-style finite graph from a joiner that is too small. -/
 noncomputable def erdos_graph (P : G.Joiner A B) (h : P.1.encard < G.mincut A B) : SimpleGraph V := by
-  let C := ∀ p : P.1, {x : V // x ∈ p.1.support}
-  let Schoice (σ : C) : Set V := Set.range (fun p : P.1 => σ p)
-  have hSchoice_card (σ : C) : (Schoice σ).encard = P.1.encard := by
-    simpa [Schoice] using encard_range_choice_eq (P := P) σ
-  have h_witness (σ : C) : ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ Schoice σ := by
-    exact exists_abPath_avoiding_of_encard_eq (P := P) h (Schoice σ) (hSchoice_card σ)
+  let C := ChoicePoints P
+  have h_witness (σ : C) : ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ choiceSet σ := by
+    exact exists_abPath_avoiding_choiceSet (P := P) h σ
   choose q hq using h_witness
   let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
   let EQ : Set (Sym2 V) := ⋃ σ : C, (q σ).p.1.edgeSet
@@ -1650,7 +1662,7 @@ variable {P : G.Joiner A B} {h : P.1.encard < G.mincut A B}
 
 theorem erdos_graph_finite : (erdos_graph P h).edgeSet.Finite := by
   haveI : Fintype P.1 := Set.encard_lt_top_iff.mp (lt_top_of_lt h) |>.fintype
-  simp [erdos_graph] ; constructor <;> apply Set.Finite.diff
+  simp [erdos_graph, ChoicePoints, choiceSet] ; constructor <;> apply Set.Finite.diff
   · exact Set.Finite.biUnion this.finite (by simp [ABPath.edgeSet_finite])
   · exact Set.finite_iUnion (by simp [ABPath.edgeSet_finite])
 
@@ -1666,12 +1678,12 @@ private lemma erdos_graph_joiner : ∃ PH : (erdos_graph P h).Joiner A B, PH.1.e
   apply subset_iUnion₂ p hp
 
 private lemma erdos_graph_separator : ∀ SH : (erdos_graph P h).Separator A B, SH.1.encard ≠ P.1.encard := by
-  let C := ∀ p : P.1, {x : V // x ∈ p.1.support}
-  let Schoice (σ : C) : Set V := Set.range (fun p : P.1 => σ p)
+  let C := ChoicePoints P
+  let Schoice : C → Set V := choiceSet
   have hSchoice_card (σ : C) : (Schoice σ).encard = P.1.encard := by
-    simpa [Schoice] using encard_range_choice_eq (P := P) σ
+    exact choiceSet_encard (P := P) σ
   have h_witness (σ : C) : ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ Schoice σ := by
-    exact exists_abPath_avoiding_of_encard_eq (P := P) h (Schoice σ) (hSchoice_card σ)
+    exact exists_abPath_avoiding_choiceSet (P := P) h σ
   let q σ := (h_witness σ).choose
   let hq σ : ∀ x ∈ (q σ).support, x ∉ Schoice σ := (h_witness σ).choose_spec
   let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
@@ -1686,15 +1698,16 @@ private lemma erdos_graph_separator : ∀ SH : (erdos_graph P h).Separator A B, 
     refine ⟨⟨x, ?_⟩, hxSH⟩
     simpa [f] using (show x ∈ (f p).support from hx)
   choose σ hσ using h_hit_SH
-  have hSH_card : SH.1.encard = P.1.encard := hcard
   have hSchoice_eq : Schoice σ = SH.1 := by
-    have hSchoice_subset : Schoice σ ⊆ SH.1 := by grind
+    have hSchoice_subset : Schoice σ ⊆ SH.1 := by
+      rintro x ⟨p, rfl⟩
+      exact hσ p
     have hSchoice_fin : (Schoice σ).Finite := by
       refine Set.encard_ne_top_iff.mp ?_
       have hP_fin : P.1.Finite := Set.encard_lt_top_iff.mp (lt_top_of_lt h)
       simpa [hSchoice_card σ] using (Set.encard_ne_top_iff.mpr hP_fin)
     apply hSchoice_fin.eq_of_subset_of_encard_le hSchoice_subset
-    simp [hSH_card, hSchoice_card σ]
+    simp [hcard, hSchoice_card σ]
   have hqE : (q σ).p.1.edgeSet ⊆ E := by
     intro e he
     exact Or.inr (Set.mem_iUnion.mpr ⟨σ, he⟩)
