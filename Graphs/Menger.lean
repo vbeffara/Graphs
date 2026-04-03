@@ -84,6 +84,18 @@ noncomputable def mincut (G : SimpleGraph V) (A B : Set V) := ⨅ S : G.Separato
 
 noncomputable def maxflow (G : SimpleGraph V) (A B : Set V) := ⨆ P : G.Joiner A B, P.1.encard
 
+lemma mincut_le_encard_of_separates (hS : G.Separates A B X) : G.mincut A B ≤ X.encard :=
+  iInf_le_of_le ⟨X, hS⟩ le_rfl
+
+lemma encard_le_maxflow_of_joiner (P : G.Joiner A B) : P.1.encard ≤ G.maxflow A B :=
+  le_iSup_of_le P le_rfl
+
+lemma exists_separator_of_mincut_lt {k : ℕ∞} (h : G.mincut A B < k) :
+    ∃ S : G.Separator A B, S.1.encard < k := by
+  by_contra h_all
+  push_neg at h_all
+  exact absurd (le_iInf h_all) (not_le.mpr h)
+
 @[blueprint "thm:maxflow_le_mincut"
   (statement := /-- The maximum number of disjoint A-B paths is at most the
     minimum size of an A-B separator. -/)]
@@ -108,7 +120,7 @@ private lemma finite_not_separates_of_mincut_top (h : G.mincut A B = ⊤) (S : S
     ¬ G.Separates A B S := by
   intro h_sep
   have : (⊤ : ℕ∞) ≤ S.encard :=
-    h ▸ iInf_le_of_le ⟨S, h_sep⟩ le_rfl
+    h ▸ mincut_le_encard_of_separates h_sep
   exact absurd (lt_of_le_of_lt this hS.encard_lt_top) (lt_irrefl _)
 
 private lemma extend_joiner_of_mincut_top (h : G.mincut A B = ⊤) (P : G.Joiner A B) (hP_fin : P.1.Finite) :
@@ -185,7 +197,7 @@ lemma inter_le_maxflow : (A ∩ B).encard ≤ G.maxflow A B := by
     exact hpq (by congr 1; all_goals exact Subtype.ext hz2)
   calc (A ∩ B).encard = (Set.range γ).encard := by
           rw [← Set.image_univ, hγ_inj.encard_image]; simp
-    _ ≤ G.maxflow A B := le_iSup_of_le ⟨_, h_joiner⟩ le_rfl
+    _ ≤ G.maxflow A B := encard_le_maxflow_of_joiner ⟨_, h_joiner⟩
 
 lemma Menger_strong_base (h : G.edgeSet = ∅) : G.mincut A B ≤ G.maxflow A B := by
   simp at h ; subst G
@@ -221,6 +233,21 @@ lemma contract_eq_map (e : G.Adj x y) : G / e = G.map (⟦·⟧) := by
 def contract_image (S : Set V) (e : G.Adj x y) : Set (V / e) := (⟦·⟧) '' S
 
 infix:60 " / " => contract_image
+
+lemma finite_inter_contract_image (hAB : (A ∩ B).Finite) : ((A / e) ∩ (B / e)).Finite := by
+  apply Set.Finite.subset ((hAB.image (⟦·⟧)).union (Set.finite_singleton (⟦x⟧)))
+  intro q ⟨⟨a, ha, haq⟩, b, hb, hbq⟩
+  simp at haq hbq
+  have hab_q : (⟦a⟧ : V / e) = ⟦b⟧ := by rw [haq, hbq]
+  by_cases hab : a = b
+  · exact Or.inl ⟨a, ⟨ha, hab ▸ hb⟩, haq⟩
+  · right
+    rw [Set.mem_singleton_iff, ← haq]
+    rw [Quotient.eq] at hab_q
+    rcases hab_q with rfl | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · exact absurd rfl hab
+    · rfl
+    · grind
 
 -- TODO use `SimpleGraph.map`
 lemma Walk.contract (p : G.Walk u v) (e : G.Adj x y) :
@@ -470,7 +497,7 @@ theorem vertex_mem_contract_separator (Y : (G / e).Separator (A / e) (B / e))
     apply Set.encard_le_encard_of_injOn (f := (⟦·⟧))
     · intro ; grind
     · rintro v hv w - hvw ; simp [Quotient.eq, contractSetoid] at hvw ; aesop
-  calc G.mincut A B ≤ (contract_preimage Y.1).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
+  calc G.mincut A B ≤ (contract_preimage Y.1).encard := mincut_le_encard_of_separates h_sep
     _ ≤ Y.1.encard := h_encard
 
 /- --------------- REVIEW --------------- -/
@@ -509,25 +536,24 @@ lemma disjoint_paths_prop (hX_fin : X.Finite) {P : G.Joiner A X} (hP_card : P.1.
 /-
 If an A-X path intersects X only at its endpoint, then any prefix ending at a vertex not in X avoids X entirely.
 -/
-lemma ABPath_prefix_avoids_X (G : SimpleGraph V) (A X : Set V) (X_fin : Set V)
-  (p : G.ABPath A X)
-  (hp_X : p.support ∩ X_fin = {p.v.1})
+lemma ABPath_prefix_avoids_X {A X : Set V} (p : G.ABPath A X)
+  (hp_X : p.support ∩ X = {p.v.1})
   (z : V)
   (hz : z ∈ p.p.1.support)
-  (hzX : z ∉ X_fin) :
-  (↑(p.p.1.takeUntil z hz).support.toFinset : Set V) ∩ X_fin = ∅ := by
+  (hzX : z ∉ X) :
+  (↑(p.p.1.takeUntil z hz).support.toFinset : Set V) ∩ X = ∅ := by
     simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, Finset.mem_coe, not_and]
     intro a ha haX
     have ha_support : a ∈ p.p.1.support :=
       Walk.support_takeUntil_subset p.p.1 hz (List.mem_toFinset.mp ha)
     have ha_eq : a = p.v.1 := by
-      have h1 : a ∈ p.support ∩ X_fin := ⟨ha_support, haX⟩
+      have h1 : a ∈ p.support ∩ X := ⟨ha_support, haX⟩
       rw [hp_X] at h1
       exact h1
     rw [ha_eq] at ha
     have hne : p.v.1 ≠ z := by
       intro heq; rw [← heq] at hzX
-      have : p.v.1 ∈ p.support ∩ X_fin := by rw [hp_X]; rfl
+      have : p.v.1 ∈ p.support ∩ X := by rw [hp_X]; rfl
       exact hzX this.2
     exact (Walk.endpoint_notMem_support_takeUntil p.p.2 hz hne)
       (List.mem_toFinset.mp ha)
@@ -545,25 +571,24 @@ lemma Walk.start_notMem_support_dropUntil {p : G.Walk u v} (hp : p.IsPath) (hw :
 /-
 If an X-B path intersects X only at its start point, then any suffix starting at a vertex not in X avoids X entirely.
 -/
-lemma ABPath_suffix_avoids_X (G : SimpleGraph V) (B X : Set V) (X_fin : Set V)
-  (q : G.ABPath X B)
-  (hq_X : q.support ∩ X_fin = {q.u.1})
+lemma ABPath_suffix_avoids_X {B X : Set V} (q : G.ABPath X B)
+  (hq_X : q.support ∩ X = {q.u.1})
   (z : V)
   (hz : z ∈ q.p.1.support)
-  (hzX : z ∉ X_fin) :
-  (↑(q.p.1.dropUntil z hz).support.toFinset : Set V) ∩ X_fin = ∅ := by
+  (hzX : z ∉ X) :
+  (↑(q.p.1.dropUntil z hz).support.toFinset : Set V) ∩ X = ∅ := by
     simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, Finset.mem_coe, not_and]
     intro a ha haX
     have ha_support : a ∈ q.p.1.support :=
       q.p.1.support_dropUntil_subset hz (List.mem_toFinset.mp ha)
     have ha_eq : a = q.u.1 := by
-      have h1 : a ∈ q.support ∩ X_fin := ⟨ha_support, haX⟩
+      have h1 : a ∈ q.support ∩ X := ⟨ha_support, haX⟩
       rw [hq_X] at h1
       exact h1
     rw [ha_eq] at ha
     have : q.u.1 ≠ z := by
       intro heq; rw [← heq] at hzX
-      have : q.u.1 ∈ q.support ∩ X_fin := by rw [hq_X]; rfl
+      have : q.u.1 ∈ q.support ∩ X := by rw [hq_X]; rfl
       exact hzX this.2
     exact (Walk.start_notMem_support_dropUntil q.p.2 hz this)
       (List.mem_toFinset.mp ha)
@@ -585,8 +610,8 @@ lemma path_intersection_of_separator (X : G.Separator A B) (p : G.ABPath A X.1)
     · have h2 : z ∈ q.support ∩ X.1 := ⟨hz.2, hzX⟩
       rw [hq_X] at h2; exact h2
   · exfalso
-    have hw1 := ABPath_prefix_avoids_X G A X.1 X.1 p hp_X z hz.1 hzX
-    have hw2 := ABPath_suffix_avoids_X G B X.1 X.1 q hq_X z hz.2 hzX
+    have hw1 := ABPath_prefix_avoids_X p hp_X z hz.1 hzX
+    have hw2 := ABPath_suffix_avoids_X q hq_X z hz.2 hzX
     have h_walk := X.2 p.u.1 p.u.2 q.v.1 q.v.2
       ((p.p.1.takeUntil z hz.1).append (q.p.1.dropUntil z hz.2))
     obtain ⟨w, hw_mem, hw_X⟩ := h_walk
@@ -1318,15 +1343,13 @@ If min_sep(G/e) < k, then there exists a separator X in G such that |X|=k, x in 
 -/
 lemma Menger_case2_exists_X (k : ℕ∞) (h_min : G.mincut A B = k) (h_contract_min : (G / e).mincut (A / e) (B / e) < k) :
     ∃ X : G.Separator A B, X.1.encard = k ∧ x ∈ X.1 ∧ y ∈ X.1 := by
-  obtain ⟨⟨Y, hY_sep⟩, hY_card⟩ : ∃ Y : (G / e).Separator (A / e) (B / e), Y.1.encard < k := by
-    by_contra h_all; push_neg at h_all
-    exact absurd (le_iInf h_all) (not_le.mpr h_contract_min)
+  obtain ⟨⟨Y, hY_sep⟩, hY_card⟩ := exists_separator_of_mincut_lt (G := G / e) (A := A / e) (B := B / e) h_contract_min
   have h_ve : ⟦x⟧ ∈ Y := vertex_mem_contract_separator ⟨Y, hY_sep⟩ (h_min ▸ hY_card)
   have h_sep : G.Separates A B (contract_preimage Y) := contract_preimage_separates ⟨Y, hY_sep⟩
   have h_lift_card : (contract_preimage Y).encard = Y.encard + 1 := encard_preimage_contractEdge h_ve
   have h_ge_k : (contract_preimage Y).encard ≥ k := by
     calc k = G.mincut A B := h_min.symm
-      _ ≤ (contract_preimage Y).encard := iInf_le_of_le ⟨_, h_sep⟩ le_rfl
+      _ ≤ (contract_preimage Y).encard := mincut_le_encard_of_separates h_sep
   have h_le_k : (contract_preimage Y).encard ≤ k := by
     rw [h_lift_card]
     have : Y.encard ≠ ⊤ := ne_top_of_lt (lt_of_lt_of_le hY_card le_top)
@@ -1489,7 +1512,7 @@ lemma Menger_case2_imp_paths (k : ℕ∞) (hk : k ≠ ⊤) (h_min : G.mincut A B
   obtain ⟨P_A, hP_A_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G := G) (G' := G - e) (A := A) (B := X.1) k hk h_subgraph h_del_A
   obtain ⟨P_B, hP_B_card⟩ := exists_joiner_of_le_maxflow_of_subgraph (G := G) (G' := G - e) (A := X.1) (B := B) k hk h_subgraph h_del_B
   obtain ⟨P, hP_card⟩ := disjoint_paths_join G A B X k hX_fin hX_card P_A hP_A_card P_B hP_B_card
-  exact hP_card ▸ le_iSup_of_le P le_rfl
+  exact hP_card ▸ encard_le_maxflow_of_joiner P
 
 /-
 Inductive step for Menger's theorem.
@@ -1506,7 +1529,7 @@ lemma Menger_inductive_step (hk : G.mincut A B ≠ ⊤)
     obtain ⟨P, hP⟩ := exists_disjoint_paths_lift (G := G) (A := A) (B := B) (e := e) P'
     calc G.mincut A B ≤ P'.1.encard := hP'
       _ = P.1.encard := hP.symm
-      _ ≤ G.maxflow A B := le_iSup_of_le P le_rfl
+      _ ≤ G.maxflow A B := encard_le_maxflow_of_joiner P
 
 /-
 Auxiliary lemma for Menger's theorem: The theorem holds for any graph with n edges, proved by strong induction on n.
@@ -1528,19 +1551,7 @@ theorem Menger_strong_aux (hAB : (A ∩ B).Finite) : G.edgeSet.encard = ↑n →
     have hk : G.mincut A B ≠ ⊤ :=
       ne_top_of_le_ne_top (WithTop.add_ne_top.mpr
         ⟨Set.encard_ne_top_iff.mpr hAB, h_card ▸ WithTop.coe_ne_top⟩) mincut_le_inter_add_edgeSet
-    have hAB_contract : ((A / e) ∩ (B / e)).Finite := by
-      apply Set.Finite.subset ((hAB.image (⟦·⟧)).union (Set.finite_singleton (⟦x⟧)))
-      intro q ⟨⟨a, ha, haq⟩, b, hb, hbq⟩
-      simp at haq hbq
-      have hab_q : (⟦a⟧ : V / e) = ⟦b⟧ := by rw [haq, hbq]
-      by_cases hab : a = b
-      · exact Or.inl ⟨a, ⟨ha, hab ▸ hb⟩, haq⟩
-      · right; rw [Set.mem_singleton_iff, ← haq]
-        rw [Quotient.eq] at hab_q
-        rcases hab_q with rfl | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
-        · exact absurd rfl hab
-        · rfl
-        · grind
+    have hAB_contract : ((A / e) ∩ (B / e)).Finite := finite_inter_contract_image (A := A) (B := B) (e := e) hAB
     exact Menger_inductive_step hk
       (ih _ (by rw [hmc] at h_contract_lt; exact WithTop.coe_lt_coe.mp h_contract_lt)
         hAB_contract hmc)
@@ -1618,7 +1629,8 @@ noncomputable def erdos_graph (P : G.Joiner A B) (h : P.1.encard < G.mincut A B)
   have h_witness (σ : C) : ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ Schoice σ := by
     apply exists_abPath_avoiding_of_not_separates (Schoice σ)
     contrapose! h
-    simpa [← hSchoice_card σ] using (iInf_le_of_le ⟨_, h⟩ (le_rfl : (Schoice σ).encard ≤ _))
+    simpa [← hSchoice_card σ] using
+      (mincut_le_encard_of_separates (G := G) (A := A) (B := B) (X := Schoice σ) h)
   choose q hq using h_witness
   let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
   let EQ : Set (Sym2 V) := ⋃ σ : C, (q σ).p.1.edgeSet
@@ -1660,7 +1672,8 @@ private lemma erdos_graph_separator : ∀ SH : (erdos_graph P h).Separator A B, 
   have h_witness (σ : C) : ∃ q : G.ABPath A B, ∀ x ∈ q.support, x ∉ Schoice σ := by
     apply exists_abPath_avoiding_of_not_separates (Schoice σ)
     contrapose! h
-    simpa [← hSchoice_card σ] using (iInf_le_of_le ⟨_, h⟩ (le_rfl : (Schoice σ).encard ≤ _))
+    simpa [← hSchoice_card σ] using
+      (mincut_le_encard_of_separates (G := G) (A := A) (B := B) (X := Schoice σ) h)
   let q σ := (h_witness σ).choose
   let hq σ : ∀ x ∈ (q σ).support, x ∉ Schoice σ := (h_witness σ).choose_spec
   let EP : Set (Sym2 V) := ⋃ p ∈ P.1, (p : G.ABPath A B).p.1.edgeSet
@@ -1720,10 +1733,10 @@ theorem Menger_finite_mincut (hk : G.mincut A B ≠ ⊤) : G.mincut A B = G.maxf
       intro Q
       obtain ⟨QG, hQG_card⟩ := lift_disjoint_paths_le G H hH_le A B Q
       calc Q.1.encard = QG.1.encard := hQG_card.symm
-        _ ≤ G.maxflow A B := le_iSup_of_le QG le_rfl
+        _ ≤ G.maxflow A B := encard_le_maxflow_of_joiner QG
         _ = P.1.encard := hP.symm
     · rw [← hPH_card]
-      exact le_iSup_of_le PH le_rfl
+      exact encard_le_maxflow_of_joiner PH
   have hSH_card : SH.1.encard = P.1.encard := by
     calc SH.1.encard = H.mincut A B := by simpa [mincut] using hSH
       _ = H.maxflow A B := hHmenger
