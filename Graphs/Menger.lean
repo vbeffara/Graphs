@@ -843,35 +843,21 @@ lemma lift_path_extension_step (e : G.Adj x y)
 /-
 A path in the contracted graph ending at the contracted vertex can be lifted to a path in the original graph ending at one of the contracted edge's endpoints.
 -/
-lemma lift_path_to_contraction_end {A : Set V} (e : G.Adj x y)
-  (u' : V / e)
-  (p' : (G / e).Walk u' ⟦x⟧)
-  (hp'_path : p'.IsPath)
-  (hu' : u' ∈ A / e)
-  (h_ne : u' ≠ ⟦x⟧) :
-  ∃ (u v : V) (p : G.Walk u v),
-    u ∈ A ∧
-    (v = x ∨ v = y) ∧
-    p.IsPath ∧
-    p.support.map (π[e]) ⊆ p'.support ∧
-    ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
-  obtain ⟨ w', q', hq'_adj, hq'_path, hq'_avoid, hq'_sub ⟩ :=
+lemma lift_path_to_contraction_end {u' : V / e} {p' : (G / e).Walk u' ⟦x⟧} (hp'_path : p'.IsPath)
+    (hu' : u' ∈ A / e) (h_ne : u' ≠ ⟦x⟧) : ∃ (u v : V) (p : G.Walk u v), u ∈ A ∧ (v = x ∨ v = y) ∧
+      p.IsPath ∧ p.support.map (π[e]) ⊆ p'.support ∧ ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
+  obtain ⟨w', q', hq'_adj, hq'_path, hq'_avoid, hq'_sub⟩ :=
     Walk.exists_prefix_path_of_path_ne p' hp'_path h_ne
-  obtain ⟨u, w, q, hu, hw, hq_path, hq_support⟩ : ∃ u w : V, ∃ q : G.Walk u w,
-      u ∈ A ∧ ⟦u⟧ = u' ∧ ⟦w⟧ = w' ∧ q.IsPath ∧ (∀ z, z ∈ q.support → ⟦z⟧ ∈ q'.support) ∧
-      x ∉ q.support ∧ y ∉ q.support := by
-    obtain ⟨u, w, q, hu, _, hw1, hw2, hq_path, hq_img, hx, hy⟩ :=
-      lift_path_avoiding_contraction_AB (A := A) (B := Set.univ) q' hq'_avoid hu'
-        ⟨Classical.choose (Quotient.exists_rep w'), trivial, Classical.choose_spec (Quotient.exists_rep w')⟩
-    exact ⟨u, w, q, hu, hw1, hw2, hq_path, fun z hz => hq_img (List.mem_map.mpr ⟨z, hz, rfl⟩), hx, hy⟩
-  obtain ⟨v, p, hv, hp_path, hp_support, hp_xy⟩ : ∃ v : V, ∃ p : G.Walk u v, (v = x ∨ v = y) ∧ p.IsPath ∧ p.support ⊆ q.support ∪ {v} ∧ ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
-    refine lift_path_extension_step e u w q hq_support.1 hq_support.2.2.1 hq_support.2.2.2 (by grind)
+  obtain ⟨u, w, q, hu, _, rfl, rfl, hq_path, hq_img, hx, hy⟩ :=
+    lift_path_avoiding_contraction_AB (B := Set.univ) q' hq'_avoid hu' (by simpa using Quotient.exists_rep w')
+  have hq_support z (hz : z ∈ q.support) : ⟦z⟧ ∈ q'.support := hq_img (List.mem_map.mpr ⟨z, hz, rfl⟩)
+  obtain ⟨v, p, hv, hp_path, hp_support, hp_xy⟩ := lift_path_extension_step e u w q hq_path hx hy (by grind)
   refine ⟨u, v, p, hu, hv, hp_path, ?_, hp_xy⟩
   intro z hz
   rcases List.mem_map.mp hz with ⟨w, hw, rfl⟩
   have hz_fin : w ∈ q.support ∨ w = v := by simpa [List.singleton_eq] using hp_support hw
   rcases hz_fin with hz_q | hz_v
-  · have h1 : ⟦w⟧ ∈ q'.support := hq_support.2.1 w hz_q
+  · have h1 : ⟦w⟧ ∈ q'.support := hq_support _ hz_q
     exact hq'_sub h1
   · subst hz_v
     have h_end : (⟦x⟧ : V / e) ∈ p'.support := p'.end_mem_support
@@ -894,12 +880,7 @@ lemma lift_path_from_contraction_start {B : Set V} (e : G.Adj x y)
     p.IsPath ∧
     p.support.map (π[e]) ⊆ p'.support ∧
     ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = u := by
-      have h_lift_reversed : ∃ u v : V, ∃ p : G.Walk u v, u ∈ B ∧
-        (v = x ∨ v = y) ∧
-        p.IsPath ∧
-        p.support.map (π[e]) ⊆ p'.reverse.support ∧
-        ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
-          exact @lift_path_to_contraction_end V G x y B e v' p'.reverse hp'_path.reverse hv' h_ne
+      have h_lift_reversed := lift_path_to_contraction_end hp'_path.reverse hv' h_ne
       obtain ⟨u, v, p, hu, hv, hp, hp_map, hp_xy⟩ := h_lift_reversed
       refine ⟨v, u, p.reverse, hv, hu, (Walk.isPath_reverse_iff p).2 hp, ?_, ?_⟩
       · intro z hz
@@ -1013,7 +994,7 @@ lemma lift_split_paths {A B : Set V} (e : G.Adj x y)
     (∀ z ∈ p2.support, z ∈ ({x, y} : Set V) → z = v_start) ∧
     Disjoint (p1.support.toFinset \ {x, y}) (p2.support.toFinset \ {x, y}) := by
   obtain ⟨u_start, u_end, p1, hu_start_A, hu_end_xy, hp1_path, hp1_sub, hp1_xy⟩ :=
-    lift_path_to_contraction_end (A := A) e u' p1' hp1'_path hu' h_u_ne
+    lift_path_to_contraction_end (A := A) hp1'_path hu' h_u_ne
   obtain ⟨v_start, v_end, p2, hv_start_xy, hv_end_B, hp2_path, hp2_sub, hp2_xy⟩ :=
     lift_path_from_contraction_start (B := B) e v' p2' hp2'_path hv' h_v_ne
   refine ⟨u_start, u_end, p1, v_start, v_end, p2, hu_start_A, hv_end_B, hu_end_xy, hv_start_xy,
@@ -1235,7 +1216,7 @@ lemma lift_path_end_eq_vertex {A B : Set V} (e : G.Adj x y)
   ∃ p : G.ABPath A B,
     p.p.1.support.map (π[e]) ⊆ p'.support := by
       obtain ⟨ u, v, p, hu, hv, hp, hp', hp'' ⟩ :=
-        lift_path_to_contraction_end (A := A) e u' p' hp'_path hu' h_start_ne
+        lift_path_to_contraction_end hp'_path hu' h_start_ne
       obtain ⟨ v', q, hv', hq, hq' ⟩ :=
         adjust_path_end_to_B (B := B) hp hv hp'' h_liftB
       exact ⟨ ⟨ ⟨ u, hu ⟩, ⟨ v', hv' ⟩, q, hq ⟩, hq'.trans hp' ⟩
