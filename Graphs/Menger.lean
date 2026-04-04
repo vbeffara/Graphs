@@ -823,7 +823,7 @@ lemma lift_path_extension_step (e : G.Adj x y)
   ∃ (v : V) (p : G.Walk u v),
     (v = x ∨ v = y) ∧
     p.IsPath ∧
-    p.support.toFinset ⊆ q.support.toFinset ∪ {v} ∧
+    p.support ⊆ q.support ∪ {v} ∧
     ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
       have h_w_adj : G.Adj w x ∨ G.Adj w y := by
         have := contractEdge_adj_lift_vertex ?_ hw_proj_adj <;> aesop;
@@ -831,12 +831,13 @@ lemma lift_path_extension_step (e : G.Adj x y)
       · refine' ⟨ x, q.append ( Walk.cons h Walk.nil ), Or.inl rfl, _, _, _ ⟩ <;> simp_all [ Walk.isPath_def ];
         · simp_all [ Walk.support_append ]
           rw [ List.nodup_append ] ; aesop
-        · simp [ Walk.support_append ]
+        · simp [ Walk.support_append, List.singleton_eq, List.subset_def ]
         · aesop
       · use y
         use q.append (Walk.cons h Walk.nil)
         simp_all [ Walk.isPath_def ]
         simp_all [ Walk.support_append ]
+        simp [ List.singleton_eq, List.subset_def ]
         rw [ List.nodup_append ] ; aesop
 
 /-
@@ -863,17 +864,16 @@ lemma lift_path_to_contraction_end {A : Set V} (e : G.Adj x y)
       lift_path_avoiding_contraction_AB (A := A) (B := Set.univ) q' hq'_avoid hu'
         ⟨Classical.choose (Quotient.exists_rep w'), trivial, Classical.choose_spec (Quotient.exists_rep w')⟩
     exact ⟨u, w, q, hu, hw1, hw2, hq_path, fun z hz => hq_img (List.mem_map.mpr ⟨z, hz, rfl⟩), hx, hy⟩
-  obtain ⟨v, p, hv, hp_path, hp_support, hp_xy⟩ : ∃ v : V, ∃ p : G.Walk u v, (v = x ∨ v = y) ∧ p.IsPath ∧ p.support.toFinset ⊆ q.support.toFinset ∪ {v} ∧ ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
+  obtain ⟨v, p, hv, hp_path, hp_support, hp_xy⟩ : ∃ v : V, ∃ p : G.Walk u v, (v = x ∨ v = y) ∧ p.IsPath ∧ p.support ⊆ q.support ∪ {v} ∧ ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
     refine lift_path_extension_step e u w q hq_support.1 hq_support.2.2.1 hq_support.2.2.2 (by grind)
   refine ⟨u, v, p, hu, hv, hp_path, ?_, hp_xy⟩
   intro z hz
   rcases List.mem_map.mp hz with ⟨w, hw, rfl⟩
-  have hz_fin : w ∈ q.support.toFinset ∪ {v} := hp_support (List.mem_toFinset.mpr hw)
-  rcases Finset.mem_union.mp hz_fin with hz_q | hz_v
-  · have h1 : ⟦w⟧ ∈ q'.support := hq_support.2.1 w (List.mem_toFinset.mp hz_q)
+  have hz_fin : w ∈ q.support ∨ w = v := by simpa [List.singleton_eq] using hp_support hw
+  rcases hz_fin with hz_q | hz_v
+  · have h1 : ⟦w⟧ ∈ q'.support := hq_support.2.1 w hz_q
     exact hq'_sub h1
-  · simp only [Finset.mem_singleton] at hz_v
-    subst hz_v
+  · subst hz_v
     have h_end : (⟦x⟧ : V / e) ∈ p'.support := p'.end_mem_support
     rcases hv with rfl | rfl
     · simp
