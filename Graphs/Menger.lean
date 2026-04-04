@@ -699,12 +699,9 @@ lemma disjoint_paths_prop_start (X B : Set V) (hX_fin : X.Finite)
 /-
 If p and q are paths that intersect only at the join point, their concatenation is a path.
 -/
-lemma Walk.IsPath_append_of_support_inter_subset_one {p : G.Walk u v} {q : G.Walk v w}
-    (hp : p.IsPath) (hq : q.IsPath) (h_inter : ∀ z, z ∈ p.support → z ∈ q.support → z = v) :
-    (p.append q).IsPath := by
-  induction p with
-  | nil => simpa
-  | cons h p ih => aesop
+lemma Walk.IsPath_append_of_support_inter_subset_one {p : G.Walk u v} {q : G.Walk v w} (hp : p.IsPath)
+    (hq : q.IsPath) (h_inter : ∀ z ∈ p.support, z ∈ q.support → z = v) : (p.append q).IsPath := by
+  induction p <;> aesop
 
 /-
 If p is an A-X path ending at x, and q is an X-B path starting at x, and both intersect X only at x, then their concatenation is a path.
@@ -827,7 +824,7 @@ lemma lift_path_extension_step (e : G.Adj x y)
     (v = x ∨ v = y) ∧
     p.IsPath ∧
     p.support.toFinset ⊆ q.support.toFinset ∪ {v} ∧
-    ∀ z, z ∈ p.support → z ∈ ({x, y} : Set V) → z = v := by
+    ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
       have h_w_adj : G.Adj w x ∨ G.Adj w y := by
         have := contractEdge_adj_lift_vertex ?_ hw_proj_adj <;> aesop;
       cases' h_w_adj with h h
@@ -856,7 +853,7 @@ lemma lift_path_to_contraction_end {A : Set V} (e : G.Adj x y)
     (v = x ∨ v = y) ∧
     p.IsPath ∧
     p.support.map (π[e]) ⊆ p'.support ∧
-    ∀ z, z ∈ p.support → z ∈ ({x, y} : Set V) → z = v := by
+    ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
   obtain ⟨ w', q', hq'_adj, hq'_path, hq'_avoid, hq'_sub ⟩ :=
     Walk.exists_prefix_path_of_path_ne p' hp'_path h_ne
   obtain ⟨u, w, q, hu, hw, hq_path, hq_support⟩ : ∃ u w : V, ∃ q : G.Walk u w,
@@ -866,7 +863,7 @@ lemma lift_path_to_contraction_end {A : Set V} (e : G.Adj x y)
       lift_path_avoiding_contraction_AB (A := A) (B := Set.univ) q' hq'_avoid hu'
         ⟨Classical.choose (Quotient.exists_rep w'), trivial, Classical.choose_spec (Quotient.exists_rep w')⟩
     exact ⟨u, w, q, hu, hw1, hw2, hq_path, fun z hz => hq_img (List.mem_map.mpr ⟨z, hz, rfl⟩), hx, hy⟩
-  obtain ⟨v, p, hv, hp_path, hp_support, hp_xy⟩ : ∃ v : V, ∃ p : G.Walk u v, (v = x ∨ v = y) ∧ p.IsPath ∧ p.support.toFinset ⊆ q.support.toFinset ∪ {v} ∧ ∀ z, z ∈ p.support → z ∈ ({x, y} : Set V) → z = v := by
+  obtain ⟨v, p, hv, hp_path, hp_support, hp_xy⟩ : ∃ v : V, ∃ p : G.Walk u v, (v = x ∨ v = y) ∧ p.IsPath ∧ p.support.toFinset ⊆ q.support.toFinset ∪ {v} ∧ ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
     refine lift_path_extension_step e u w q hq_support.1 hq_support.2.2.1 hq_support.2.2.2 (by grind)
   refine ⟨u, v, p, hu, hv, hp_path, ?_, hp_xy⟩
   intro z hz
@@ -896,12 +893,12 @@ lemma lift_path_from_contraction_start {B : Set V} (e : G.Adj x y)
     v ∈ B ∧
     p.IsPath ∧
     p.support.map (π[e]) ⊆ p'.support ∧
-    ∀ z, z ∈ p.support → z ∈ ({x, y} : Set V) → z = u := by
+    ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = u := by
       have h_lift_reversed : ∃ u v : V, ∃ p : G.Walk u v, u ∈ B ∧
         (v = x ∨ v = y) ∧
         p.IsPath ∧
         p.support.map (π[e]) ⊆ p'.reverse.support ∧
-        ∀ z, z ∈ p.support → z ∈ ({x, y} : Set V) → z = v := by
+        ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v := by
           exact @lift_path_to_contraction_end V G x y B e v' p'.reverse hp'_path.reverse hv' h_ne
       obtain ⟨u, v, p, hu, hv, hp, hp_map, hp_xy⟩ := h_lift_reversed
       refine ⟨v, u, p.reverse, hv, hu, (Walk.isPath_reverse_iff p).2 hp, ?_, ?_⟩
@@ -1164,7 +1161,7 @@ lemma adjust_path_start_to_A {A : Set V} (e : G.Adj x y)
   exact ⟨u', p', hu'A, hp'path, map_subset_of_finset_image_subset_map hp'sub⟩
 
 lemma adjust_path_end_to_B {p : G.Walk u v} (hp_path : p.IsPath) (hv : v = x ∨ v = y)
-  (hp_support : ∀ z, z ∈ p.support → z ∈ ({x, y} : Set V) → z = v)
+  (hp_support : ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v)
   (h_liftB : ⟦x⟧ ∈ B / e) :
   ∃ (v' : V) (p' : G.Walk u v'),
     v' ∈ B ∧
