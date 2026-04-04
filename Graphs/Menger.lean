@@ -261,25 +261,15 @@ lemma finite_inter_contract_image (hAB : (A ∩ B).Finite) : ((A / e) ∩ (B / e
 -- TODO use `SimpleGraph.map`
 lemma Walk.contract (p : G.Walk u v) (e : G.Adj x y) :
     ∃ w : (G / e).Walk ⟦u⟧ ⟦v⟧, w.support ⊆ p.support.map (π[e]) := by
-  have hfin : ∃ w : (G / e).Walk ⟦u⟧ ⟦v⟧, w.support.toFinset ⊆ p.support.toFinset.image (π[e]) := by
-    induction' p with u v p ih
-    · exact ⟨Walk.nil, by simp⟩
-    · simp +zetaDelta at *
-      cases' ‹∃ w, _› with w hw
-      by_cases h : (⟦v⟧ : V / e) = ⟦p⟧
-      · grind
-      · have h_adj : (G / e).Adj ⟦v⟧ ⟦p⟧ := by
-          simp [_root_.SimpleGraph.contract]
-          grind
-        refine' ⟨ Walk.cons h_adj w, _ ⟩
-        simp_all [ Finset.subset_iff ]
-  rcases hfin with ⟨w, hw⟩
-  refine ⟨w, ?_⟩
-  intro z hz
-  have hzfin : z ∈ w.support.toFinset := List.mem_toFinset.mpr hz
-  have hzimg : z ∈ p.support.toFinset.image (π[e]) := hw hzfin
-  rcases Finset.mem_image.mp hzimg with ⟨a, ha, rfl⟩
-  exact List.mem_map.mpr ⟨a, List.mem_toFinset.mp ha, rfl⟩
+  induction p with
+  | nil => exact ⟨Walk.nil, by simp⟩
+  | cons h p ih =>
+    rename_i x y z
+    obtain ⟨w, hw⟩ := ih
+    by_cases this : (⟦x⟧ : V/e) = ⟦y⟧
+    · grind
+    · have hh : (G / e).Adj ⟦x⟧ ⟦y⟧ := by constructor ; exact this ; grind
+      exact ⟨w.cons hh, by simp_all⟩
 
 noncomputable abbrev contract_preimage (Y : Set (V / e)) : Set V := {v | ⟦v⟧ ∈ Y}
 
@@ -709,18 +699,12 @@ lemma disjoint_paths_prop_start (X B : Set V) (hX_fin : X.Finite)
 /-
 If p and q are paths that intersect only at the join point, their concatenation is a path.
 -/
-lemma Walk.IsPath_append_of_support_inter_subset_one {G : SimpleGraph V}
-  {u v w : V} (p : G.Walk u v) (q : G.Walk v w)
-  (hp : p.IsPath) (hq : q.IsPath)
-  (h_inter : p.support.toFinset ∩ q.support.toFinset ⊆ {v}) :
-  (p.append q).IsPath := by
-    have hpq_distinct : ∀ x ∈ p.support, x ≠ v → x ∉ q.support := by
-      intro x hx hxv hxq
-      specialize h_inter (Finset.mem_inter_of_mem (List.mem_toFinset.mpr hx) (List.mem_toFinset.mpr hxq))
-      aesop
-    cases p <;> cases q <;> simp_all [ Walk.isPath_def ];
-    simp_all [ Walk.support_append ]
-    rw [ List.nodup_append ] ; aesop
+lemma Walk.IsPath_append_of_support_inter_subset_one {p : G.Walk u v} {q : G.Walk v w}
+    (hp : p.IsPath) (hq : q.IsPath) (h_inter : ∀ z, z ∈ p.support → z ∈ q.support → z = v) :
+    (p.append q).IsPath := by
+  induction p with
+  | nil => simpa
+  | cons h p ih => aesop
 
 /-
 If p is an A-X path ending at x, and q is an X-B path starting at x, and both intersect X only at x, then their concatenation is a path.
@@ -731,19 +715,13 @@ lemma joined_path_is_path
   (p : G.ABPath A X.1) (h_p : p.v = x) (h_p_X : p.support ∩ X.1 = {x})
   (q : G.ABPath X.1 B) (h_q : q.u = x) (h_q_X : q.support ∩ X.1 = {x}) :
   ((p.p.1.copy rfl h_p).append (q.p.1.copy h_q rfl)).IsPath := by
-    have h_support_inter :
-        (p.p.1.copy rfl h_p).support.toFinset ∩ (q.p.1.copy h_q rfl).support.toFinset ⊆ {x} := by
-      have h := path_intersection_of_separator X p q
-        (by rw [show (p.v : V) = x from h_p]; exact h_p_X)
-        (by rw [show (q.u : V) = x from h_q]; exact h_q_X)
-      intro z hz
-      simp only [Finset.mem_inter, List.mem_toFinset] at hz
-      have hz' := h ⟨by simpa [Walk.support_copy] using hz.1, by simpa [Walk.support_copy] using hz.2⟩
-      simp [Set.mem_singleton_iff] at hz' ⊢
-      exact hz'.1.trans (by simpa using h_p)
-    apply_rules [ Walk.IsPath_append_of_support_inter_subset_one ]
+    apply Walk.IsPath_append_of_support_inter_subset_one
     · exact (p.p.1.isPath_copy rfl h_p).mpr p.p.2
     · exact (q.p.1.isPath_copy h_q rfl).mpr q.p.2
+    have h := path_intersection_of_separator X p q
+      (by rw [show (p.v : V) = x from h_p]; exact h_p_X)
+      (by rw [show (q.u : V) = x from h_q]; exact h_q_X)
+    aesop
 
 /-
 If X separates A and B, and we have k disjoint paths from A to X and k disjoint paths from X to B, then we can combine them to form k disjoint paths from A to B.
@@ -823,24 +801,19 @@ theorem disjoint_paths_join (X : G.Separator A B) (k : ℕ∞)
 /-
 If a walk is a path and the start is not the end, it can be decomposed into a prefix path avoiding the end vertex, and a final edge.
 -/
-lemma Walk.exists_prefix_path_of_path_ne {G : SimpleGraph V}
-  {u v : V} (p : G.Walk u v) (hp : p.IsPath) (h_ne : u ≠ v) :
-  ∃ (w : V) (q : G.Walk u w),
-    G.Adj w v ∧
-    q.IsPath ∧
-    v ∉ q.support ∧
-    q.support ⊆ p.support := by
-      simp +zetaDelta at *
-      induction' p with u v p ih
-      · contradiction
-      · rename_i h₁ h₂ h₃
-        by_cases h : p = ih
-        · aesop
-        · obtain ⟨ w, hw₁, q, hq₁, hq₂, hq₃ ⟩ := h₃ ( by
-            cases h₂ <;> aesop ) h;
-          refine' ⟨ w, hw₁, cons h₁ q, _, _, _ ⟩ <;> simp_all
-          · exact fun h => hp.2 ( by simpa using hq₃ ( by simpa using h ) )
-          · grind
+lemma Walk.exists_prefix_path_of_path_ne (p : G.Walk u v) (hp : p.IsPath) (h_ne : u ≠ v) :
+    ∃ (w : V) (q : G.Walk u w), G.Adj w v ∧ q.IsPath ∧ v ∉ q.support ∧ q.support ⊆ p.support := by
+  simp +zetaDelta at *
+  induction' p with u v p ih
+  · contradiction
+  · rename_i h₁ h₂ h₃
+    by_cases h : p = ih
+    · aesop
+    · obtain ⟨ w, hw₁, q, hq₁, hq₂, hq₃ ⟩ := h₃ ( by
+        cases h₂ <;> aesop ) h;
+      refine' ⟨ w, hw₁, cons h₁ q, _, _, _ ⟩ <;> simp_all
+      · exact fun h => hp.2 ( by simpa using hq₃ ( by simpa using h ) )
+      · grind
 
 /-
 If a path ends at a vertex whose projection is adjacent to the contracted vertex, and the path avoids the contracted edge's endpoints, it can be extended to one of the endpoints.
@@ -978,21 +951,21 @@ lemma join_paths_through_edge (e : G.Adj x y)
 /-
 A path can be split at any vertex in its support into two paths that intersect only at that vertex.
 -/
-lemma Walk.split_at_vertex {G : SimpleGraph V} {u v : V} (p : G.Walk u v) (hp : p.IsPath) (z : V) (hz : z ∈ p.support) :
+lemma Walk.split_at_vertex (p : G.Walk u v) (hp : p.IsPath) (z : V) (hz : z ∈ p.support) :
   ∃ (p1 : G.Walk u z) (p2 : G.Walk z v),
     p1.IsPath ∧ p2.IsPath ∧
     p1.support.toFinset ∩ p2.support.toFinset = {z} ∧
     p1.support.toFinset ∪ p2.support.toFinset = p.support.toFinset := by
-      simp +zetaDelta at *
-      obtain ⟨p1, p2, hp1, hp2, hp_split⟩ : ∃ p1 : G.Walk u z, ∃ p2 : G.Walk z v, p = p1.append p2 ∧ p1.IsPath ∧ p2.IsPath := by
-        exact ⟨ p.takeUntil z hz, p.dropUntil z hz, by rw [ Walk.take_spec ], by exact hp.takeUntil _, by exact hp.dropUntil _ ⟩
-      refine' ⟨ p1, hp2, p2, hp_split, _, _ ⟩ <;> simp_all [ Finset.ext_iff ];
-      intro a; constructor <;> intro ha ; simp_all [ Walk.isPath_def ] ;
-      · induction' p1 with u' p1 ih generalizing a ; induction' p2 with v' p2 ih' ; aesop
-        · aesop
-        · simp_all [ Walk.support ]
-          grind +ring
-      · aesop
+  simp +zetaDelta at *
+  obtain ⟨p1, p2, hp1, hp2, hp_split⟩ : ∃ p1 : G.Walk u z, ∃ p2 : G.Walk z v, p = p1.append p2 ∧ p1.IsPath ∧ p2.IsPath := by
+    exact ⟨ p.takeUntil z hz, p.dropUntil z hz, by rw [ Walk.take_spec ], by exact hp.takeUntil _, by exact hp.dropUntil _ ⟩
+  refine' ⟨ p1, hp2, p2, hp_split, _, _ ⟩ <;> simp_all [ Finset.ext_iff ];
+  intro a; constructor <;> intro ha ; simp_all [ Walk.isPath_def ] ;
+  · induction' p1 with u' p1 ih generalizing a ; induction' p2 with v' p2 ih' ; aesop
+    · aesop
+    · simp_all [ Walk.support ]
+      grind +ring
+  · aesop
 
 /-
 If two sets in the contracted graph are disjoint away from the contracted vertex, their preimages in the original graph are disjoint away from the endpoints of the contracted edge.
@@ -1225,7 +1198,7 @@ lemma adjust_path_end_to_B {B : Set V} (e : G.Adj x y)
           rw [ Quotient.eq, contractSetoid ]
           grind
         refine ⟨ x, p.append ( Walk.cons e.symm Walk.nil ), hx, ?_, ?_ ⟩
-        · refine Walk.IsPath_append_of_support_inter_subset_one _ _ hp_path ?_ ?_
+        · refine Walk.IsPath_append_of_support_inter_subset_one hp_path ?_ ?_
           · aesop
           · rw [ Finset.eq_singleton_iff_unique_mem ] at hp_support ; aesop
         · simp_all [ Finset.subset_iff ]
