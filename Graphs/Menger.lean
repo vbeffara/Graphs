@@ -879,8 +879,8 @@ lemma lift_path_to_contraction_end {A : Set V} (e : G.Adj x y)
     subst hz_v
     have h_end : (⟦x⟧ : V / e) ∈ p'.support := p'.end_mem_support
     rcases hv with rfl | rfl
-    · simpa using h_end
-    · simpa [contract_same (e := e)] using h_end
+    · simp
+    · simp [contract_same (e := e)]
 
 /-
 A path in the contracted graph starting at the contracted vertex can be lifted to a path in the original graph starting at one of the contracted edge's endpoints.
