@@ -116,6 +116,29 @@ lemma join_paths_through_edge (e : G.Adj x y) {u1 v1 u2 v2 : V} (p1 : G.Walk u1 
     apply (support_bypass_subset _).trans
     intro a ; simp ; grind [p1.end_mem_support]
 
+theorem support_inter_support (hp : (p.append q).IsPath) (ha : x ∈ p.support ∧ x ∈ q.support) :
+    x = v := by
+  replace hp := hp.2
+  by_contra!
+  suffices x ∈ q.support.tail by grind [Walk.support_append, List.nodup_append]
+  cases q <;> simp_all
+
+/-
+A path can be split at any vertex in its support into two paths that intersect only at that vertex.
+-/
+lemma split_at_vertex (hp : p.IsPath) {z : V} (hz : z ∈ p.support) :
+    ∃ (p1 : G.Walk u z) (p2 : G.Walk z v), p1.IsPath ∧ p2.IsPath ∧
+      p1.support.toFinset ∩ p2.support.toFinset = {z} ∧
+      p1.support.toFinset ⊆ p.support.toFinset ∧
+      p2.support.toFinset ⊆ p.support.toFinset := by
+  rw [← p.take_spec hz]
+  refine ⟨_, _, hp.takeUntil hz, hp.dropUntil hz, ?_, ?_, ?_⟩
+  · simp [Finset.ext_iff] ; intro a ; constructor
+    · apply Walk.support_inter_support ; simpa
+    · simp +contextual
+  · intro a ; simp ; grind [Walk.support_takeUntil_subset]
+  · intro a ; simp ; grind [Walk.support_dropUntil_subset]
+
 end Walk
 
 end SimpleGraph

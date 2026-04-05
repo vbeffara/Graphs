@@ -752,26 +752,6 @@ lemma lift_path_from_contraction_start {B : Set V} (e : G.Adj x y)
 
 -- XXX Take basic things to Menger/Basic.lean
 
-theorem Walk.support_inter_support {p1 : G.Walk u z} {p2 : G.Walk z v} (hp : (p1.append p2).support.Nodup)
-    (ha : x ∈ p1.support ∧ x ∈ p2.support) : x = z := by
-  by_contra!
-  suffices x ∈ p2.support.tail by grind [Walk.support_append, List.nodup_append]
-  cases p2 <;> simp_all
-
-/-
-A path can be split at any vertex in its support into two paths that intersect only at that vertex.
--/
-lemma Walk.split_at_vertex {p : G.Walk u v} (hp : p.IsPath) {z : V} (hz : z ∈ p.support) :
-    ∃ (p1 : G.Walk u z) (p2 : G.Walk z v), p1.IsPath ∧ p2.IsPath ∧
-      p1.support.toFinset ∩ p2.support.toFinset = {z} ∧
-      p1.support.toFinset ∪ p2.support.toFinset = p.support.toFinset := by
-  rw [← p.take_spec hz]
-  refine ⟨_, _, hp.takeUntil hz, hp.dropUntil hz, ?_, ?_⟩
-  · simp [Finset.ext_iff] ; intro a ; constructor
-    · apply Walk.support_inter_support ; simp ; exact hp.support_nodup
-    · simp +contextual
-  · simp [-Walk.take_spec, Finset.ext_iff]
-
 /-
 If two sets in the contracted graph are disjoint away from the contracted vertex, their preimages in the original graph are disjoint away from the endpoints of the contracted edge.
 -/
@@ -847,7 +827,8 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
     p.support.map (π[e]) ⊆ p'.support := by
       have h_split : ∃ (p1' : (G / e).Walk u' ⟦x⟧) (p2' : (G / e).Walk ⟦x⟧ v'), p1'.IsPath ∧ p2'.IsPath ∧
           p1'.support.toFinset ∩ p2'.support.toFinset = {⟦x⟧} ∧
-          p1'.support.toFinset ∪ p2'.support.toFinset = p'.support.toFinset := by
+          p1'.support.toFinset ⊆ p'.support.toFinset ∧
+          p2'.support.toFinset ⊆ p'.support.toFinset := by
         convert Walk.split_at_vertex hp'_path h_ve_mem
       obtain ⟨p1', p2', hp1'_path, hp2'_path, h_inter, h_union⟩ := h_split
       obtain ⟨u_start, u_end, p1, v_start, v_end, p2, hu_start_A, hv_end_B, hu_end_xy, hv_start_xy,
@@ -863,11 +844,12 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
       rcases List.mem_union_iff.mp hw_fin with h1 | h2
       · have hw1 : π[e] w ∈ p1'.support := hp1_sub (by grind)
         have : π[e] w ∈ p'.support.toFinset := by
-          exact h_union ▸ Finset.mem_union.mpr (Or.inl (List.mem_toFinset.mpr hw1))
+          apply h_union.1 ; simpa using hw1
         exact List.mem_toFinset.mp this
       · have hw2 : π[e] w ∈ p2'.support := hp2_sub (by grind)
         have : π[e] w ∈ p'.support.toFinset := by
-          exact h_union ▸ Finset.mem_union.mpr (Or.inr (List.mem_toFinset.mpr hw2))
+          apply h_union.2
+          simpa using hw2
         exact List.mem_toFinset.mp this
 
 /-
