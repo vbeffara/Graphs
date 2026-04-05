@@ -128,12 +128,10 @@ A path can be split at any vertex in its support into two paths that intersect o
 -/
 lemma split_at_vertex (hp : p.IsPath) {z : V} (hz : z ∈ p.support) :
     ∃ (p1 : G.Walk u z) (p2 : G.Walk z v), p1.IsPath ∧ p2.IsPath ∧
-      p1.support.toFinset ∩ p2.support.toFinset ⊆ {z} ∧
-      p1.support ⊆ p.support ∧
-      p2.support ⊆ p.support := by
+      p1.support ∩ p2.support ⊆ {z} ∧ p1.support ⊆ p.support ∧ p2.support ⊆ p.support := by
   rw [← p.take_spec hz]
   refine ⟨_, _, hp.takeUntil hz, hp.dropUntil hz, ?_, ?_, ?_⟩
-  · intro a ha ; simp only [Finset.mem_inter, List.mem_toFinset] at ha
+  · intro a ha ; simp [List.singleton_eq] at ha ⊢
     simpa using Walk.support_inter_support (by simpa) ha
   · intro a ; simp ; grind [Walk.support_takeUntil_subset]
   · intro a ; simp ; grind [Walk.support_dropUntil_subset]
