@@ -855,7 +855,7 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
         lift_split_paths (A := A) (B := B) h_inter h_u_ne h_v_ne hu' hv'
       obtain ⟨q, hq_path, hq_sub⟩ : ∃ q : G.Walk u_start v_end,
           q.IsPath ∧ q.support ⊆ p1.support ∪ p2.support := by
-        exact Walk.join_paths_through_edge e hp1_path hp2_path hu_end_xy hv_start_xy hp1_xy hp2_xy h_disjoint
+        exact Walk.join_paths_through_edge e p1 p2 hu_end_xy hv_start_xy
       refine ⟨u_start, v_end, q, hu_start_A, hv_end_B, hq_path, ?_⟩
       intro z hz
       rcases List.mem_map.mp hz with ⟨w, hw, rfl⟩
