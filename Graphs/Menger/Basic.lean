@@ -104,6 +104,26 @@ lemma exists_prefix_path_of_ne (p : G.Walk u v) (h_ne : u ≠ v) : ∃ (w : V) (
       · grind [support_bypass_subset]
       · simp ; grind [support_bypass_subset]
 
+/-
+Two paths ending and starting at the endpoints of an edge can be joined into a single path if they are otherwise disjoint and avoid the edge's endpoints internally.
+-/
+lemma join_paths_through_edge (e : G.Adj x y)
+    {u1 v1 : V} {p1 : G.Walk u1 v1} (hp1_path : p1.IsPath)
+    {u2 v2 : V} {p2 : G.Walk u2 v2} (hp2_path : p2.IsPath)
+    (hv1 : v1 = x ∨ v1 = y)
+    (hu2 : u2 = x ∨ u2 = y)
+    (hp1 : ∀ z ∈ p1.support, z ∈ ({x, y} : Set V) → z = v1)
+    (hp2 : ∀ z ∈ p2.support, z ∈ ({x, y} : Set V) → z = u2)
+    (h12 : ∀ w ∈ p1.support, w ∈ p2.support → w = x ∨ w = y) :
+    ∃ (q : G.Walk u1 v2), q.IsPath ∧ q.support ⊆ p1.support ∪ p2.support := by
+  obtain (rfl | h) := eq_or_ne v1 u2
+  · exact ⟨p1.append p2, isPath_append_of_inter hp1_path hp2_path (by grind), fun v => by simp⟩
+  · have e' : G.Adj v1 u2 := by grind [adj_comm]
+    have : (v1 = x ∧ u2 = y ∨ v1 = y ∧ u2 = x) := by grind
+    refine ⟨p1.append (Walk.cons e' p2), ?_, ?_⟩
+    · simp [Walk.isPath_def, Walk.support_append] at * ; grind [p1.end_mem_support]
+    · intro a ; simp ; grind [p1.end_mem_support]
+
 end Walk
 
 end SimpleGraph

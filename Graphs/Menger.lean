@@ -673,8 +673,6 @@ theorem disjoint_paths_join (X : G.Separator A B) (k : ℕ∞)
         h_inj.injOn.encard_image]; simp [hX_card]
   exact ⟨⟨Set.range joinPath, h_disj⟩, h_card⟩
 
--- XXX Take basic things to Menger/Basic.lean
-
 /-
 If a path ends at a vertex whose projection is adjacent to the contracted vertex, and the path avoids the contracted edge's endpoints, it can be extended to one of the endpoints.
 -/
@@ -752,29 +750,7 @@ lemma lift_path_from_contraction_start {B : Set V} (e : G.Adj x y)
         simpa [Walk.support_reverse, List.mem_reverse] using hproj
       · simpa [Walk.support_reverse] using hp_xy
 
-/-
-Two paths ending and starting at the endpoints of an edge can be joined into a single path if they are otherwise disjoint and avoid the edge's endpoints internally.
--/
-lemma join_paths_through_edge (e : G.Adj x y) {u_start u_end v_start v_end : V}
-    {p1 : G.Walk u_start u_end} {p2 : G.Walk v_start v_end} (hp1_path : p1.IsPath) (hp2_path : p2.IsPath)
-    (hu_end : u_end = x ∨ u_end = y) (hv_start : v_start = x ∨ v_start = y)
-    (hp1_end : ∀ z ∈ p1.support, z ∈ ({x, y} : Set V) → z = u_end)
-    (hp2_start : ∀ z ∈ p2.support, z ∈ ({x, y} : Set V) → z = v_start)
-    (h_disjoint : ∀ w ∈ p1.support, w ∈ p2.support → w = x ∨ w = y) :
-    ∃ (q : G.Walk u_start v_end), q.IsPath ∧ q.support ⊆ p1.support ∪ p2.support := by
-  by_cases h_cases : u_end = v_start
-  · refine' ⟨ p1.append ( h_cases ▸ p2 ), _, _ ⟩ <;> simp_all
-    · apply Walk.isPath_append_of_inter
-      · assumption
-      · aesop
-      · intro v hv; simp_all
-        grind
-    · intro v hv; aesop
-  · obtain ⟨h_edge, h_cases⟩ : G.Adj u_end v_start ∧ (u_end = x ∧ v_start = y ∨ u_end = y ∧ v_start = x) := by
-      cases hu_end <;> cases hv_start <;> simp_all [ adj_comm ];
-    use p1.append (Walk.cons h_edge p2)
-    simp_all [ Walk.isPath_def , Walk.support_append ]
-    grind [p1.end_mem_support]
+-- XXX Take basic things to Menger/Basic.lean
 
 theorem Walk.support_inter_support {p1 : G.Walk u z} {p2 : G.Walk z v} (hp : (p1.append p2).support.Nodup)
     (ha : x ∈ p1.support ∧ x ∈ p2.support) : x = z := by
@@ -879,7 +855,7 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
         lift_split_paths (A := A) (B := B) h_inter h_u_ne h_v_ne hu' hv'
       obtain ⟨q, hq_path, hq_sub⟩ : ∃ q : G.Walk u_start v_end,
           q.IsPath ∧ q.support ⊆ p1.support ∪ p2.support := by
-        exact join_paths_through_edge e hp1_path hp2_path hu_end_xy hv_start_xy hp1_xy hp2_xy h_disjoint
+        exact Walk.join_paths_through_edge e hp1_path hp2_path hu_end_xy hv_start_xy hp1_xy hp2_xy h_disjoint
       refine ⟨u_start, v_end, q, hu_start_A, hv_end_B, hq_path, ?_⟩
       intro z hz
       rcases List.mem_map.mp hz with ⟨w, hw, rfl⟩
