@@ -787,11 +787,9 @@ lemma lift_split_paths {u' v' : V / e} {p1' : (G / e).Walk u' ⟦x⟧} {p2' : (G
       (({q | q ∈ p2'.support} : Set (V/e)) \ {⟦x⟧}) := by
     rw [Set.disjoint_left]
     intro z ⟨hz1, hz_ne⟩ ⟨hz2, _⟩
-    have : z ∈ p1'.support.toFinset ∩ p2'.support.toFinset :=
-      Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hz1, List.mem_toFinset.mpr hz2⟩
-    simp only [Finset.mem_inter, List.mem_toFinset, ← List.mem_inter_iff] at this
-    have := h_inter this
-    exact hz_ne (Finset.mem_singleton.mp this ▸ Set.mem_singleton _)
+    have : z ∈ p1'.support ∩ p2'.support := by simpa using ⟨hz1, hz2⟩
+    apply hz_ne
+    simpa [List.singleton_eq] using h_inter this
   have h_preimage_disj := contract_preimage_disjoint_away_from_endpoints e _ _ h_disj_sets
   intro z hz1 hz2
   have h1 : ⟦z⟧ ∈ p1'.support := by grind
