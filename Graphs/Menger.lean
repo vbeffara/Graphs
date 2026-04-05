@@ -11,7 +11,7 @@ set_option maxHeartbeats 0
 
 open Classical Set
 
-variable {V W : Type*} {G : SimpleGraph V} {x y u v w : V} {e : G.Adj x y} {A B X : Set V} {n : ℕ}
+variable {V W : Type*} {G : SimpleGraph V} {x y z u v w : V} {p : G.Walk u v} {e : G.Adj x y} {A B X : Set V} {n : ℕ}
 
 namespace SimpleGraph
 
@@ -902,18 +902,11 @@ lemma join_paths_through_edge (e : G.Adj x y) {u_start u_end v_start v_end : V}
     ∃ (q : G.Walk u_start v_end), q.IsPath ∧ q.support ⊆ p1.support ∪ p2.support := by
   by_cases h_cases : u_end = v_start
   · refine' ⟨ p1.append ( h_cases ▸ p2 ), _, _ ⟩ <;> simp_all
-    · have h_concat_path : (p1.append (h_cases ▸ p2)).IsPath := by
-        have h_disjoint : Disjoint (p1.support.toFinset \ {v_start}) (p2.support.toFinset \ {v_start}) := by
-          simp_all [ Finset.disjoint_left ]
-          intro a ha ha' ha''
-          specialize h_disjoint _ ha
-          simp_all
-        apply Walk.IsPath_append_of_support_inter_subset_one
-        · assumption
-        · aesop
-        · intro v hv; simp_all [ Finset.disjoint_left ]
-          grind
-      exact h_concat_path
+    · apply Walk.IsPath_append_of_support_inter_subset_one
+      · assumption
+      · aesop
+      · intro v hv; simp_all
+        grind
     · intro v hv; aesop
   · obtain ⟨h_edge, h_cases⟩ : G.Adj u_end v_start ∧ (u_end = x ∧ v_start = y ∨ u_end = y ∧ v_start = x) := by
       cases hu_end <;> cases hv_start <;> simp_all [ adj_comm ];
@@ -921,24 +914,26 @@ lemma join_paths_through_edge (e : G.Adj x y) {u_start u_end v_start v_end : V}
     simp_all [ Walk.isPath_def , Walk.support_append ]
     grind [p1.end_mem_support]
 
+theorem Walk.support_inter_support {p1 : G.Walk u z} {p2 : G.Walk z v} (hp : (p1.append p2).support.Nodup)
+    (ha : x ∈ p1.support ∧ x ∈ p2.support) : x = z := by
+  by_contra!
+  suffices x ∈ p2.support.tail by grind [Walk.support_append, List.nodup_append]
+  cases p2 <;> simp_all
+
 /-
 A path can be split at any vertex in its support into two paths that intersect only at that vertex.
 -/
-lemma Walk.split_at_vertex (p : G.Walk u v) (hp : p.IsPath) (z : V) (hz : z ∈ p.support) :
-  ∃ (p1 : G.Walk u z) (p2 : G.Walk z v),
-    p1.IsPath ∧ p2.IsPath ∧
-    p1.support.toFinset ∩ p2.support.toFinset = {z} ∧
-    p1.support.toFinset ∪ p2.support.toFinset = p.support.toFinset := by
-  simp +zetaDelta at *
-  obtain ⟨p1, p2, hp1, hp2, hp_split⟩ : ∃ p1 : G.Walk u z, ∃ p2 : G.Walk z v, p = p1.append p2 ∧ p1.IsPath ∧ p2.IsPath := by
-    exact ⟨ p.takeUntil z hz, p.dropUntil z hz, by rw [ Walk.take_spec ], by exact hp.takeUntil _, by exact hp.dropUntil _ ⟩
-  refine' ⟨ p1, hp2, p2, hp_split, _, _ ⟩ <;> simp_all [ Finset.ext_iff ];
-  intro a; constructor <;> intro ha ; simp_all [ Walk.isPath_def ] ;
-  · induction' p1 with u' p1 ih generalizing a ; induction' p2 with v' p2 ih' ; aesop
-    · aesop
-    · simp_all [ Walk.support ]
-      grind +ring
-  · aesop
+lemma Walk.split_at_vertex {p : G.Walk u v} (hp : p.IsPath) {z : V} (hz : z ∈ p.support) :
+    ∃ (p1 : G.Walk u z) (p2 : G.Walk z v), p1.IsPath ∧ p2.IsPath ∧
+      p1.support.toFinset ∩ p2.support.toFinset = {z} ∧
+      p1.support.toFinset ∪ p2.support.toFinset = p.support.toFinset := by
+  rw [← p.take_spec hz]
+  refine ⟨_, _, hp.takeUntil hz, hp.dropUntil hz, ?_, ?_⟩
+  · simp [Finset.ext_iff] ; intro a ; constructor
+    · apply Walk.support_inter_support ; simp ; exact hp.support_nodup
+    · simp +contextual
+  · simp [-Walk.take_spec, Finset.ext_iff]
+
 
 /-
 If two sets in the contracted graph are disjoint away from the contracted vertex, their preimages in the original graph are disjoint away from the endpoints of the contracted edge.
@@ -1020,7 +1015,7 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
         p2'.IsPath ∧
         p1'.support.toFinset ∩ p2'.support.toFinset = {⟦x⟧} ∧
         p1'.support.toFinset ∪ p2'.support.toFinset = p'.support.toFinset := by
-          have := Walk.split_at_vertex p' hp'_path _ h_ve_mem
+          have := Walk.split_at_vertex hp'_path h_ve_mem
           obtain ⟨p1, p2, hp1, hp2, h1, h2⟩ := this
           refine ⟨p1, p2, hp1, hp2, ?_, ?_⟩
           convert h1 ; convert h2
