@@ -4,7 +4,7 @@ import Graphs.Util
 import Graphs.Separation
 import Mathlib.Combinatorics.SimpleGraph.Paths
 
-variable {V : Type*} {G : SimpleGraph V} {u v w x y z : V} {p : G.Walk u v} {X : Set V}
+variable {V : Type*} {G : SimpleGraph V} {u v w x y z : V} {p : G.Walk u v} {q : G.Walk v w} {A B X : Set V}
 
 open Classical
 
@@ -61,14 +61,34 @@ lemma exists_path_prefix_avoiding_set {X : Set V} {p : G.Walk u v} (h : ∃ w �
   obtain ⟨w', q, hw'X, hq_support, hq_unique⟩ := p.exists_walk_prefix_avoiding_set h
   refine ⟨w', q.bypass, hw'X, q.bypass_isPath, ?_, ?_⟩ <;> grind [q.support_bypass_subset]
 
+lemma start_notMem_support_dropUntil (hp : p.IsPath) (hw : w ∈ p.support) (h : u ≠ w) :
+    u ∉ (p.dropUntil w hw).support := by
+  cases p with
+  | nil => simp at hw ; grind
+  | cons e p =>
+    contrapose hp ; simp [Walk.dropUntil, h] at hp ; simp [h.symm] at hw ; simp [p.support_dropUntil_subset hw hp]
+
 lemma prefix_avoids_X (hp : p.IsPath) (hp_X : {z | z ∈ p.support} ∩ X = {v}) (hz : z ∈ p.support)
     (hzX : z ∉ X) : ({a | a ∈ (p.takeUntil z hz).support} : Set V) ∩ X = ∅ := by
-  simp [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_and]
+  simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_and]
   intro a ha haX
   have ha_support : a ∈ p.support := p.support_takeUntil_subset hz ha
   have h1 : a ∈ {z | z ∈ p.support} ∩ X := ⟨ha_support, haX⟩
   simp [hp_X] at h1 ; subst a
   exact p.endpoint_notMem_support_takeUntil hp hz (by grind) ha
+
+lemma suffix_avoids_X (hp : p.IsPath) (hp_X : {z | z ∈ p.support} ∩ X = {u}) (hz : z ∈ p.support)
+    (hzX : z ∉ X) : ({a | a ∈ (p.dropUntil z hz).support} : Set V) ∩ X = ∅ := by
+  simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_and]
+  intro a ha haX
+  have ha_support : a ∈ p.support := p.support_dropUntil_subset hz ha
+  have h1 : a ∈ {x | x ∈ p.support} ∩ X := ⟨ha_support, haX⟩
+  simp [hp_X] at h1 ; subst a
+  exact Walk.start_notMem_support_dropUntil hp hz (by grind) ha
+
+lemma isPath_append_of_inter (hp : p.IsPath) (hq : q.IsPath)
+    (h_inter : ∀ z ∈ p.support, z ∈ q.support → z = v) : (p.append q).IsPath := by
+  induction p <;> aesop
 
 end Walk
 

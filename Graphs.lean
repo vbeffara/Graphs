@@ -7,6 +7,7 @@ import Graphs.GMT_bounded_tw
 import Graphs.GraphMinorTheorem
 import Graphs.Map
 import Graphs.Menger
+import Graphs.Menger.Basic
 import Graphs.Minor
 import Graphs.PlanarMap
 import Graphs.QuasiMin

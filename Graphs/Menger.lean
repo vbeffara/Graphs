@@ -525,50 +525,6 @@ lemma disjoint_paths_prop (hX_fin : X.Finite) {P : G.Joiner A X} (hP_card : P.1.
   exact Set.disjoint_left.mp (P.2 hp hqP hneq) (show z ∈ p.support from hzP)
     (show z ∈ q.support from by simp only [ABPath.support, Set.mem_setOf_eq]; rw [← hqv]; exact q.p.1.end_mem_support)
 
--- XXX Take basic things to Menger/Basic.lean
-
-/-
-If an A-X path intersects X only at its endpoint, then any prefix ending at a vertex not in X avoids X entirely.
--/
-lemma ABPath_prefix_avoids_X (p : G.ABPath A X) (hp_X : p.support ∩ X = {p.v.1}) (hz : z ∈ p.p.1.support)
-    (hzX : z ∉ X) : ({a | a ∈ (p.p.1.takeUntil z hz).support} : Set V) ∩ X = ∅ :=
-  Walk.prefix_avoids_X p.p.2 hp_X hz hzX
-
-/-
-If a walk is a path, and we drop the prefix until a vertex w (where w is not the start), then the start vertex is not in the remaining suffix.
--/
-lemma Walk.start_notMem_support_dropUntil {p : G.Walk u v} (hp : p.IsPath) (hw : w ∈ p.support) (h : u ≠ w) :
-    u ∉ (p.dropUntil w hw).support := by
-  cases p with
-  | nil => simp at hw ; grind
-  | cons e p =>
-    contrapose hp ; simp [Walk.dropUntil, h] at hp ; simp [h.symm] at hw ; simp [p.support_dropUntil_subset hw hp]
-
-/-
-If an X-B path intersects X only at its start point, then any suffix starting at a vertex not in X avoids X entirely.
--/
-lemma ABPath_suffix_avoids_X {B X : Set V} (q : G.ABPath X B)
-  (hq_X : q.support ∩ X = {q.u.1})
-  (z : V)
-  (hz : z ∈ q.p.1.support)
-  (hzX : z ∉ X) :
-  ({a | a ∈ (q.p.1.dropUntil z hz).support} : Set V) ∩ X = ∅ := by
-    simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_and]
-    intro a ha haX
-    have ha_support : a ∈ q.p.1.support :=
-      q.p.1.support_dropUntil_subset hz ha
-    have ha_eq : a = q.u.1 := by
-      have h1 : a ∈ q.support ∩ X := ⟨ha_support, haX⟩
-      rw [hq_X] at h1
-      exact h1
-    rw [ha_eq] at ha
-    have : q.u.1 ≠ z := by
-      intro heq; rw [← heq] at hzX
-      have : q.u.1 ∈ q.support ∩ X := by rw [hq_X]; rfl
-      exact hzX this.2
-    exact (Walk.start_notMem_support_dropUntil q.p.2 hz this)
-      ha
-
 /-
 If X separates A and B, and p is an A-X path hitting X only at the end, and q is an X-B path hitting X only at the start, then p and q intersect only at their common endpoint in X (if any).
 -/
@@ -586,8 +542,8 @@ lemma path_intersection_of_separator (X : G.Separator A B) (p : G.ABPath A X.1)
     · have h2 : z ∈ q.support ∩ X.1 := ⟨hz.2, hzX⟩
       rw [hq_X] at h2; exact h2
   · exfalso
-    have hw1 := ABPath_prefix_avoids_X p hp_X hz.1 hzX
-    have hw2 := ABPath_suffix_avoids_X q hq_X z hz.2 hzX
+    have hw1 := Walk.prefix_avoids_X p.p.2 hp_X hz.1 hzX
+    have hw2 := Walk.suffix_avoids_X q.p.2 hq_X hz.2 hzX
     have h_walk := X.2 p.u.1 p.u.2 q.v.1 q.v.2
       ((p.p.1.takeUntil z hz.1).append (q.p.1.dropUntil z hz.2))
     obtain ⟨w, hw_mem, hw_X⟩ := h_walk
@@ -631,29 +587,18 @@ lemma disjoint_paths_prop_start (X B : Set V) (hX_fin : X.Finite)
     exact ⟨p, ⟨hp₁, hp₂, h_path_X x hx p hp₁ hp₂⟩,
       fun q ⟨hq1, hq2, _⟩ => (h_distinct_start hp₁ hq1 (show p.u.1 = q.u.1 by rw [hp₂, hq2])).symm⟩
 
-/-
-If p and q are paths that intersect only at the join point, their concatenation is a path.
--/
-lemma Walk.IsPath_append_of_support_inter_subset_one {p : G.Walk u v} {q : G.Walk v w} (hp : p.IsPath)
-    (hq : q.IsPath) (h_inter : ∀ z ∈ p.support, z ∈ q.support → z = v) : (p.append q).IsPath := by
-  induction p <;> aesop
+-- XXX Take basic things to Menger/Basic.lean
 
 /-
 If p is an A-X path ending at x, and q is an X-B path starting at x, and both intersect X only at x, then their concatenation is a path.
 -/
-lemma joined_path_is_path
-  (X : G.Separator A B)
-  (x : V)
-  (p : G.ABPath A X.1) (h_p : p.v = x) (h_p_X : p.support ∩ X.1 = {x})
-  (q : G.ABPath X.1 B) (h_q : q.u = x) (h_q_X : q.support ∩ X.1 = {x}) :
-  ((p.p.1.copy rfl h_p).append (q.p.1.copy h_q rfl)).IsPath := by
-    apply Walk.IsPath_append_of_support_inter_subset_one
-    · exact (p.p.1.isPath_copy rfl h_p).mpr p.p.2
-    · exact (q.p.1.isPath_copy h_q rfl).mpr q.p.2
-    have h := path_intersection_of_separator X p q
-      (by rw [show (p.v : V) = x from h_p]; exact h_p_X)
-      (by rw [show (q.u : V) = x from h_q]; exact h_q_X)
-    aesop
+lemma joined_path_is_path (X : G.Separator A B)
+    (p : G.ABPath A X.1) (h_p : p.v = x) (h_p_X : p.support ∩ X.1 = {x})
+    (q : G.ABPath X.1 B) (h_q : q.u = x) (h_q_X : q.support ∩ X.1 = {x}) :
+    ((p.p.1.copy rfl h_p).append (q.p.1.copy h_q rfl)).IsPath := by
+  apply Walk.isPath_append_of_inter (by simp) (by simp)
+  have h := path_intersection_of_separator X p q (by grind) (by grind)
+  aesop
 
 /-
 If X separates A and B, and we have k disjoint paths from A to X and k disjoint paths from X to B, then we can combine them to form k disjoint paths from A to B.
@@ -674,7 +619,7 @@ theorem disjoint_paths_join (X : G.Separator A B) (k : ℕ∞)
   let joinPath : X.1 → G.ABPath A B := fun ⟨x, hx⟩ =>
     ⟨(pa x hx).u, (qb x hx).v,
      (pa x hx).p.1.copy rfl (hpa_end x hx) |>.append ((qb x hx).p.1.copy (hqb_start x hx) rfl),
-     joined_path_is_path X x (pa x hx) (hpa_end x hx) (hpa_inter x hx)
+     joined_path_is_path X (pa x hx) (hpa_end x hx) (hpa_inter x hx)
                            (qb x hx) (hqb_start x hx) (hqb_inter x hx)⟩
   -- Membership in join support decomposes into sub-path supports
   have h_mem_join : ∀ (x : V) (hx : x ∈ X.1) (z : V),
@@ -837,7 +782,7 @@ lemma join_paths_through_edge (e : G.Adj x y) {u_start u_end v_start v_end : V}
     ∃ (q : G.Walk u_start v_end), q.IsPath ∧ q.support ⊆ p1.support ∪ p2.support := by
   by_cases h_cases : u_end = v_start
   · refine' ⟨ p1.append ( h_cases ▸ p2 ), _, _ ⟩ <;> simp_all
-    · apply Walk.IsPath_append_of_support_inter_subset_one
+    · apply Walk.isPath_append_of_inter
       · assumption
       · aesop
       · intro v hv; simp_all
@@ -1080,7 +1025,7 @@ lemma adjust_path_end_to_B {p : G.Walk u v} (hp_path : p.IsPath) (hv : v = x ∨
           rw [ Quotient.eq, contractSetoid ]
           grind
         refine ⟨ x, p.append ( Walk.cons e.symm Walk.nil ), hx, ?_, ?_ ⟩
-        · refine Walk.IsPath_append_of_support_inter_subset_one hp_path ?_ ?_
+        · refine Walk.isPath_append_of_inter hp_path ?_ ?_
           · aesop
           · simp ; grind
         · simp_all [ Finset.subset_iff ]
