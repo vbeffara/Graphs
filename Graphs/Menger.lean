@@ -1,5 +1,6 @@
 import Architect
 import Graphs.Map
+import Graphs.Menger.Basic
 import Graphs.Util
 import Graphs.Separation
 import Mathlib.Algebra.Order.Ring.Star
@@ -468,56 +469,6 @@ lemma contract_encard_lt (hfin : G.edgeSet.Finite) : (G / e).edgeSet.encard < G.
     _ < G.edgeSet.encard :=
         (hfin.subset Set.diff_subset).encard_lt_encard (Set.diff_singleton_ssubset.mpr e)
 
-lemma Walk.edges_no_xy_of_support_inter_subset_one {p : G.Walk u v} (hxy : x ≠ y)
-    (h : ({a | a ∈ p.support} : Set V) ∩ {x, y} ⊆ ({v} : Set V)) :
-    s(x, y) ∉ p.edges := by
-  intro hxy_mem
-  have hx_support : x ∈ p.support := p.fst_mem_support_of_mem_edges hxy_mem
-  have hy_support : y ∈ p.support := p.snd_mem_support_of_mem_edges hxy_mem
-  have hxv : x = v := Set.mem_singleton_iff.mp (h ⟨hx_support, by simp⟩)
-  have hyv : y = v := Set.mem_singleton_iff.mp (h ⟨hy_support, by simp⟩)
-  exact hxy (hxv.trans hyv.symm)
-
-noncomputable def Walk.firstVisit (X : Set V) : ∀ {u v} (p : G.Walk u v), (∃ w ∈ p.support, w ∈ X) → V
-  | u, _, Walk.nil, hp => u
-  | u, v, Walk.cons h p, hp => if h : u ∈ X then u else p.firstVisit X (by grind)
-
-theorem firstVisit_mem_support {X : Set V} {p : G.Walk u v} {hp : ∃ w ∈ p.support, w ∈ X} :
-    p.firstVisit X hp ∈ p.support := by
-  induction' p ; simp [Walk.firstVisit] ; grind [Walk.firstVisit]
-
-theorem firstVisit_mem_X {X : Set V} {p : G.Walk u v} {hp : ∃ w ∈ p.support, w ∈ X} :
-    p.firstVisit X hp ∈ X := by
-  induction' p ; simpa [Walk.firstVisit] using hp ; grind [Walk.firstVisit]
-
-theorem firstVisit_mem_takeUntil {X : Set V} {p : G.Walk u v} (h1 : w ∈ p.support) (h2 : w ∈ X) :
-    p.firstVisit X ⟨w, h1, h2⟩ ∈ (p.takeUntil _ h1).support := by
-  induction' p with u u ; simp [Walk.firstVisit, Walk.takeUntil]
-  by_cases h3 : u ∈ X ; simp [Walk.firstVisit, Walk.takeUntil, h3]
-  grind [Walk.firstVisit, Walk.takeUntil]
-
-noncomputable def Walk.takeUntilFirst (X : Set V) (p : G.Walk u v) (hp : ∃ w ∈ p.support, w ∈ X) :
-    G.Walk u (p.firstVisit X hp) :=
-  p.takeUntil _ firstVisit_mem_support
-
-theorem takeUntilFirst_subset_support {X : Set V} {p : G.Walk u v} {hp : ∃ w ∈ p.support, w ∈ X} :
-    (p.takeUntilFirst X hp).support ⊆ p.support :=
-  (Walk.isSubwalk_takeUntil _ _).support_subset
-
-lemma Walk.exists_walk_prefix_avoiding_set {X : Set V} {p : G.Walk u v} (hp : ∃ w ∈ p.support, w ∈ X) :
-    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.support ⊆ p.support ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
-  refine ⟨p.firstVisit X hp, p.takeUntilFirst X hp, firstVisit_mem_X, takeUntilFirst_subset_support, ?_⟩
-  intro z hz hzX
-  have hz' : z ∈ p.support := takeUntilFirst_subset_support hz
-  contrapose! hz
-  apply Walk.notMem_support_takeUntil_support_takeUntil_subset hz.symm hz'
-  exact firstVisit_mem_takeUntil hz' hzX
-
-lemma Walk.exists_path_prefix_avoiding_set {X : Set V} {p : G.Walk u v} (h : ∃ w ∈ p.support, w ∈ X) :
-    ∃ (w : V) (q : G.Walk u w), w ∈ X ∧ q.IsPath ∧ q.support ⊆ p.support ∧ (∀ z ∈ q.support, z ∈ X → z = w) := by
-  obtain ⟨w', q, hw'X, hq_support, hq_unique⟩ := p.exists_walk_prefix_avoiding_set h
-  refine ⟨w', q.bypass, hw'X, q.bypass_isPath, ?_, ?_⟩ <;> grind [q.support_bypass_subset]
-
 lemma separates_of_separates_delete (e : G.Adj x y) (X : G.Separator A B)
     (S : (G - e).Separator A X.1) (hx : x ∈ X.1) (hy : y ∈ X.1) : G.Separates A B S.1 := by
   intro u hu v hv p
@@ -574,30 +525,14 @@ lemma disjoint_paths_prop (hX_fin : X.Finite) {P : G.Joiner A X} (hP_card : P.1.
   exact Set.disjoint_left.mp (P.2 hp hqP hneq) (show z ∈ p.support from hzP)
     (show z ∈ q.support from by simp only [ABPath.support, Set.mem_setOf_eq]; rw [← hqv]; exact q.p.1.end_mem_support)
 
+-- XXX Take basic things to Menger/Basic.lean
+
 /-
 If an A-X path intersects X only at its endpoint, then any prefix ending at a vertex not in X avoids X entirely.
 -/
-lemma ABPath_prefix_avoids_X {A X : Set V} (p : G.ABPath A X)
-  (hp_X : p.support ∩ X = {p.v.1})
-  (z : V)
-  (hz : z ∈ p.p.1.support)
-  (hzX : z ∉ X) :
-  ({a | a ∈ (p.p.1.takeUntil z hz).support} : Set V) ∩ X = ∅ := by
-    simp only [Set.eq_empty_iff_forall_notMem, Set.mem_inter_iff, not_and]
-    intro a ha haX
-    have ha_support : a ∈ p.p.1.support :=
-      Walk.support_takeUntil_subset p.p.1 hz ha
-    have ha_eq : a = p.v.1 := by
-      have h1 : a ∈ p.support ∩ X := ⟨ha_support, haX⟩
-      rw [hp_X] at h1
-      exact h1
-    rw [ha_eq] at ha
-    have hne : p.v.1 ≠ z := by
-      intro heq; rw [← heq] at hzX
-      have : p.v.1 ∈ p.support ∩ X := by rw [hp_X]; rfl
-      exact hzX this.2
-    exact (Walk.endpoint_notMem_support_takeUntil p.p.2 hz hne)
-      ha
+lemma ABPath_prefix_avoids_X (p : G.ABPath A X) (hp_X : p.support ∩ X = {p.v.1}) (hz : z ∈ p.p.1.support)
+    (hzX : z ∉ X) : ({a | a ∈ (p.p.1.takeUntil z hz).support} : Set V) ∩ X = ∅ :=
+  Walk.prefix_avoids_X p.p.2 hp_X hz hzX
 
 /-
 If a walk is a path, and we drop the prefix until a vertex w (where w is not the start), then the start vertex is not in the remaining suffix.
@@ -651,7 +586,7 @@ lemma path_intersection_of_separator (X : G.Separator A B) (p : G.ABPath A X.1)
     · have h2 : z ∈ q.support ∩ X.1 := ⟨hz.2, hzX⟩
       rw [hq_X] at h2; exact h2
   · exfalso
-    have hw1 := ABPath_prefix_avoids_X p hp_X z hz.1 hzX
+    have hw1 := ABPath_prefix_avoids_X p hp_X hz.1 hzX
     have hw2 := ABPath_suffix_avoids_X q hq_X z hz.2 hzX
     have h_walk := X.2 p.u.1 p.u.2 q.v.1 q.v.2
       ((p.p.1.takeUntil z hz.1).append (q.p.1.dropUntil z hz.2))
@@ -934,7 +869,6 @@ lemma Walk.split_at_vertex {p : G.Walk u v} (hp : p.IsPath) {z : V} (hz : z ∈ 
     · simp +contextual
   · simp [-Walk.take_spec, Finset.ext_iff]
 
-
 /-
 If two sets in the contracted graph are disjoint away from the contracted vertex, their preimages in the original graph are disjoint away from the endpoints of the contracted edge.
 -/
@@ -1009,16 +943,10 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
     u ∈ A ∧ v ∈ B ∧
     p.IsPath ∧
     p.support.map (π[e]) ⊆ p'.support := by
-      have h_split : ∃ (p1' : (G / e).Walk u' ⟦x⟧)
-        (p2' : (G / e).Walk ⟦x⟧ v'),
-        p1'.IsPath ∧
-        p2'.IsPath ∧
-        p1'.support.toFinset ∩ p2'.support.toFinset = {⟦x⟧} ∧
-        p1'.support.toFinset ∪ p2'.support.toFinset = p'.support.toFinset := by
-          have := Walk.split_at_vertex hp'_path h_ve_mem
-          obtain ⟨p1, p2, hp1, hp2, h1, h2⟩ := this
-          refine ⟨p1, p2, hp1, hp2, ?_, ?_⟩
-          convert h1 ; convert h2
+      have h_split : ∃ (p1' : (G / e).Walk u' ⟦x⟧) (p2' : (G / e).Walk ⟦x⟧ v'), p1'.IsPath ∧ p2'.IsPath ∧
+          p1'.support.toFinset ∩ p2'.support.toFinset = {⟦x⟧} ∧
+          p1'.support.toFinset ∪ p2'.support.toFinset = p'.support.toFinset := by
+        convert Walk.split_at_vertex hp'_path h_ve_mem
       obtain ⟨p1', p2', hp1'_path, hp2'_path, h_inter, h_union⟩ := h_split
       obtain ⟨u_start, u_end, p1, v_start, v_end, p2, hu_start_A, hv_end_B, hu_end_xy, hv_start_xy,
         hp1_path, hp2_path, hp1_sub, hp2_sub, hp1_xy, hp2_xy, h_disjoint⟩ :=
