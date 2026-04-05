@@ -276,16 +276,6 @@ noncomputable abbrev contract_preimage (Y : Set (V / e)) : Set V := {v | ⟦v⟧
 
 lemma mem_contract_preimage {Y : Set (V / e)} : v ∈ contract_preimage Y ↔ ⟦v⟧ ∈ Y := by rfl
 
-private lemma map_subset_of_finset_image_subset_map {l t : List V}
-    (h : l.toFinset.image (π[e]) ⊆ t.toFinset.image (π[e])) :
-    l.map (π[e]) ⊆ t.map (π[e]) := by
-  intro q hq
-  rcases List.mem_map.mp hq with ⟨w, hw, rfl⟩
-  have hw' : π[e] w ∈ t.toFinset.image (π[e]) :=
-    h (Finset.mem_image.mpr ⟨w, List.mem_toFinset.mpr hw, rfl⟩)
-  rcases Finset.mem_image.mp hw' with ⟨u, hu, huq⟩
-  exact List.mem_map.mpr ⟨u, List.mem_toFinset.mp hu, huq⟩
-
 lemma contract_preimage_separates (Y : (G / e).Separator (A / e) (B / e)) :
     G.Separates A B (contract_preimage Y.1) := by
   intro u hu v hv p
@@ -897,10 +887,10 @@ lemma adjust_path_start_to_A {A : Set V} (e : G.Adj x y)
     p'.support.map (π[e]) ⊆ p.support.map (π[e]) := by
   have hfin : ∃ (u' : V) (p' : G.Walk u' v),
       u' ∈ A ∧ p'.IsPath ∧
-      (p'.support.toFinset.image (π[e]) : Finset (V / e)) ⊆ p.support.toFinset.image (π[e]) := by
+      (p'.support.map (π[e])) ⊆ p.support.map (π[e]) := by
     by_cases hx : x ∈ A
     · rcases hu with ( rfl | rfl )
-      · exact ⟨ u, p, hx, hp_path, Finset.Subset.refl _ ⟩
+      · exact ⟨ u, p, hx, hp_path, .refl _ ⟩
       · refine ⟨ x, Walk.cons e p, hx, ?_, ?_ ⟩ <;> simp_all [ Walk.cons_isPath_iff ];
         · intro hxmem
           have hx_in : x ∈ p.support.toFinset ∩ {x, u} := by
@@ -909,25 +899,22 @@ lemma adjust_path_start_to_A {A : Set V} (e : G.Adj x y)
             have : x ∈ ({u} : Finset V) := by grind
             simpa using this
           exact e.ne hx_eq_u
-        · simp_all [ Finset.subset_iff ]
-          use u
+        · use u
           exact ⟨ p.start_mem_support, by exact Quotient.sound ( by tauto ) ⟩
     · by_cases hy : y ∈ A
-      · cases hu <;> simp_all [ Finset.subset_iff ];
+      · cases hu <;> simp_all
         · refine ⟨ y, hy, ?_, ?_, ?_ ⟩
-          exact Walk.cons e.symm ( p.copy ( by simp [ * ] ) rfl )
+          · exact Walk.cons e.symm ( p.copy ( by simp [ * ] ) rfl )
           · simp [hp_path] ; grind
           · simp [ Walk.support_cons ]
-            constructor
-            · refine ⟨u, p.start_mem_support, by grind⟩
-            · grind
+            grind [Walk.start_mem_support]
         · grind
       · simp_all
         obtain ⟨ u', hu', hu'' ⟩ := h_liftA
         rw [contractEdgeProj_eq_vertex_iff] at hu''
         cases hu'' <;> simp_all
   rcases hfin with ⟨u', p', hu'A, hp'path, hp'sub⟩
-  exact ⟨u', p', hu'A, hp'path, map_subset_of_finset_image_subset_map hp'sub⟩
+  exact ⟨u', p', hu'A, hp'path, hp'sub⟩
 
 lemma adjust_path_end_to_B {p : G.Walk u v} (hp_path : p.IsPath) (hv : v = x ∨ v = y)
   (hp_support : ∀ z ∈ p.support, z ∈ ({x, y} : Set V) → z = v)
@@ -938,7 +925,7 @@ lemma adjust_path_end_to_B {p : G.Walk u v} (hp_path : p.IsPath) (hv : v = x ∨
     p'.support.map (π[e]) ⊆ p.support.map (π[e]) := by
   have hfin : ∃ (v' : V) (p' : G.Walk u v'),
       v' ∈ B ∧ p'.IsPath ∧
-      (p'.support.toFinset.image (π[e]) : Finset (V / e)) ⊆ p.support.toFinset.image (π[e]) := by
+      (p'.support.map (π[e])) ⊆ p.support.map (π[e]) := by
     rcases hv with ( rfl | rfl )
     · by_cases hy : y ∈ B
       · refine ⟨ y, ?_, hy, ?_, ?_ ⟩
@@ -949,15 +936,15 @@ lemma adjust_path_end_to_B {p : G.Walk u v} (hp_path : p.IsPath) (hv : v = x ∨
           intro a ha ha'
           have hyv : y = v := by grind
           exact e.ne hyv.symm
-        · simp [ Finset.subset_iff, Walk.support_append ]
+        · simp [ Walk.support_append ]
           use v
           simp_all
           exact Quotient.sound ( by tauto )
       · have hvB : v ∈ B := by
           exact Or.resolve_right ((mem_liftSet_contraction_vertex_iff (A := B) e).1 h_liftB) hy
-        exact ⟨ v, p, hvB, hp_path, Finset.Subset.refl _ ⟩
+        exact ⟨ v, p, hvB, hp_path, .refl _ ⟩
     · by_cases hv : v ∈ B
-      · exact ⟨ v, p, hv, hp_path, Finset.Subset.refl _ ⟩
+      · exact ⟨ v, p, hv, hp_path, .refl _ ⟩
       · have hx : x ∈ B := by
           contrapose! h_liftB; simp_all
           intro w hw
@@ -967,13 +954,11 @@ lemma adjust_path_end_to_B {p : G.Walk u v} (hp_path : p.IsPath) (hv : v = x ∨
         · refine Walk.isPath_append_of_inter hp_path ?_ ?_
           · aesop
           · simp ; grind
-        · simp_all [ Finset.subset_iff ]
-          rintro a ( ha | rfl | rfl )
-          · exact ⟨ a, ha, by rfl ⟩
-          · exact ⟨ a, by cases p <;> aesop ⟩
-          · exact ⟨v, by simp, Quotient.sound (Or.inr (Or.inr ⟨rfl, rfl⟩))⟩
+        · simp [Walk.support_append]
+          use v
+          simp
   rcases hfin with ⟨v', p', hv'B, hp'path, hp'sub⟩
-  exact ⟨v', p', hv'B, hp'path, map_subset_of_finset_image_subset_map hp'sub⟩
+  exact ⟨v', p', hv'B, hp'path, hp'sub⟩
 
 /-
 Helper lemma: A path starting at the contracted vertex can be lifted to an A-B path if the contracted vertex is in the lifted set of A.
