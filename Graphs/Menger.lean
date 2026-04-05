@@ -893,36 +893,33 @@ lemma lift_path_from_contraction_start {B : Set V} (e : G.Adj x y)
 /-
 Two paths ending and starting at the endpoints of an edge can be joined into a single path if they are otherwise disjoint and avoid the edge's endpoints internally.
 -/
-lemma join_paths_through_edge (e : G.Adj x y)
-  {u_start u_end v_start v_end : V}
-  (p1 : G.Walk u_start u_end) (p2 : G.Walk v_start v_end)
-  (hp1_path : p1.IsPath) (hp2_path : p2.IsPath)
-  (hu_end : u_end = x ∨ u_end = y)
-  (hv_start : v_start = x ∨ v_start = y)
-  (hp1_end : ∀ z ∈ p1.support, z ∈ ({x, y} : Set V) → z = u_end)
-  (hp2_start : ∀ z ∈ p2.support, z ∈ ({x, y} : Set V) → z = v_start)
-  (h_disjoint : ∀ w ∈ p1.support, w ∈ p2.support → w = x ∨ w = y) :
-  ∃ (q : G.Walk u_start v_end), q.IsPath ∧ q.support.toFinset ⊆ p1.support.toFinset ∪ p2.support.toFinset := by
-    by_cases h_cases : u_end = v_start
-    · refine' ⟨ p1.append ( h_cases ▸ p2 ), _, _ ⟩ <;> simp_all
-      · have h_concat_path : (p1.append (h_cases ▸ p2)).IsPath := by
-          have h_disjoint : Disjoint (p1.support.toFinset \ {v_start}) (p2.support.toFinset \ {v_start}) := by
-            simp_all [ Finset.disjoint_left ]
-            intro a ha ha' ha''
-            specialize h_disjoint _ ha
-            simp_all
-          apply Walk.IsPath_append_of_support_inter_subset_one
-          · assumption
-          · aesop
-          · intro v hv; simp_all [ Finset.disjoint_left ]
-            grind
-        exact h_concat_path
-      · intro v hv; aesop
-    · obtain ⟨h_edge, h_cases⟩ : G.Adj u_end v_start ∧ (u_end = x ∧ v_start = y ∨ u_end = y ∧ v_start = x) := by
-        cases hu_end <;> cases hv_start <;> simp_all [ adj_comm ];
-      use p1.append (Walk.cons h_edge p2)
-      simp_all [ Walk.isPath_def , Walk.support_append ]
-      grind [p1.end_mem_support]
+lemma join_paths_through_edge (e : G.Adj x y) {u_start u_end v_start v_end : V}
+    {p1 : G.Walk u_start u_end} {p2 : G.Walk v_start v_end} (hp1_path : p1.IsPath) (hp2_path : p2.IsPath)
+    (hu_end : u_end = x ∨ u_end = y) (hv_start : v_start = x ∨ v_start = y)
+    (hp1_end : ∀ z ∈ p1.support, z ∈ ({x, y} : Set V) → z = u_end)
+    (hp2_start : ∀ z ∈ p2.support, z ∈ ({x, y} : Set V) → z = v_start)
+    (h_disjoint : ∀ w ∈ p1.support, w ∈ p2.support → w = x ∨ w = y) :
+    ∃ (q : G.Walk u_start v_end), q.IsPath ∧ q.support ⊆ p1.support ∪ p2.support := by
+  by_cases h_cases : u_end = v_start
+  · refine' ⟨ p1.append ( h_cases ▸ p2 ), _, _ ⟩ <;> simp_all
+    · have h_concat_path : (p1.append (h_cases ▸ p2)).IsPath := by
+        have h_disjoint : Disjoint (p1.support.toFinset \ {v_start}) (p2.support.toFinset \ {v_start}) := by
+          simp_all [ Finset.disjoint_left ]
+          intro a ha ha' ha''
+          specialize h_disjoint _ ha
+          simp_all
+        apply Walk.IsPath_append_of_support_inter_subset_one
+        · assumption
+        · aesop
+        · intro v hv; simp_all [ Finset.disjoint_left ]
+          grind
+      exact h_concat_path
+    · intro v hv; aesop
+  · obtain ⟨h_edge, h_cases⟩ : G.Adj u_end v_start ∧ (u_end = x ∧ v_start = y ∨ u_end = y ∧ v_start = x) := by
+      cases hu_end <;> cases hv_start <;> simp_all [ adj_comm ];
+    use p1.append (Walk.cons h_edge p2)
+    simp_all [ Walk.isPath_def , Walk.support_append ]
+    grind [p1.end_mem_support]
 
 /-
 A path can be split at any vertex in its support into two paths that intersect only at that vertex.
@@ -1032,18 +1029,18 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
         hp1_path, hp2_path, hp1_sub, hp2_sub, hp1_xy, hp2_xy, h_disjoint⟩ :=
         lift_split_paths (A := A) (B := B) hp1'_path hp2'_path h_inter h_u_ne h_v_ne hu' hv'
       obtain ⟨q, hq_path, hq_sub⟩ : ∃ q : G.Walk u_start v_end,
-          q.IsPath ∧ q.support.toFinset ⊆ p1.support.toFinset ∪ p2.support.toFinset := by
-        exact join_paths_through_edge e p1 p2 hp1_path hp2_path hu_end_xy hv_start_xy hp1_xy hp2_xy h_disjoint
+          q.IsPath ∧ q.support ⊆ p1.support ∪ p2.support := by
+        exact join_paths_through_edge e hp1_path hp2_path hu_end_xy hv_start_xy hp1_xy hp2_xy h_disjoint
       refine ⟨u_start, v_end, q, hu_start_A, hv_end_B, hq_path, ?_⟩
       intro z hz
       rcases List.mem_map.mp hz with ⟨w, hw, rfl⟩
-      have hw_fin : w ∈ p1.support.toFinset ∪ p2.support.toFinset := hq_sub (List.mem_toFinset.mpr hw)
-      rcases Finset.mem_union.mp hw_fin with h1 | h2
-      · have hw1 : π[e] w ∈ p1'.support := hp1_sub (List.mem_map.mpr ⟨w, List.mem_toFinset.mp h1, rfl⟩)
+      have hw_fin : w ∈ p1.support ∪ p2.support := hq_sub hw
+      rcases List.mem_union_iff.mp hw_fin with h1 | h2
+      · have hw1 : π[e] w ∈ p1'.support := hp1_sub (by grind)
         have : π[e] w ∈ p'.support.toFinset := by
           exact h_union ▸ Finset.mem_union.mpr (Or.inl (List.mem_toFinset.mpr hw1))
         exact List.mem_toFinset.mp this
-      · have hw2 : π[e] w ∈ p2'.support := hp2_sub (List.mem_map.mpr ⟨w, List.mem_toFinset.mp h2, rfl⟩)
+      · have hw2 : π[e] w ∈ p2'.support := hp2_sub (by grind)
         have : π[e] w ∈ p'.support.toFinset := by
           exact h_union ▸ Finset.mem_union.mpr (Or.inr (List.mem_toFinset.mpr hw2))
         exact List.mem_toFinset.mp this
