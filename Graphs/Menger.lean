@@ -816,8 +816,8 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
     p.support.map (π[e]) ⊆ p'.support := by
       have h_split : ∃ (p1' : (G / e).Walk u' ⟦x⟧) (p2' : (G / e).Walk ⟦x⟧ v'), p1'.IsPath ∧ p2'.IsPath ∧
           p1'.support.toFinset ∩ p2'.support.toFinset ⊆ {⟦x⟧} ∧
-          p1'.support.toFinset ⊆ p'.support.toFinset ∧
-          p2'.support.toFinset ⊆ p'.support.toFinset := by
+          p1'.support ⊆ p'.support ∧
+          p2'.support ⊆ p'.support := by
         convert Walk.split_at_vertex hp'_path h_ve_mem
       obtain ⟨p1', p2', hp1'_path, hp2'_path, h_inter, h_union⟩ := h_split
       have h_inter' : p1'.support ∩ p2'.support ⊆ {⟦x⟧} := by
@@ -836,14 +836,9 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
       have hw_fin : w ∈ p1.support ∪ p2.support := hq_sub hw
       rcases List.mem_union_iff.mp hw_fin with h1 | h2
       · have hw1 : π[e] w ∈ p1'.support := hp1_sub (by grind)
-        have : π[e] w ∈ p'.support.toFinset := by
-          apply h_union.1 ; simpa using hw1
-        exact List.mem_toFinset.mp this
+        apply h_union.1 ; simpa using hw1
       · have hw2 : π[e] w ∈ p2'.support := hp2_sub (by grind)
-        have : π[e] w ∈ p'.support.toFinset := by
-          apply h_union.2
-          simpa using hw2
-        exact List.mem_toFinset.mp this
+        apply h_union.2 ; simpa using hw2
 
 /-
 A path in the contracted graph that avoids the contracted vertex can be lifted to a path in the original graph that avoids the endpoints of the contracted edge.
