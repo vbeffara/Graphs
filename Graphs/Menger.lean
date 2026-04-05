@@ -769,7 +769,7 @@ lemma contract_preimage_disjoint_away_from_endpoints (e : G.Adj x y)
 If two paths in the contracted graph meet only at the contracted vertex, they can be lifted to paths in the original graph that are disjoint away from the contracted edge's endpoints.
 -/
 lemma lift_split_paths {u' v' : V / e} {p1' : (G / e).Walk u' ⟦x⟧} {p2' : (G / e).Walk ⟦x⟧ v'}
-    (h_inter : p1'.support.toFinset ∩ p2'.support.toFinset ⊆ {⟦x⟧})
+    (h_inter : p1'.support ∩ p2'.support ⊆ {⟦x⟧})
     (h_u_ne : u' ≠ ⟦x⟧) (h_v_ne : v' ≠ ⟦x⟧) (hu' : u' ∈ A / e) (hv' : v' ∈ B / e) :
     ∃ (u_start u_end : V) (p1 : G.Walk u_start u_end) (v_start v_end : V) (p2 : G.Walk v_start v_end),
       u_start ∈ A ∧ v_end ∈ B ∧ (u_end = x ∨ u_end = y) ∧ (v_start = x ∨ v_start = y) ∧
@@ -789,13 +789,14 @@ lemma lift_split_paths {u' v' : V / e} {p1' : (G / e).Walk u' ⟦x⟧} {p2' : (G
     intro z ⟨hz1, hz_ne⟩ ⟨hz2, _⟩
     have : z ∈ p1'.support.toFinset ∩ p2'.support.toFinset :=
       Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hz1, List.mem_toFinset.mpr hz2⟩
+    simp only [Finset.mem_inter, List.mem_toFinset, ← List.mem_inter_iff] at this
     have := h_inter this
     exact hz_ne (Finset.mem_singleton.mp this ▸ Set.mem_singleton _)
   have h_preimage_disj := contract_preimage_disjoint_away_from_endpoints e _ _ h_disj_sets
   intro z hz1 hz2
   have h1 : ⟦z⟧ ∈ p1'.support := by grind
   have h2 : ⟦z⟧ ∈ p2'.support := by grind
-  simp [Finset.ext_iff] at h_inter
+  simp [List.subset_def, List.singleton_eq] at h_inter
   rw [← contractEdgeProj_eq_vertex_iff (e := e)]
   grind
 
@@ -821,9 +822,13 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
           p2'.support.toFinset ⊆ p'.support.toFinset := by
         convert Walk.split_at_vertex hp'_path h_ve_mem
       obtain ⟨p1', p2', hp1'_path, hp2'_path, h_inter, h_union⟩ := h_split
+      have h_inter' : p1'.support ∩ p2'.support ⊆ {⟦x⟧} := by
+        simp only [List.subset_def, Finset.subset_iff, Finset.mem_inter, List.mem_toFinset] at h_inter ⊢
+        simp [List.singleton_eq] at h_inter ⊢
+        grind
       obtain ⟨u_start, u_end, p1, v_start, v_end, p2, hu_start_A, hv_end_B, hu_end_xy, hv_start_xy,
         hp1_path, hp2_path, hp1_sub, hp2_sub, hp1_xy, hp2_xy, h_disjoint⟩ :=
-        lift_split_paths (A := A) (B := B) h_inter h_u_ne h_v_ne hu' hv'
+        lift_split_paths (A := A) (B := B) h_inter' h_u_ne h_v_ne hu' hv'
       obtain ⟨q, hq_path, hq_sub⟩ : ∃ q : G.Walk u_start v_end,
           q.IsPath ∧ q.support ⊆ p1.support ∪ p2.support := by
         exact Walk.join_paths_through_edge e p1 p2 hu_end_xy hv_start_xy
