@@ -769,7 +769,7 @@ lemma contract_preimage_disjoint_away_from_endpoints (e : G.Adj x y)
 If two paths in the contracted graph meet only at the contracted vertex, they can be lifted to paths in the original graph that are disjoint away from the contracted edge's endpoints.
 -/
 lemma lift_split_paths {u' v' : V / e} {p1' : (G / e).Walk u' ⟦x⟧} {p2' : (G / e).Walk ⟦x⟧ v'}
-    (h_inter : p1'.support.toFinset ∩ p2'.support.toFinset = {⟦x⟧})
+    (h_inter : p1'.support.toFinset ∩ p2'.support.toFinset ⊆ {⟦x⟧})
     (h_u_ne : u' ≠ ⟦x⟧) (h_v_ne : v' ≠ ⟦x⟧) (hu' : u' ∈ A / e) (hv' : v' ∈ B / e) :
     ∃ (u_start u_end : V) (p1 : G.Walk u_start u_end) (v_start v_end : V) (p2 : G.Walk v_start v_end),
       u_start ∈ A ∧ v_end ∈ B ∧ (u_end = x ∨ u_end = y) ∧ (v_start = x ∨ v_start = y) ∧
@@ -789,7 +789,7 @@ lemma lift_split_paths {u' v' : V / e} {p1' : (G / e).Walk u' ⟦x⟧} {p2' : (G
     intro z ⟨hz1, hz_ne⟩ ⟨hz2, _⟩
     have : z ∈ p1'.support.toFinset ∩ p2'.support.toFinset :=
       Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hz1, List.mem_toFinset.mpr hz2⟩
-    rw [h_inter] at this
+    have := h_inter this
     exact hz_ne (Finset.mem_singleton.mp this ▸ Set.mem_singleton _)
   have h_preimage_disj := contract_preimage_disjoint_away_from_endpoints e _ _ h_disj_sets
   intro z hz1 hz2
@@ -816,7 +816,7 @@ lemma lift_path_through_contraction_internal {A B : Set V} (e : G.Adj x y)
     p.IsPath ∧
     p.support.map (π[e]) ⊆ p'.support := by
       have h_split : ∃ (p1' : (G / e).Walk u' ⟦x⟧) (p2' : (G / e).Walk ⟦x⟧ v'), p1'.IsPath ∧ p2'.IsPath ∧
-          p1'.support.toFinset ∩ p2'.support.toFinset = {⟦x⟧} ∧
+          p1'.support.toFinset ∩ p2'.support.toFinset ⊆ {⟦x⟧} ∧
           p1'.support.toFinset ⊆ p'.support.toFinset ∧
           p2'.support.toFinset ⊆ p'.support.toFinset := by
         convert Walk.split_at_vertex hp'_path h_ve_mem
