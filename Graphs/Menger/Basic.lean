@@ -90,6 +90,20 @@ lemma isPath_append_of_inter (hp : p.IsPath) (hq : q.IsPath)
     (h_inter : ∀ z ∈ p.support, z ∈ q.support → z = v) : (p.append q).IsPath := by
   induction p <;> aesop
 
+lemma exists_prefix_path_of_ne (p : G.Walk u v) (h_ne : u ≠ v) : ∃ (w : V) (q : G.Walk u w),
+    G.Adj w v ∧ q.IsPath ∧ v ∉ q.support ∧ q.support ⊆ p.support := by
+  induction p with
+  | nil => contradiction
+  | cons h p ih =>
+    rename_i a b c
+    by_cases hbc : b = c
+    · aesop
+    · obtain ⟨w, q, h1, h2, h3, h4⟩ := ih hbc
+      refine ⟨w, (cons h q).bypass, h1, ?_, ?_, ?_⟩
+      · exact bypass_isPath (cons h q)
+      · grind [support_bypass_subset]
+      · simp ; grind [support_bypass_subset]
+
 end Walk
 
 end SimpleGraph
