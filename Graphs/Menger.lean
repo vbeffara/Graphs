@@ -883,16 +883,10 @@ lemma adjust_path_start_to_A {A : Set V} (e : G.Adj x y)
     by_cases hx : x ∈ A
     · rcases hu with ( rfl | rfl )
       · exact ⟨ u, p, hx, hp_path, .refl _ ⟩
-      · refine ⟨ x, Walk.cons e p, hx, ?_, ?_ ⟩ <;> simp_all [ Walk.cons_isPath_iff ];
-        · intro hxmem
-          have hx_in : x ∈ p.support.toFinset ∩ {x, u} := by
-            exact Finset.mem_inter.mpr ⟨List.mem_toFinset.mpr hxmem, by simp⟩
-          have hx_eq_u : x = u := by
-            have : x ∈ ({u} : Finset V) := by grind
-            simpa using this
-          exact e.ne hx_eq_u
-        · use u
-          exact ⟨ p.start_mem_support, by exact Quotient.sound ( by tauto ) ⟩
+      · refine ⟨ x, Walk.cons e p, hx, ?_, ?_ ⟩-- <;> simp_all [ Walk.cons_isPath_iff ];
+        · grind [Walk.cons_isPath_iff, e.ne]
+        · simp_all
+          exact ⟨u, p.start_mem_support, by exact Quotient.sound ( by tauto )⟩
     · by_cases hy : y ∈ A
       · cases hu <;> simp_all
         · refine ⟨ y, hy, ?_, ?_, ?_ ⟩
